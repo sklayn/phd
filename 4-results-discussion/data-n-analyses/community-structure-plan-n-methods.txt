@@ -1,0 +1,62 @@
+1. Community description and structure
+- diveristy indices - alpha diversity (Whittaker, 1960) -> diversity in one spot.
+					- Shannon diversity & Pielou evenness (others?)
+
+- rarefaction curves - because sp richness increases with sample size, and differences in sp
+richness might be caused by differences in sample size -> solved by rarefying sp richness 
+to the same number of individuals - to get an expected number of species in a community. 
+Often seen as objective solution for comparing sp richness with different sample sizes. But rank
+orders typically differ among different rarefaction sample sizes, so rarefaction curves can cross.
+  --> first aggregate data frame by site/year, then apply!
+ 
+- taxonomic and functional diversity indices - to judge the differences of species. Either can be used
+with either taxonomic or functional traits of species. 
+	- taxonomic diversity - average distance of traits: tax.diversity, tax.distinctness. Indices give
+	values for a single site. 
+	Need taxonomic differences among species to calculate indices -> any distance structure among species,
+	but usually found from established hierarchic taxonomy. Typical differences coding: species in the 
+	same genus = 1, same family = 2,... Tax.differences scaled to max 100 for easier comparison b/n 
+	different datasets and taxonomies. OR possible to scale steps between tax.levels proportional to 
+	reduction in number of categories: if almost all genera have only one sp, it does not matter much if
+	two individuals belong to a different sp or a different genus. 
+
+	- functional diversity - height of trait tree. (Petchey and Gaston, 2002, 2006)
+	Primary data: species traits, translated to pairwise distances among species then to clustering trees
+	of species traits -> in this way, a single deviant species will have a small influence, since its 
+	difference is evaluated only once instead of evaluating its distance to all other species.
+	Functional diversity = total branch length in a trait dendrogram connecting all species, but excluding 
+	the unnecessary root segments of the tree.
+	
+- sp abundance models 
+	- ranked abundance distribution - plot log abundances in decreasing order, or against ranks of species
+	(ranked abundance distribution curves, sp abundance curves, dominance-diversity curves, Whittaker plots)
+
+- sp accumulation and beta diversity - study collections of sites and their sp richness, or try to estimate
+the number of unseen species.
+	- sp accumulation models - similar to rarefaction: study the accumulation of species when the nb of sites
+	increases. Several alternative methods: accumulating sites in the order they happen to be, repeated 
+	accumulation in random order,.. 
+	3 analytic models; recommended - Kindt's exact method. 
+	
+	- beta diversity (Whittaker, 1960) - diversity along gradients. Should thus be studied with respect to 
+	gradients, but most commonly - applied as measure of general heterogeneity (Tuomisto, 2010): how many 
+	more sp in a collection of sites compared to an average site.
+	Best known index - based on the ratio of total nb of sp in a collection of sites S and the average 
+	richness per one site. b = 0 when no excess species or no heterogeneity between sites. 
+	Problematic because S increases with the nb of sites even when they are all subsets of the same 
+	community.
+	-> could be found from pairwise comparison of sites instead - Sorensen index of dissimilarity.
+	Can be studied with respect to classes or factors -> betadisper (-> does mutivariate PCoA)
+	
+- sp pool
+	- nb of unseen species -> not all species are seen at any site, but the unseen sp also belong to the sp 
+	pool.
+	specpool (collection of sites), estimateR (counts of individuals, can be used on a single site) - both 
+	assume that nb of unseen sp is related to nb of rare sp, or sp seen only once or twice. Species grouped 
+	by their nb of occurrences. Nb of missing species estimated by jacknife - we missed about as many species 
+	as we saw only once; or bootstrap - if we repeat sampling from the same data (with replacement), we miss 
+	as many sp as we missed originally.
+	
+	
+	
+	
