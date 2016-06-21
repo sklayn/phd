@@ -1,4 +1,5 @@
 ### Environmental data & ordination
+### (continued from community composition)
 
 library(ggplot2)
 library(grid)
@@ -272,7 +273,7 @@ ordi.list.all$id <- NULL
 ## plot the mds and the ordisurf objects for the list of variables in ggplot2 
 ## (get back a list of plots)
 
-ordisurf_ggplot <- function(mds.obj, ordisurf.df) {
+ordisurf_ggplot <- function(mds.obj, ordisurf.df, stations) {
   ## an ordination in ggplot, with environmental variables overlaid as 
   ## surfaces (calculatedd by ordisurf in package vegan)
   
@@ -280,30 +281,38 @@ ordisurf_ggplot <- function(mds.obj, ordisurf.df) {
   # data frame as the environmental variables (for ease of plotting in ggplot)  
   nmds.data <- as.data.frame(scores(mds.obj, display = "sites"))
     
-  p <- ggplot(nmds.data, aes(x = NMDS1, y = NMDS2)) + 
+  p <- ggplot() + 
+    # plot the surface representing the environmental variable's values (plotting 
+    # them first because otherwise hard to see). Change the number of bins to the
+    # desired number.
+    geom_contour(data = ordisurf.df, 
+                 lwd = 0.7,
+                 aes(x = x, y = y, z = z, colour = ..level..),  
+                 bins = 10) + 
     # plot the points corresponding to the station/replicates
-    geom_point(size = 3, alpha = 0.8) + 
-      
-    # then plot the surface representing the environmental variable's values. Change 
-    # the number of bins to the desired number.
-    geom_contour(data = ordisurf.df, aes(x = x, y = y, z = z, colour = ..level..), bins = 10)  +
-      
-    # set the other plot parameters (legend, colors, titles, background)
-    # label for the legend
-    #labs(colour = .id) + 
-
-    # position & other elements of the legend
-    theme(legend.key = element_blank(),
-          legend.position = "top",
-          legend.direction = "horizontal", 
-          legend.box = "horizontal", 
-          legend.box.just = "centre") +
+    geom_text(data = nmds.data, 
+              aes(x = NMDS1, y = NMDS2), 
+              label = stations, 
+              size = 3, 
+              alpha = 0.8, 
+              check_overlap = T) + 
     
-    # black and white background
     theme_bw()
     
     return(p)
-  } 
+} 
   
-# plot all variables and store plots in a list     
-ordisurf.plots.final <- llply(ordi.list.all, function(t) ordisurf_ggplot(mds.sand, t))
+# plot all variables and store plots in a list (use llply because preserves element names)    
+ordisurf.plots.final <- llply(ordi.list.all, 
+                              function(t) ordisurf_ggplot(mds.sand, t, factors.zoo.sand$stations))
+
+# add other plot parameters (legend labels) from list element names
+ordisurf.plots.final <- mapply(function(x, y) x + scale_colour_gradient(high = "red", low = "blue", name = y), 
+                               ordisurf.plots.final, 
+                               names(ordisurf.plots.final), 
+                               SIMPLIFY = F)
+
+
+# label isolines with their value (theoretically, more readable than a legend; 
+# here, however, plots the horrible real values so ultimately useless)
+pfu <- lapply(ordisurf.plots.final, direct.label, method = "bottom.pieces")
