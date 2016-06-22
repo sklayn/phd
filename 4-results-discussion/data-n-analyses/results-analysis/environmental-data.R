@@ -227,92 +227,43 @@ num.values.for.ordiplot <- do.call("rbind", num.values.for.ordiplot)
 num.values.for.ordiplot.mean <- ddply(num.values.for.ordiplot, .(id), colwise(mean))
 
 
-envdata_ordisurf_clean <- function(mds.obj, env.vars) {
-  ## prepares environemntal data for plotting as surfaces overlaid on an 
-  ## ordination (package vegan)
-  ## mds.obj - ordination object; env.vars - data frame of environmental 
-  ## variables (observations x variables)
-  ## output: named list of data frames containing x, y and z values from
-  ## ordisurf, where each element corresponds to a variable.
-  
-  library(vegan)
-
-  # apply ordisurf sequentially to all environmental variables
-  ordi.list.all <- apply(env.vars, MARGIN = 2, FUN = function(x) ordi <- ordisurf(mds.obj ~ x, plot = F))
-
-  ## prepare the ordisurf data for plotting
-  # extract the ordisurf grid objects
-  ordi.list.grids <- lapply(ordi.list.all, function(x) x$grid)
-  
-  # they are lists themsleves, though - cannot be plotted directly.
-  # Get x and y values
-  ordi.list.xy <- lapply(ordi.list.grids, function(m) expand.grid(x = m$x, y = m$y))
-  
-  # get z values from the matrix  
-  ordi.list.xyz <- mapply(function(m, n){
-                            m$z <- as.vector(n$z)
-                            return(m)
-                            }, 
-                         ordi.list.xy,
-                         ordi.list.grids,
-                         SIMPLIFY = F) 
-  
-  # get rid of the NAs
-  ordi.list.final <- lapply(ordi.list.xyz, function(x) data.frame(na.omit(x)))
-
-  return(ordi.list.final)
-  
-}  
-
-# apply ordisurf and clean the results
-ordi.list.all <- envdata_ordisurf_clean(mds.sand, num.values.for.ordiplot.mean)
+# apply ordisurf sequentially to all environmental variables (get a list of ordisurf
+# objects where each element is an environmental variable)
+ordi.list.all <- apply(num.values.for.ordiplot.mean, 
+                       MARGIN = 2, 
+                       FUN = function(x) ordi <- ordisurf(mds.sand ~ x, plot = F))
 
 # get rid of the first element (id), which serves no purpose
 ordi.list.all$id <- NULL
 
-## plot the mds and the ordisurf objects for the list of variables in ggplot2 
-## (get back a list of plots)
+# check out the summaries of the fits
+lapply(ordi.list.all, summary)
 
-ordisurf_ggplot <- function(mds.obj, ordisurf.df, stations) {
-  ## an ordination in ggplot, with environmental variables overlaid as 
-  ## surfaces (calculatedd by ordisurf in package vegan)
+
+plot_mds_ordisurf <- function(mds.obj, ordisurf.obj, cols = c(low, high)) {
+  ## plot the mds and the ordisurf objects for the list of variables 
+  ## in base graphics, because the isolines are better-looking (get
+  ## back a list of plots)
   
-  # extract the NMDS coordinates of the points in new columns, but in the same 
-  # data frame as the environmental variables (for ease of plotting in ggplot)  
-  nmds.data <- as.data.frame(scores(mds.obj, display = "sites"))
-    
-  p <- ggplot() + 
-    # plot the surface representing the environmental variable's values (plotting 
-    # them first because otherwise hard to see). Change the number of bins to the
-    # desired number.
-    geom_contour(data = ordisurf.df, 
-                 lwd = 0.7,
-                 aes(x = x, y = y, z = z, colour = ..level..),  
-                 bins = 10) + 
-    # plot the points corresponding to the station/replicates
-    geom_text(data = nmds.data, 
-              aes(x = NMDS1, y = NMDS2), 
-              label = stations, 
-              size = 3, 
-              alpha = 0.8, 
-              check_overlap = T) + 
-    
-    theme_bw()
-    
-    return(p)
-} 
+  # create custom color palette for plotting the isolines
+  isoline.cols <- colorRampPalette(cols)
   
+  # get the (max) number of isolines that will be plotted automatically, to make
+  # sure the color ramp covers the whole extent of the isolines 
+  ncols <- length(pretty(ordisurf.obj$grid$z, n = 10))
+    
+  plot(mds.obj, display = "sites")
+  plot(ordisurf.obj, add = T, nlevels = 10, col = isoline.cols(ncols))
+
+}
+
 # plot all variables and store plots in a list (use llply because preserves element names)    
-ordisurf.plots.final <- llply(ordi.list.all, 
-                              function(t) ordisurf_ggplot(mds.sand, t, factors.zoo.sand$stations))
+# ordisurf.plots.final <- llply(ordi.list.all, 
+#                               function(t) ordisurf_ggplot(mds.sand, t, factors.zoo.sand$stations))
+# 
+# # add other plot parameters (legend labels) from list element names
+# ordisurf.plots.final <- mapply(function(x, y) x + scale_colour_gradient(high = "red", low = "blue", name = y), 
+#                                ordisurf.plots.final, 
+#                                names(ordisurf.plots.final), 
+#                                SIMPLIFY = F)
 
-# add other plot parameters (legend labels) from list element names
-ordisurf.plots.final <- mapply(function(x, y) x + scale_colour_gradient(high = "red", low = "blue", name = y), 
-                               ordisurf.plots.final, 
-                               names(ordisurf.plots.final), 
-                               SIMPLIFY = F)
-
-
-# label isolines with their value (theoretically, more readable than a legend; 
-# here, however, plots the horrible real values so ultimately useless)
-pfu <- lapply(ordisurf.plots.final, direct.label, method = "bottom.pieces")

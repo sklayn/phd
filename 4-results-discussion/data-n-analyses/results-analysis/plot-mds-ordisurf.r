@@ -52,3 +52,76 @@ mite.ordisurf.ggplot<-ggplot(mite.NMDS.data, aes(x = NMDS1, y = NMDS2))+
         legend.box.just = "centre")
 mite.ordisurf.ggplot
 #ggsave(plot = mite.ordisurf.ggplot, file= "mite.ordisurf.ggplot.png") #to save = see ?ggsave. does not work for base graphics
+
+
+
+##############################################################################################################################
+
+## My cleaned-up version (unused, because want labels on contour lines, but no time to look into making them more presentable)
+
+envdata_ordisurf_clean <- function(mds.obj, env.vars) {
+  ## prepares environemntal data for plotting as surfaces overlaid on an 
+  ## ordination (package vegan)
+  ## mds.obj - ordination object; env.vars - data frame of environmental 
+  ## variables (observations x variables)
+  ## output: named list of data frames containing x, y and z values from
+  ## ordisurf, where each element corresponds to a variable.
+  
+  library(vegan)
+  
+  # apply ordisurf sequentially to all environmental variables
+  ordi.list.all <- apply(env.vars, MARGIN = 2, FUN = function(x) ordi <- ordisurf(mds.obj ~ x, plot = F))
+  
+  ## prepare the ordisurf data for plotting
+  # extract the ordisurf grid objects
+  ordi.list.grids <- lapply(ordi.list.all, function(x) x$grid)
+  
+  # they are lists themsleves, though - cannot be plotted directly.
+  # Get x and y values
+  ordi.list.xy <- lapply(ordi.list.grids, function(m) expand.grid(x = m$x, y = m$y))
+  
+  # get z values from the matrix  
+  ordi.list.xyz <- mapply(function(m, n){
+    m$z <- as.vector(n$z)
+    return(m)
+  }, 
+  ordi.list.xy,
+  ordi.list.grids,
+  SIMPLIFY = F) 
+  
+  # get rid of the NAs
+  ordi.list.final <- lapply(ordi.list.xyz, function(x) data.frame(na.omit(x)))
+  
+  return(ordi.list.final)
+  
+}  
+
+
+ordisurf_ggplot <- function(mds.obj, ordisurf.df, stations) {
+  ## an ordination in ggplot, with environmental variables overlaid as 
+  ## surfaces (calculatedd by ordisurf in package vegan)
+  
+  # extract the NMDS coordinates of the points in new columns, but in the same 
+  # data frame as the environmental variables (for ease of plotting in ggplot)  
+  
+  nmds.data <- as.data.frame(scores(mds.obj, display = "sites"))
+  
+  p <- ggplot() + 
+    # plot the surface representing the environmental variable's values. Change 
+    # the number of bins to the desired number.
+    geom_contour(data = ordisurf.df, 
+                 lwd = 0.7,
+                 aes(x = x, y = y, z = z, colour = ..level..),  
+                 bins = 10) + 
+    # plot the points corresponding to the station/replicates
+    geom_text(data = nmds.data, 
+              aes(x = NMDS1, y = NMDS2), 
+              label = stations, 
+              size = 3, 
+              alpha = 0.8, 
+              check_overlap = T) + 
+    
+    theme_bw()
+  
+  return(p)
+} 
