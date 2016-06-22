@@ -227,8 +227,8 @@ num.values.for.ordiplot <- do.call("rbind", num.values.for.ordiplot)
 num.values.for.ordiplot.mean <- ddply(num.values.for.ordiplot, .(id), colwise(mean))
 
 
-# apply ordisurf sequentially to all environmental variables (get a list of ordisurf
-# objects where each element is an environmental variable)
+# apply ordisurf sequentially to all environmental variables (get back a list of
+# ordisurf objects where each element is an environmental variable)
 ordi.list.all <- apply(num.values.for.ordiplot.mean, 
                        MARGIN = 2, 
                        FUN = function(x) ordi <- ordisurf(mds.sand ~ x, plot = F))
@@ -240,30 +240,91 @@ ordi.list.all$id <- NULL
 lapply(ordi.list.all, summary)
 
 
-plot_mds_ordisurf <- function(mds.obj, ordisurf.obj, cols = c(low, high)) {
-  ## plot the mds and the ordisurf objects for the list of variables 
-  ## in base graphics, because the isolines are better-looking (get
-  ## back a list of plots)
+plot_mds_ordisurf <- function(mds.obj, 
+                              ordisurf.obj, 
+                              st.labels = NULL,
+                              col.isolines = c("blue", "red"), 
+                              col.points = "grey28",
+                              col.others = "grey28"
+                              ) {
+  ## plot the mds and the ordisurf objects for all input variables in base 
+  ## graphics, because the isolines with labels are better-looking than in 
+  ## ggplot2 or lattice.
+  ## 
+
+  # create an empty plot, without axes or axis labels
+  plot(mds.obj, display = "sites", type = "n", 
+       axes = F,
+       ann = F
+       )
+  
+  if(is.null(st.labels)) {
+    # display the stations as points, if labels are not provided as input
+    points(mds.obj, display = "sites", col = col.points, cex = 0.7)  
+
+  } else {
+    # display the stations as text, using the labels provided 
+    text(mds.obj, display = "sites", labels = st.labels, col = col.points, cex = 0.7)
+  }
   
   # create custom color palette for plotting the isolines
-  isoline.cols <- colorRampPalette(cols)
+  isoline.cols <- colorRampPalette(col.isolines)
   
   # get the (max) number of isolines that will be plotted automatically, to make
-  # sure the color ramp covers the whole extent of the isolines 
+  # sure the color ramp covers the whole extent of the isolines. Function pretty()
+  # is called under the hood by the plot.ordisurf methods for determining the 
+  # best number and level of those lines.
   ncols <- length(pretty(ordisurf.obj$grid$z, n = 10))
-    
-  plot(mds.obj, display = "sites")
+  
+  # overlay the ordisurf object 
   plot(ordisurf.obj, add = T, nlevels = 10, col = isoline.cols(ncols))
+  
+  # add in all the extra plot elements
+  axis(1, col.axis = col.others, col = col.others, col.ticks = NULL)
+  axis(2, col.axis = col.others, col = col.others, col.ticks = NULL)
+  box(col = col.others)
+  title(xlab = "NMDS1", ylab = "NMDS2", col.lab = col.others)
 
 }
 
-# plot all variables and store plots in a list (use llply because preserves element names)    
-# ordisurf.plots.final <- llply(ordi.list.all, 
-#                               function(t) ordisurf_ggplot(mds.sand, t, factors.zoo.sand$stations))
-# 
-# # add other plot parameters (legend labels) from list element names
-# ordisurf.plots.final <- mapply(function(x, y) x + scale_colour_gradient(high = "red", low = "blue", name = y), 
-#                                ordisurf.plots.final, 
-#                                names(ordisurf.plots.final), 
-#                                SIMPLIFY = F)
 
+# drop O2.average - mostly the same as O2.bottom (make new list, in case it's 
+# actually needed later)
+ordi.list.noO2 <- ordi.list.all
+ordi.list.noO2$O2.average <- NULL
+
+# rearrange list to have the plots in the desired order.
+# Here: on the first row of the plot will be the sediment parameters, on the 
+# second - the water column parameters, and on the third - the heavy metals.
+# In each row - variables left to right according to decreasing frequency in the 
+# list of imputed datasets.
+vars.order <- c("sorting", "mean.grain.size", "org.matter", "silt.clay", 
+                "Secchi.depth", "O2.bottom", "chl.a", "salinity", 
+                "heavy.metals.noFe", "Pb", "Mn", "Ni")
+
+ordi.list.noO2 <- ordi.list.noO2[vars.order]
+
+# set the file name and properties for the output graph
+pdf(file = file.path(figs.dir, "mds_ordisurf_sand_most_sign_vars.pdf"), 
+    paper = "a4r",
+    width = 12,
+    height = 12,
+    useDingbats = F)
+
+# modify par to fit all plots on one page (here, 4 plots per row)
+par(mfrow = c(3, 4))
+
+# plot all variables, using the new function and adding the main title on each 
+# subplot
+mapply(function(m, n) {
+          plot_mds_ordisurf(mds.sand, m)
+          title(main = n, col.main = "grey28")
+       }, 
+       ordi.list.noO2, 
+       names(ordi.list.noO2)
+       )
+
+dev.off()
+
+# return the graphics device to the original settings
+par(mfrow = c(1, 1))
