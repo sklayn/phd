@@ -298,11 +298,13 @@ ordi.list.noO2$O2.average <- NULL
 # second - the water column parameters, and on the third - the heavy metals.
 # In each row - variables left to right according to decreasing frequency in the 
 # list of imputed datasets.
-vars.order <- c("sorting", "mean.grain.size", "org.matter", "silt.clay", 
-                "Secchi.depth", "O2.bottom", "chl.a", "salinity", 
-                "heavy.metals.noFe", "Pb", "Mn", "Ni")
+ordi.list.noO2 <- ordi.list.noO2[c("sorting", "mean.grain.size", "org.matter", "silt.clay", 
+                                   "Secchi.depth", "O2.bottom", "chl.a", "salinity", 
+                                   "heavy.metals.noFe", "Pb", "Mn", "Ni")]
 
-ordi.list.noO2 <- ordi.list.noO2[vars.order]
+var.labels <- c("sorting", "mean grain size", "organic matter", "silt-clay", 
+                 "Secchi depth", "O2 bottom", "chl-a", "salinity", 
+                 "heavy metals (no Fe)", "Pb", "Mn", "Ni")
 
 # set the file name and properties for the output graph
 pdf(file = file.path(figs.dir, "mds_ordisurf_sand_most_sign_vars.pdf"), 
@@ -321,10 +323,12 @@ mapply(function(m, n) {
           title(main = n, col.main = "grey28")
        }, 
        ordi.list.noO2, 
-       names(ordi.list.noO2)
+       var.labels
        )
 
 dev.off()
 
 # return the graphics device to the original settings
 par(mfrow = c(1, 1))
+
+
