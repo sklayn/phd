@@ -45,10 +45,11 @@ levels(water.param$station) <- revalue(levels(water.param$station),
 water.param$station <- reorder.factor(water.param$station, 
                                       new.order = stations.sand)
 
-# aggregate the data by month and station (average of all depths)
+# aggregate the data by year, month and station (-> average of all depths for a
+# particular sampling occasion)
 water.param.aggr <- ddply(water.param, .(year, month, station), colwise(mean, .cols = is.numeric))
 
-# remove the depth (not relevant for these imputations)
+# remove the depth (not relevant for these particular imputations)
 water.param.aggr$depth <- NULL
 
 # check the predictor matrix. The correlation between predictor and target, and 
@@ -296,15 +297,14 @@ ordi.list.noO2$O2.average <- NULL
 # rearrange list to have the plots in the desired order.
 # Here: on the first row of the plot will be the sediment parameters, on the 
 # second - the water column parameters, and on the third - the heavy metals.
-# In each row - variables left to right according to decreasing frequency in the 
-# list of imputed datasets.
+
 ordi.list.noO2 <- ordi.list.noO2[c("sorting", "mean.grain.size", "org.matter", "silt.clay", 
-                                   "Secchi.depth", "O2.bottom", "chl.a", "salinity", 
-                                   "heavy.metals.noFe", "Pb", "Mn", "Ni")]
+                                   "O2.bottom", "Secchi.depth", "salinity", "depth",
+                                   "dist.innermost", "heavy.metals.noFe", "Pb")]
 
 var.labels <- c("sorting", "mean grain size", "organic matter", "silt-clay", 
-                 "Secchi depth", "O2 bottom", "chl-a", "salinity", 
-                 "heavy metals (no Fe)", "Pb", "Mn", "Ni")
+                 "O2 bottom", "Secchi depth", "salinity", "depth", 
+                 "distance to innermost station", "heavy metals (no Fe)", "Pb")
 
 # set the file name and properties for the output graph
 pdf(file = file.path(figs.dir, "mds_ordisurf_sand_most_sign_vars.pdf"), 
@@ -332,3 +332,39 @@ dev.off()
 par(mfrow = c(1, 1))
 
 
+### Gradient forest analysis -> try to predict species presence by the available 
+### environmental variables (package extendedForest, gradientForest)
+library(gradientForest)
+
+# prepare the environemental data: use list of all (100) imputed values for the 
+# environmental variables; combine by averaging by station
+num.env.imp.all <- lapply(num.env.imp.all, 
+                                  function(x) { 
+                                  # add a numeric identifier to be used later for aggregating
+                                  # to avoid having to reorder later
+                                  x$id <- rownames(x)
+                                  x$id <- as.numeric(x$id)
+                                  return(x)
+                                  })
+env.vars.gradientForest <- do.call("rbind", num.env.imp.all)
+env.vars.gradientForest <- ddply(env.vars.gradientForest, .(id), colwise(mean))
+
+# calculate the maximum number of splits for the random tree analysis
+lev <- floor(log2(nrow(community.sand) * 0.368/2))
+
+# apply the gradient forest analysis (using the subset of species present at the 
+# current sites).
+# Important: convert the sites x species df to matrix; exclude the id column from
+# the df of environmental variables; include a transformation of the species abundance
+# data (here - square root). 
+gf.sand <- gradientForest(cbind(env.vars.gradientForest[-1], as.matrix(community.sand)), 
+                          predictor.vars = colnames(env.vars.gradientForest[-1]), 
+                          response.vars = colnames(community.sand), 
+                          ntree = 500,
+                          transform = function(x) sqrt(x),
+                          compact = T,
+                          nbin = 201,
+                          maxLevel = lev,
+                          corr.threshold = 0.5
+                          )
+gf.sand
