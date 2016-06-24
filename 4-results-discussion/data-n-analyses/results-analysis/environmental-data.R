@@ -12,7 +12,7 @@ library(VIM)
 
 ## import environmental data - for the study period, as is, in order to explore
 ## (missing values, etc.) and decide what to do next
-env.sand <- read.csv()
+# env.sand <- read.csv()
 
 ## First, explore and deal with missing values
 
