@@ -82,17 +82,37 @@ summary.abnd <- ddply(zoo.abnd.sand, .(stations), colwise(mean, .cols = is.numer
 
 
 ## Basic taxonomic composition and structure
-# import taxonomic tables!
+# import taxonomic data (species names are rows, successively higher taxonomic
+# ranks are columns)
+zoo.taxa <- read.csv(file.path(data.dir, "zoo-taxonomy.csv"), header = T, row.names = 1)
 
 # get the present taxa only (abundance > 0 in all samples)
 community.sand <- num.zoo.abnd.sand[colSums(num.zoo.abnd.sand) > 0] 
 current.zoo.taxa <- subset(zoo.taxa, row.names(zoo.taxa) %in% names(community.sand))
 
 # explore the taxonomic composition of the community: number of taxa per phylum/class, etc.
-barchart(table(current.zoo.taxa$class))
 table(current.zoo.taxa$class)
+table(current.zoo.taxa$phylum)
 
-# add new column with the most commonly used (in the literature) larger taxonomic groups
+# plot comparison of nb taxa/class and nb taxa/phylum side by side, and save for reference
+pdf(file = file.path(figs.dir, "explor_nb-taxa_sand.pdf"), useDingbats = F)
+p.class <- barchart(sort(table(current.zoo.taxa$class)), # sort for easier comparison
+                                         main = "Per class", 
+                                         xlab = "Number of taxa", 
+                                         col = "skyblue")
+
+p.phyl <- barchart(sort(table(current.zoo.taxa$phylum)), # sort for easier comparison
+                   main = "Per phylum", 
+                   xlab = "Number of taxa", 
+                   col = "skyblue")
+
+grid.arrange(p.class, p.phyl, nrow = 2)
+
+dev.off()
+
+rm(p.class, p.phyl)
+
+# add new column with the most commonly used larger taxonomic groups from the literature
 current.zoo.taxa$group <- with(current.zoo.taxa, 
                                   ifelse(class == "Polychaeta", "Polychaeta", 
                                   ifelse(class == "Bivalvia" | 
@@ -138,14 +158,13 @@ write.csv(diversity.profiles.sand,
           file.path(save.dir, "div-profiles-sand_classical.csv"))
 
 # add a measure of similarity between species/taxa. 
-# read in the taxonomic classification table from which distances will be derived.
-# This has species names as rows, and successively higher taxonomic classes as columns  
-zoo.taxa <- read.csv(file.path(data.dir, "zoo-taxonomy.csv"), header = T, row.names = 1)
+# If not already in the workspace, import taxonomic data from which distances will
+# be derived. 
+# zoo.taxa <- read.csv(file.path(data.dir, "zoo-taxonomy.csv"), header = T, row.names = 1)
 
 # calculate diversity profiles including a measure of similarity between species -
 # allows for a lot more meaningful ecological and biodiversity comparisons; then
 # calculate and plot diversity profiles again (Leinster & Cobbold, 2012)
-
 weighted.profiles.sand <- weighted_div_profiles(num.zoo.abnd.sand, zoo.taxa)
 
 # plot the profiles in panels by station and save
