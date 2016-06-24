@@ -106,10 +106,11 @@ p.phyl <- barchart(sort(table(current.zoo.taxa$phylum)), # sort for easier compa
                    xlab = "Number of taxa", 
                    col = "skyblue")
 
+# have to use grid.arrange() from gridExtra to put both plots on the same graphics device, 
+# because barchart() is a lattice function.
 grid.arrange(p.class, p.phyl, nrow = 2)
 
 dev.off()
-
 rm(p.class, p.phyl)
 
 # add new column with the most commonly used larger taxonomic groups from the literature
@@ -120,8 +121,15 @@ current.zoo.taxa$group <- with(current.zoo.taxa,
                                          class == "Polyplacophora", "Mollusca", 
                                   ifelse(class == "Malacostraca", "Crustacea", "Varia"))))
 
-barchart(current.zoo.taxa$group)
 table(current.zoo.taxa$group)
+
+# plot the number of taxa in each of these taxonomic groups
+pdf(file = file.path(figs.dir, "nb-taxa_sand.pdf"), useDingbats = F)
+barchart(sort(table(current.zoo.taxa$group)), 
+         main = "Number of taxa",
+         xlab = "", 
+         col = "skyblue")
+dev.off()
 
 
 # calculate the contribution of each taxonomic group to the abundance by station
