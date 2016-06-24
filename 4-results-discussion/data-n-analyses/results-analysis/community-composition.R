@@ -132,10 +132,16 @@ barchart(sort(table(current.zoo.taxa$group)),
 dev.off()
 
 
-# calculate the contribution of each taxonomic group to the abundance by station
-# and by year
+## calculate the contribution of each taxonomic group to the abundance by station
+## and by year
+# first calculate proportions by taxonomic group in each station/replicate
+tax.group.props <- tax_group_contribution(community.sand, current.zoo.taxa$group)
+
+# plot the contribution of taxonomic groups: 
+# by station
 
 
+# by station and year
 
 
 

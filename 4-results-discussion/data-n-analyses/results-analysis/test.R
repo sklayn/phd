@@ -1,21 +1,42 @@
-## summarize community abundance by larger tax.group
-
-# 1. calculate prop of each species in each row (= sample) : tax.prop <- num.abund.df/rowSums(num.abund.df)
-# 2. transpose -> species as rows
-# 3. add new group identifier (new column) + other factors (station, year)
-# 4. aggregate data by tax.group (= sum of proportions of all sp in that group)
-# 5. maybe also aggregate by station and year (mean)?
-
-
-# summarize abundance by year then station
-summary.abnd.st.yr <- ddply(zoo.abnd.sand, .(years, stations), colwise(mean, .cols = is.numeric))
-
-# calculate the proportion of each tax. group
-head(summary.abnd.st.yr)
-tst <- as.data.frame(t(summary.abnd.st.yr[sapply(summary.abnd.st.yr, is.numeric)]))
-tst <- tst[rowSums(tst) > 0, ] 
-
-tst$group <- current.zoo.taxa$group
-
-tst.fin <- ddply(tst, .(group), transform, sum.n = length(group))
-
+plot_contrib_tax_groups <- function(tax.gr.props, by.years = FALSE) {
+  ## prepares and plots contributon of taxonomic groups to the abundance/
+  ## biomass (as proportions). 
+  
+  library(ggplot2)
+  library(plyr)
+  library(reshape2)
+  
+  
+  if(by.years) {
+    # summarize data by stations and years, if specified at input 
+    summary.tax.props <- ddply(tax.gr.props, .(stations, years), colwise(mean, .cols = is.numeric))  
+    
+  } else {
+    # summarize data by stations only
+    summary.tax.props <- ddply(tax.gr.props, .(stations), colwise(mean, .cols = is.numeric))  
+  }
+  
+  # reshape the data frame in long format
+  tax.props.melted <- melt(summary.tax.props)  
+  
+  # define custom color scheme based on the colours specified at input 
+  custom.cols <- col.curves
+  names(custom.cols) <- levels(curves.melted$variable)
+  custom.col.scale <- scale_color_manual(name = "", values = custom.cols)
+  
+  # plot
+  p <- ggplot(data = tax.props.melted, aes(x = stations, y = value, fill = variable)) + 
+        geom_bar(stat="identity", position="stack") +
+        custom.col.scale +
+        labs(x = "Stations", y = "Proportion", colour = "") + 
+        theme_bw()
+  
+  # facet by year, if specified at input
+  if(by.years){
+    p <- p + facet_wrap(~years)  
+  }
+  
+  
+  return(p)
+  
+}
