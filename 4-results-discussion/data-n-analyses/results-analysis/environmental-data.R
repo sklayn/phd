@@ -25,7 +25,7 @@ apply(env.sand, 1, function(x) {sum(is.na(x))/length(x) * 100})
 md.pattern(env.sand)
 
 # another way - more visual (package VIM)
-na.pattern <- aggr(env.sand, col = c("blue", "red"), numbers = T, sortVars = T,
+na.pattern <- aggr(env.sand, col = c("blue", "red"), numbers = TRUE, sortVars = TRUE,
                    labels = names(env.sand), cex.axis = 0.7, gap = 3)
 
 ## Here - a lot of missing values for the study period, so removing the whole rows
@@ -65,7 +65,7 @@ water.param.aggr$depth <- NULL
 quickpred(water.param.aggr)
 
 # impute the missing data
-water.imp <- mice(water.param.aggr, method = "pmm", m = 100, seed = 100, printFlag = F)
+water.imp <- mice(water.param.aggr, method = "pmm", m = 100, seed = 100, printFlag = FALSE)
 summary(water.imp)
 
 # subset the imputed data to only 2013-2014 (the only ones we're interested in)
@@ -79,7 +79,7 @@ water.imp.subs <- lapply(water.imp.subs, function(x) arrange(x, station, year, m
 # import the sediment parameters (and other parameters for which only short-term 
 # data is available)
 other.env <- read.csv(file.path(data.dir, "other-env_sand-imputations.csv"),
-                      header = T)
+                      header = TRUE)
 
 # reorder factor station as desired
 other.env$station <- reorder.factor(other.env$station, 
@@ -89,7 +89,7 @@ other.env$station <- reorder.factor(other.env$station,
 # impute missing values here, too
 
 # first, exclude the depth as a predictor (not relevant)
-ini <- mice(other.env, maxit = 0, printFlag = F)
+ini <- mice(other.env, maxit = 0, printFlag = FALSE)
 pred <- ini$predictorMatrix
 pred[,"depth"] <- 0
 
@@ -99,7 +99,7 @@ other.env.imp <- mice(other.env,
                       predictorMatrix = pred, 
                       m = 100, 
                       seed = 100, 
-                      printFlag = F)
+                      printFlag = FALSE)
 
 summary(other.env.imp)
 
@@ -110,7 +110,7 @@ other.env.imp.subs <- subset_datlist(other.env.imp, index = 1:100,
 env.imp.all <- mapply(function(x, y) merge(x, y, by = c("station", "month", "year")), 
                       water.imp.subs, 
                       other.env.imp.subs, 
-                      SIMPLIFY = F)
+                      SIMPLIFY = FALSE)
 
 # clean up the no longer useful intermediate data frames, lists etc. 
 rm(water.param, 
@@ -155,7 +155,7 @@ sign_vars_pos_envfit <- function(envfit.obj) {
   ## and their position (based on p and r2).
   
   # extract the most significant variables (p < 0.05) from the fit
-  envfit.sign.vars <- extract_envfit_scores(envfit.obj, p = 0.05, r2 = T)
+  envfit.sign.vars <- extract_envfit_scores(envfit.obj, p = 0.05, r2 = TRUE)
   
   # sort the resulting data frame by p-value and descending r-squared
   envfit.sign.vars <- arrange(envfit.sign.vars, pvals, desc(r2))
@@ -239,7 +239,7 @@ vars.for.ordisurf <- ddply(vars.for.ordisurf, .(id), colwise(mean))
 # is an environmental variable)
 ordisurf.list.all <- apply(vars.for.ordisurf[-1], 
                        MARGIN = 2, 
-                       FUN = function(x) ordi <- ordisurf(mds.sand ~ x, plot = F)) 
+                       FUN = function(x) ordi <- ordisurf(mds.sand ~ x, plot = FALSE)) 
 
 # check out the summaries of the fits
 lapply(ordisurf.list.all, summary)
@@ -266,7 +266,7 @@ pdf(file = file.path(figs.dir, "mds_ordisurf_sand_most_sign_vars.pdf"),
     paper = "a4r",
     width = 12,
     height = 12,
-    useDingbats = F)
+    useDingbats = FALSE)
 
 # modify par to fit all plots on one page (here, 4 plots per row)
 par(mfrow = c(3, 4))
@@ -294,7 +294,7 @@ rm(env.sign.count,
    var.labels, 
    vars.for.ordisurf)
 
-
+########################################################################################################
 ### ASIDE: 
 ### Gradient forest analysis -> try to predict species presence by the available 
 ### environmental variables (package extendedForest, gradientForest). Most probably
@@ -329,7 +329,7 @@ gf.sand <- gradientForest(cbind(env.vars.gf[-1], as.matrix(community.sand)),
                           response.vars = colnames(community.sand), 
                           ntree = 500,
                           transform = function(x) sqrt(x),
-                          compact = T,
+                          compact = TRUE,
                           nbin = 201,
                           maxLevel = lev,
                           corr.threshold = 0.5
@@ -338,3 +338,6 @@ gf.sand <- gradientForest(cbind(env.vars.gf[-1], as.matrix(community.sand)),
 gf.sand
 
 # plots to explore the results... 
+
+######################################################################################################################
+

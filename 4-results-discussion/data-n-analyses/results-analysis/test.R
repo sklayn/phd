@@ -5,6 +5,7 @@ plot_contrib_tax_groups <- function(tax.gr.props, by.years = FALSE) {
   library(ggplot2)
   library(plyr)
   library(reshape2)
+  library(viridis)
   
   
   if(by.years) {
@@ -19,24 +20,25 @@ plot_contrib_tax_groups <- function(tax.gr.props, by.years = FALSE) {
   # reshape the data frame in long format
   tax.props.melted <- melt(summary.tax.props)  
   
-  # define custom color scheme based on the colours specified at input 
-  custom.cols <- col.curves
-  names(custom.cols) <- levels(curves.melted$variable)
-  custom.col.scale <- scale_color_manual(name = "", values = custom.cols)
-  
-  # plot
+  # plot proportions as stacked bars
   p <- ggplot(data = tax.props.melted, aes(x = stations, y = value, fill = variable)) + 
-        geom_bar(stat="identity", position="stack") +
-        custom.col.scale +
-        labs(x = "Stations", y = "Proportion", colour = "") + 
+        geom_bar(stat = "identity", position = "stack") +
+        scale_fill_viridis(discrete = TRUE, name = "") +
+        labs(x = "", y = "Proportion") + 
         theme_bw()
   
   # facet by year, if specified at input
   if(by.years){
-    p <- p + facet_wrap(~years)  
+    p <- p + facet_wrap(~years, nrow = 2)
   }
-  
   
   return(p)
   
 }
+
+p <- ggplot(data = y, aes(x = stations, y = value, fill = variable)) + 
+  geom_bar(stat = "identity", position="stack") +
+  #custom.col.scale +
+  scale_fill_viridis(discrete = TRUE, name = "") +
+  labs(x = "", y = "Proportion") + 
+  theme_bw()

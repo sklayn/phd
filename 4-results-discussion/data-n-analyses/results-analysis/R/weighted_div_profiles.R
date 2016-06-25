@@ -34,7 +34,7 @@ weighted_div_profiles <- function(community.data, tax.data, q = 50) {
   # in number of classes when going up in the tax. tree (-> variable - because if 
   # almost all genera have only 1 species, it makes no big difference if 2 individuals 
   # belong to a different species or a different genus).
-  taxa.distance <- taxa2dist(current.zoo.taxa, varstep = T)
+  taxa.distance <- taxa2dist(current.zoo.taxa, varstep = TRUE)
   
   # convert distance object to matrix, then scale so that distances vary between
   # 0 and 1, where 0 means no difference between taxa, and the dissimilarities 
@@ -51,7 +51,7 @@ weighted_div_profiles <- function(community.data, tax.data, q = 50) {
     ## calculates the diversity of order q for a community matrix containing 
     ## species proportions in the samples, weighted by a measure of the 
     ## ordinariness of each species in the community. 
-    
+    4-results-discussion/data-n-analyses/results-analysis/R/tax_group_contribution.R
     # only calculate for species actually present in the community
     out.mat <- ifelse(ord.mat > 0, ord.mat^(q - 1), 0)  
     

@@ -14,7 +14,7 @@ plot_div_profiles <- function(div.profiles, stations, one.panel = FALSE) {
   # import the necessary libraries
   library(ggplot2)
   library(plyr)
-  library(reshape)  
+  library(reshape2)  
 
   # reshape data matrix for easier plotting with ggplot
   div.prof.long <- melt(div.profiles)
@@ -47,7 +47,7 @@ plot_div_profiles <- function(div.profiles, stations, one.panel = FALSE) {
                                      y = value, 
                                      group = replicate, 
                                      colour = station)) + 
-      geom_line(show.legend = F) +
+      geom_line(show.legend = FALSE) +
       facet_wrap(~station) +
       labs(x = "Sensitivity parameter q", y = "Diversity") +
       theme_bw()  
@@ -77,7 +77,7 @@ plot_div_profiles_w_aver <- function(div.profiles,
   # import the necessary libraries
   library(ggplot2)
   library(plyr)
-  library(reshape)  
+  library(reshape2)  
   
   # reshape data matrices for easier plotting with ggplot. 
   # NB: the names of all variables in the reshaped data frames should match, 
@@ -112,7 +112,7 @@ plot_div_profiles_w_aver <- function(div.profiles,
                                    group = replicate)) + 
     
     # plot the diversity profiles for each replicate 
-    geom_line(colour = col.profiles[1], show.legend = F) +
+    geom_line(colour = col.profiles[1], show.legend = FALSE) +
     
     # plot the average diversity profile for each station
     geom_line(data = aver.prof.long, lwd = 0.8, colour = col.profiles[2]) +

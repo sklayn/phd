@@ -26,21 +26,21 @@ check_anova_assumptions <- function(variable, factor, data = NULL) {
   # check the outcome of each test for significance and print the p-value and the corresponding message.
   if(shapiro.out$p.value < 0.05) {
     print(paste("Shapiro-Wilk test: p =", signif(shapiro.out$p.value, 3), 
-                messages.outcomes["shap.sign"], sep = " "), quote = F)
+                messages.outcomes["shap.sign"], sep = " "), quote = FALSE)
 
   } else {
     print(paste("Shapiro-Wilk test: p =", signif(shapiro.out$p.value, 3), 
-                messages.outcomes["shap.insign"], sep = " "), quote = F)  
+                messages.outcomes["shap.insign"], sep = " "), quote = FALSE)  
   }
 
    
   if(bartlett.out$p.value < 0.05) {
     print(paste("Bartlett test: p =", signif(bartlett.out$p.value, 3), 
-                messages.outcomes["bartlett.sign"], sep = " "), quote = F)    
+                messages.outcomes["bartlett.sign"], sep = " "), quote = FALSE)    
   
   } else {
     print(paste("Bartlett test: p =", signif(bartlett.out$p.value, 3), 
-                messages.outcomes["bartlett.insign"], sep = " "), quote = F)
+                messages.outcomes["bartlett.insign"], sep = " "), quote = FALSE)
   }
 
 }

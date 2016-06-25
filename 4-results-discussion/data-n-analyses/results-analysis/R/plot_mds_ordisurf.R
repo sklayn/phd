@@ -11,9 +11,8 @@ plot_mds_ordisurf <- function(mds.obj,
   
   # create an empty plot, without axes or axis labels
   plot(mds.obj, display = "sites", type = "n", 
-       axes = F,
-       ann = F
-  )
+       axes = FALSE,
+       ann = FALSE)
   
   if(is.null(st.labels)) {
     # display the stations as points, if labels are not provided as input
@@ -34,7 +33,7 @@ plot_mds_ordisurf <- function(mds.obj,
   ncols <- length(pretty(ordisurf.obj$grid$z, n = 10))
   
   # overlay the ordisurf object 
-  plot(ordisurf.obj, add = T, nlevels = 10, col = isoline.cols(ncols))
+  plot(ordisurf.obj, add = TRUE, nlevels = 10, col = isoline.cols(ncols))
   
   # add in all the extra plot elements
   axis(1, col.axis = col.others, col = col.others, col.ticks = NULL)

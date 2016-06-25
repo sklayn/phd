@@ -4,8 +4,8 @@ abc <- function (abnd.data, biomass.data) {
   ## abundance and biomass, respectively (species x stations).
 
   # sort the abundance and biomass data in decreasing order
-  abundance <- sort(abnd.data, decreasing = T)
-  biomass <- sort(biomass.data, decreasing = T)
+  abundance <- sort(abnd.data, decreasing = TRUE)
+  biomass <- sort(biomass.data, decreasing = TRUE)
   
   # check if the abundance and biomass are imported correctly - they should 
   # contain the same number of elements unless there is an error in the input 
@@ -79,8 +79,8 @@ partial_dominance_curves <- function(abnd.data, biomass.data) {
   ## and biomass, respectively.
   
   # get the abundance and biomass data and sort them in decreasing order 
-  abundance <- sort(abnd.data, decreasing = T)
-  biomass <- sort(biomass.data, decreasing = T)
+  abundance <- sort(abnd.data, decreasing = TRUE)
+  biomass <- sort(biomass.data, decreasing = TRUE)
   
   # check if the abundance and biomass vectors contain the same number of elements
   # (i.e., if there is an error in the input data - a species for which only an

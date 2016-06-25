@@ -30,7 +30,7 @@ import_zoo_data <- function(data.dir = NULL, zoo.data, station.names, repl) {
   }
   
   # read the input raw data from the specified .csv file
-  zoo.abnd.raw <- read.csv(file = zoo.data.file, header = T, row.names = 1) 
+  zoo.abnd.raw <- read.csv(file = zoo.data.file, header = TRUE, row.names = 1) 
   
   # transpose the data (stations x species matrix needed for vegan and vegan-dependent 
   # functions)

@@ -16,6 +16,7 @@ library(plyr)
 library(reshape2)
 library(R.utils)
 library(vegan)
+library(viridis)
 
 # source the files containing the necessary funcitons (function from package R.utils)-> MAKE ONE FILE W/ ALL CUSTOM FUNCTIONS??
 sourceDirectory(path = file.path(functions.dir))
@@ -95,7 +96,7 @@ table(current.zoo.taxa$class)
 table(current.zoo.taxa$phylum)
 
 # plot comparison of nb taxa/class and nb taxa/phylum side by side, and save for reference
-pdf(file = file.path(figs.dir, "explor_nb-taxa_sand.pdf"), useDingbats = F)
+pdf(file = file.path(figs.dir, "explor_nb-taxa_sand.pdf"), useDingbats = FALSE)
 p.class <- barchart(sort(table(current.zoo.taxa$class)), # sort for easier comparison
                                          main = "Per class", 
                                          xlab = "Number of taxa", 
@@ -124,7 +125,7 @@ current.zoo.taxa$group <- with(current.zoo.taxa,
 table(current.zoo.taxa$group)
 
 # plot the number of taxa in each of these taxonomic groups
-pdf(file = file.path(figs.dir, "nb-taxa_sand.pdf"), useDingbats = F)
+pdf(file = file.path(figs.dir, "nb-taxa_sand.pdf"), useDingbats = FALSE)
 barchart(sort(table(current.zoo.taxa$group)), 
          main = "Number of taxa",
          xlab = "", 
@@ -132,8 +133,8 @@ barchart(sort(table(current.zoo.taxa$group)),
 dev.off()
 
 
-## calculate the contribution of each taxonomic group to the abundance by station
-## and by year
+## calculate the contribution of each taxonomic group to the numeric community 
+## composition by station and by year
 # first calculate proportions by taxonomic group in each station/replicate
 tax.group.props <- tax_group_contribution(community.sand, current.zoo.taxa$group)
 
@@ -163,7 +164,7 @@ diversity.profiles.sand <- diversity_profiles(num.zoo.abnd.sand, q = 50)
 # plot the diversity profiles (all samples - in panels by station); save to file.
 # !NB set useDingbats = FALSE, otherwise points might get transformed to letters 
 # when the pdf file is opened in another program!
-pdf(file = file.path(figs.dir, "classical-diversity-profiles_all_sand.pdf"), useDingbats = F)
+pdf(file = file.path(figs.dir, "classical-diversity-profiles_all_sand.pdf"), useDingbats = FALSE)
 plot_div_profiles(diversity.profiles.sand, stations.sand)
 dev.off()
 
@@ -182,7 +183,7 @@ write.csv(diversity.profiles.sand,
 weighted.profiles.sand <- weighted_div_profiles(num.zoo.abnd.sand, zoo.taxa)
 
 # plot the profiles in panels by station and save
-pdf(file = file.path(figs.dir, "weighted-diversity-profiles_all_sand.pdf"), useDingbats = F)
+pdf(file = file.path(figs.dir, "weighted-diversity-profiles_all_sand.pdf"), useDingbats = FALSE)
 plot_div_profiles(weighted.profiles.sand, stations.sand)
 dev.off()
 
@@ -190,13 +191,13 @@ dev.off()
 aver.profiles.sand <- weighted_div_profiles(summary.abnd[-1], zoo.taxa)
 
 # plot the profiles; save as pdf 
-pdf(file = file.path(figs.dir, "weighted-diversity-profiles_aver_sand.pdf"), useDingbats = F)
-plot_div_profiles(aver.profiles.sand, stations.sand, one.panel = T)
+pdf(file = file.path(figs.dir, "weighted-diversity-profiles_aver_sand.pdf"), useDingbats = FALSE)
+plot_div_profiles(aver.profiles.sand, stations.sand, one.panel = TRUE)
 dev.off()
 
 # plot all the weighted diversity profiles by station, and add the average profiles
 # on the same graph
-pdf(file = file.path(figs.dir, "weighted-div-profiles_allaver_sand.pdf"), useDingbats = F)
+pdf(file = file.path(figs.dir, "weighted-div-profiles_allaver_sand.pdf"), useDingbats = FALSE)
 plot_div_profiles_w_aver(weighted.profiles.sand, 
                          aver.profiles.sand, 
                          stations.sand, 
@@ -222,7 +223,7 @@ tax.zoo.abnd <- import_zoo_data(data.dir = data.dir,
 taxa.list <- read.csv(file = file.path(data.dir, "tst-zoo-taxonomy.csv"), header = T, row.names = 1)
 
 # calcualate teh taxonomic distance for the species list, using variable step 
-taxa.dist <- taxa2dist(taxa.list, varstep = T)
+taxa.dist <- taxa2dist(taxa.list, varstep = TRUE)
 
 # calculate the taxonomic distinctness indices - on the numeric columns (species)
 tax.distinctness <- taxondive(tax.zoo.abnd[sapply(tax.zoo.abnd, is.numeric)], 
@@ -237,7 +238,7 @@ tax.dist.table <- cbind(factors.zoo.sand, tax.dist.table)
 
 # save tax.distinctness indices to file 
 write.csv(tax.dist.table, 
-          file = file.path(save.dir, "tax.distinctness.sand.csv"), row.names = F)
+          file = file.path(save.dir, "tax.distinctness.sand.csv"), row.names = FALSE)
 
 # aggregate taxonomic distinctness indices by station and year
 tax.dist.summary <- ddply(tax.dist.table, .(stations), 
@@ -248,7 +249,7 @@ tax.dist.summary$stations <- reorder.factor(tax.dist.summary$stations,
 # plot selected taxonomic diversity indices:
 # average tax.diversity based on presence/absence - Delta + 
 # (reflects mean tax.breadth of the species lists)
-pdf(file = file.path(figs.dir, "Dplus_sand.pdf"), useDingbats = F)
+pdf(file = file.path(figs.dir, "Dplus_sand.pdf"), useDingbats = FALSE)
 ggplot(tax.dist.summary, mapping = aes(x = Species, y = Dplus, colour = stations)) +
   geom_point(size = 2) +
   geom_abline(slope = 0, intercept = tax.dist.summary$EDplus, col = "gray") +
@@ -258,7 +259,7 @@ dev.off()
 
 # variation in tax.distinctness Lambda + (also based on presence/
 # absence, reflects unevenness in the tax.hierarchy)
-pdf(file = file.path(figs.dir, "Lambda_sand.pdf"), useDingbats = F)
+pdf(file = file.path(figs.dir, "Lambda_sand.pdf"), useDingbats = FALSE)
 ggplot(tax.dist.summary, mapping = aes(x = Species, y = Lambda, colour = stations)) +
   geom_point(size = 2) +
   scale_colour_discrete(name = "Stations") +
@@ -283,7 +284,7 @@ plot(sp.accumulation, ci.type = "polygon", ci.col = "pink")
 
 # beta diversity - from pairwise comparison of sites (= Sorensen index of 
 # dissimilarity)
-beta.div <- vegdist(num.zoo.abnd.sand, binary = T)
+beta.div <- vegdist(num.zoo.abnd.sand, binary = TRUE)
 beta.div
 
 
@@ -327,13 +328,13 @@ summary.biomass <- ddply(zoo.biomass.sand, .(stations), colwise(mean, .cols = is
 abc.sand <- mapply(abc, 
                    as.data.frame(t(num.zoo.abnd.sand)), 
                    as.data.frame(t(num.zoo.biomass.sand)), 
-                   SIMPLIFY = F)
+                   SIMPLIFY = FALSE)
 
 # calculate and plot the average ABC curves - by station
 abc.aver.sand <- mapply(abc, 
                         as.data.frame(t(summary.abnd[-1])), 
                         as.data.frame(t(summary.biomass[-1])),
-                        SIMPLIFY = F)
+                        SIMPLIFY = FALSE)
 
 # each sublist (= station/replicate) consists of 2 elements: a data frame with 
 # the cumulative abundance and biomass for the ranked species, and a W value. 
@@ -341,7 +342,7 @@ abc.aver.sand <- mapply(abc,
 abc.plots <- lapply(sapply(abc.aver.sand, function(x) x[1]), plot_dom_curves)
 do.call(grid.arrange, abc.plots)
 
-pdf(file = file.path(figs.dir, "abc_aver_sand.pdf"), useDingbats = F)
+pdf(file = file.path(figs.dir, "abc_aver_sand.pdf"), useDingbats = FALSE)
 plot_dom_curves_facets(abc.aver.sand, stations = stations.sand)
 dev.off()
 
@@ -359,8 +360,8 @@ modif_logistic_trans <- function() trans_new("modif_logistic",
                                              function(x) exp((1 + x)/(101 - x)))
 
 # plot the curves again
-pdf(file = file.path(figs.dir, "abc-transformed-y_aver_sand.pdf"), useDingbats = F)
-plot_dom_curves_facets(abc.aver.sand, stations = stations.sand, trasf.y = T)
+pdf(file = file.path(figs.dir, "abc-transformed-y_aver_sand.pdf"), useDingbats = FALSE)
+plot_dom_curves_facets(abc.aver.sand, stations = stations.sand, trasf.y = TRUE)
 dev.off()
 
 
@@ -400,19 +401,19 @@ row.names(w) <- c(1:nrow(w))
 part.dominance.sand <- mapply(partial_dominance_curves, 
                               as.data.frame(t(num.zoo.abnd.sand)), 
                               as.data.frame(t(num.zoo.biomass.sand)), 
-                              SIMPLIFY = F)
+                              SIMPLIFY = FALSE)
 
 
 # calculate the average curves/station, then plot
 pd.aver.sand <- mapply(partial_dominance_curves, 
                         as.data.frame(t(summary.abnd[-1])), 
                         as.data.frame(t(summary.biomass[-1])),
-                        SIMPLIFY = F)
+                        SIMPLIFY = FALSE)
 
 l1 <- lapply(pd.aver.sand, plot_dom_curves)
 do.call(grid.arrange, l1)
 
-pdf(file = file.path(figs.dir, "part-dom-curves_aver_sand.pdf"), useDingbats = F)
+pdf(file = file.path(figs.dir, "part-dom-curves_aver_sand.pdf"), useDingbats = FALSE)
 plot_dom_curves_facets(pd.aver.sand, stations = stations.sand)
 dev.off()
 

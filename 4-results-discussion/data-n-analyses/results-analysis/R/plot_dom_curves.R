@@ -8,7 +8,7 @@ plot_dom_curves <- function(dom.curves, trasf.y = FALSE, col.curves = c("skyblue
   ##              respectively.
   
   library(ggplot2)
-  library(reshape)
+  library(reshape2)
   library(scales)
 
   # the input is still a list, so convert to data frame and drop the third column
@@ -66,7 +66,7 @@ plot_dom_curves_facets <- function(dom.curves, stations, trasf.y = FALSE, col.cu
   ##              respectively.
   
   library(ggplot2)
-  library(reshape)
+  library(reshape2)
   library(scales)
   library(plyr)
   
