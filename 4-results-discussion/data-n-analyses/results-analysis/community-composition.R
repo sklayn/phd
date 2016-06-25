@@ -265,9 +265,9 @@ dev.off()
 # variation in tax.distinctness Lambda + (also based on presence/
 # absence, reflects unevenness in the tax.hierarchy)
 pdf(file = file.path(figs.dir, "Lambda_sand.pdf"), useDingbats = FALSE)
-ggplot(tax.dist.summary, mapping = aes(x = Species, y = Lambda, colour = stations)) +
-  geom_point(size = 2) +
-  scale_colour_discrete(name = "Stations") +
+ggplot(tax.dist.summary, mapping = aes(x = Species, y = Lambda)) +
+  geom_point(size = 2, show.legend = FALSE) +
+  geom_text(aes(label = stations), nudge_y = -4) +
   theme_bw()
 dev.off()
 
