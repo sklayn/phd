@@ -216,14 +216,14 @@ dev.off()
 # re-import abundances, but including the full species list for the area (Black Sea 
 # macroinvertebrate fauna) 
 tax.zoo.abnd <- import_zoo_data(data.dir = data.dir, 
-                                 zoo.data = "tst-zoo-abnd-sand.csv", 
+                                 zoo.data = "td-zoo-abnd-sand.csv", 
                                  stations = stations.sand, 
-                                 replicates = 3, 
-                                 sampling.events = 3, 
-                                 years = c("2013", "2013", "2014"))
+                                 repl = 3)
 
 # import taxonomy data for the full species list (genus, family, order..)
-taxa.list <- read.csv(file = file.path(data.dir, "tst-zoo-taxonomy.csv"), header = T, row.names = 1)
+taxa.list <- read.csv(file = file.path(data.dir, "td-zoo-taxonomy.csv"), 
+                      header = TRUE, 
+                      row.names = 1)
 
 # calcualate teh taxonomic distance for the species list, using variable step 
 taxa.dist <- taxa2dist(taxa.list, varstep = TRUE)
@@ -244,21 +244,23 @@ write.csv(tax.dist.table,
           file = file.path(save.dir, "tax.distinctness.sand.csv"), row.names = FALSE)
 
 # aggregate taxonomic distinctness indices by station and year
+tax.dist.table$stations <- reorder.factor(tax.dist.table$stations, 
+                                            new.order = stations.sand)
 tax.dist.summary <- ddply(tax.dist.table, .(stations), 
                           colwise(mean, .cols = is.numeric))
-tax.dist.summary$stations <- reorder.factor(tax.dist.summary$stations, 
-                                               new.order = stations.sand)
+
 
 # plot selected taxonomic diversity indices:
 # average tax.diversity based on presence/absence - Delta + 
 # (reflects mean tax.breadth of the species lists)
 pdf(file = file.path(figs.dir, "Dplus_sand.pdf"), useDingbats = FALSE)
-ggplot(tax.dist.summary, mapping = aes(x = Species, y = Dplus, colour = stations)) +
-  geom_point(size = 2) +
-  geom_abline(slope = 0, intercept = tax.dist.summary$EDplus, col = "gray") +
-  scale_colour_discrete(name = "Stations") +
-  theme_bw()
-dev.off()
+ggplot(tax.dist.summary, mapping = aes(x = Species, y = Dplus)) +
+  geom_point(size = 2, show.legend = FALSE) +
+  geom_text(aes(label = stations), nudge_x = 0.1, nudge_y = -0.2) + 
+  geom_hline(aes(yintercept = EDplus), colour = "gray") +
+  geom_text(aes(40, EDplus, label = "EDplus"), nudge_y = 0.2, colour = "gray") + 
+  theme_bw() 
+dev.off() 
 
 # variation in tax.distinctness Lambda + (also based on presence/
 # absence, reflects unevenness in the tax.hierarchy)
