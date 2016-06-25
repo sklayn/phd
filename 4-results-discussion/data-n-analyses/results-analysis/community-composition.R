@@ -425,11 +425,22 @@ dev.off()
 
 
 ## nMDS on the abundance data
+# set seed in case we have to rerun the computation
+set.seed(1)
 mds.sand <- metaMDS(num.zoo.abnd.sand)
 
 # basic summary of the MDS
 mds.sand
 
-# Stress plot for the MDS
+# stress plot for the MDS
+pdf(file = file.path(figs.dir, "explor_stressplot-mds_sand.pdf"), useDingbats = FALSE)
 stressplot(mds.sand)
+dev.off()
 
+# save the MDS result 
+saveRDS(mds.sand, file = file.path(save.dir, "mds_sand.rds"))
+
+# plot and save the MDS (ggplot2)
+pdf(file = file.path(figs.dir, "explor_mds_sand.pdf"), useDingbats = FALSE)
+plot_mds(mds.sand, factors.zoo.sand$stations)
+dev.off()

@@ -35,7 +35,7 @@ plot_div_profiles <- function(div.profiles, stations, one.panel = TRUE) {
                                         y = value, 
                                         group = replicate, 
                                         colour = station)) +
-    scale_color_brewer(palette = "Set1") + 
+    scale_color_brewer(palette = "Set2") + 
     labs(x = "Sensitivity parameter q", y = "Diversity", colour = "Stations") +
     theme_bw() + 
     theme(legend.text = element_text(size = rel(1))) 

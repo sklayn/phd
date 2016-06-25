@@ -1,3 +1,62 @@
+extract_envfit_scores <- function(envfit.obj, pval = 0.05, r2 = FALSE) {
+  # helper function to extract NMDS vector scores from envfit objects according 
+  # to the specified p-value (p < 0.05 by default). Optionally also extracts 
+  # the r2 value.
+  
+  # extract the NMDS scores for the fitted environmental parameters 
+  vector.scrs <- as.data.frame(scores(envfit.obj, display = "vectors"))
+  
+  # convert all the variables characterizing the vectors in the envfit object 
+  # to a list 
+  list.scrs <- as.list(envfit.obj$vectors)
+  
+  if(r2) {
+    # get r2 values 
+    vector.scrs$r2 <- list.scrs$r    
+  }
+  
+  # get the p-values and subset the data frame according to them
+  vector.scrs$pvals <- list.scrs$pvals
+  sign.vectors <- subset(vector.scrs, pvals < pval)
+  
+  # clean up a little: get rid of the row names - add them as a variable in their
+  # own column instead
+  sign.vectors <- cbind(vars = rownames(sign.vectors), sign.vectors)
+  rownames(sign.vectors) <- 1:nrow(sign.vectors)
+  
+  return(sign.vectors)
+}
+
+
+plot_mds <- function(mds.obj, stations) {
+  ## Plots MDS result in ggplot2. 
+  ## Arguments: mds.obj - mds result object.
+  ##            stations - station labels to use in grouping the points on 
+  ##              the plot; need to be in the same order as those used for 
+  ##              the mds.
+  ## Returns a ggplot object.
+  
+  # import libraries
+  library(ggplot2)
+  library(vegan)
+  
+  # extract the MDS scores and create data frame for plotting
+  scrs <- as.data.frame(scores(mds.obj, display = "sites"))
+  
+  # add labels to use for grouping
+  scrs <- cbind(scrs, stations) 		
+  
+  p <- ggplot(scrs, aes(x = NMDS1, y = NMDS2, colour = stations)) + 
+    geom_text(aes(label = stations), size = 3, position = "identity", show.legend = FALSE) +
+    stat_ellipse(show.legend = FALSE) +
+    scale_color_brewer(palette = "Set2") +
+    theme_bw()
+  
+  return(p)
+}
+
+
+### FIX THIS ONE! CHECK NAMES OF COLUMNS OF DF - EXTRACT_ENVFIT
 plot_mds_factors <- function(mds.obj, envfit.obj, stations, p = 0.05) {
 	## Plots MDS with fitted environmental factors as vectors (factors with 
   ## significant correlations).
@@ -28,14 +87,14 @@ plot_mds_factors <- function(mds.obj, envfit.obj, stations, p = 0.05) {
 
 	p <- ggplot(scrs) + 
 	        geom_point(mapping = aes(x = NMDS1, y = NMDS2, colour = stations)) +
+	        scale_color_brewer(palette = "Set2") +
 	        coord_fixed() +    # need aspect ratio of 1!
 	        geom_segment(data = sign.vectors, 
       					       aes(x = 0, xend = NMDS1, y = 0, yend = NMDS2),
       					       arrow = arrow(length = unit(0.25, "cm")), 
       					       colour = "grey") +
       	  geom_text(data = sign.vectors, aes(x = NMDS1, y = NMDS2, label = env.vars), size = 5) +
-      	  theme_bw() + 
-      	  scale_fill_discrete(name = "Stations") # change the label for the grouping in the legend
-  
+      	  theme_bw()
+	
 	return(p)
 }
