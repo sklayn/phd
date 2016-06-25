@@ -70,7 +70,9 @@ names(zoo.abnd.sand)  # variable (species) names
 # names(zoo.abnd.zostera)
 
 ## SAVE THE CLEANED AND REARRANGED DATA
-write.csv(zoo.abnd.sand, file = file.path(save.dir, "zoo-sand-clean.csv"))
+write.csv(zoo.abnd.sand, 
+          file = file.path(save.dir, "zoo-sand-clean.csv"), 
+          row.names = FALSE)
 
 # make subsets of the numeric columns (the species data), and the factor columns -
 # to avoid retyping the command, because these subsets will be 
@@ -138,6 +140,11 @@ dev.off()
 # first calculate proportions by taxonomic group in each station/replicate
 tax.group.props <- tax_group_contribution(community.sand, current.zoo.taxa$group)
 
+# save to file (in case) 
+write.csv(tax.group.props, 
+          file = file.path(save.dir, "tax-gr-proportions_sand-clean.csv"), 
+          row.names = FALSE)
+
 # plot the contribution of taxonomic groups: 
 # by station
 pdf(file = file.path(figs.dir, "tax-gr-contrib_stations_sand.pdf"), useDingbats = FALSE)
@@ -156,7 +163,9 @@ dev.off()
 diversity.sand <- alpha_diversity(zoo.abnd.sand)
 
 # save the data frame of diversity indices and measures in a file
-write.csv(diversity.sand, file = file.path(save.dir, "diversity.sand.csv"))
+write.csv(diversity.sand, 
+          file = file.path(save.dir, "diversity.sand.csv"), 
+          row.names = FALSE)
 
 
 # calculate and plot diversity profiles - graphical representation of the shape of the community;
@@ -241,7 +250,8 @@ tax.dist.table <- cbind(factors.zoo.sand, tax.dist.table)
 
 # save tax.distinctness indices to file 
 write.csv(tax.dist.table, 
-          file = file.path(save.dir, "tax.distinctness.sand.csv"), row.names = FALSE)
+          file = file.path(save.dir, "tax.distinctness.sand.csv"), 
+          row.names = FALSE)
 
 # aggregate taxonomic distinctness indices by station and year
 tax.dist.table$stations <- reorder.factor(tax.dist.table$stations, 
@@ -284,8 +294,9 @@ text(tax.dist.table$Dstar, labels = row.names(tax.dist.table), pos = 4)
 sp.accumulation <- specaccum(num.zoo.abnd.sand)
 
 # plot sac with 95% confidence intervals
-plot(sp.accumulation, ci.type = "polygon", ci.col = "pink")
-
+pdf(file = file.path(figs.dir, "sp-accumulaton_sand.pdf"), useDingbats = FALSE)
+plot(sp.accumulation, ylab = "Cumulative species richness", ci.type = "polygon", ci.col = "skyblue")
+dev.off()
 
 # beta diversity - from pairwise comparison of sites (= Sorensen index of 
 # dissimilarity)
