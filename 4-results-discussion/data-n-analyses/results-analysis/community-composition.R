@@ -140,13 +140,16 @@ tax.group.props <- tax_group_contribution(community.sand, current.zoo.taxa$group
 
 # plot the contribution of taxonomic groups: 
 # by station
-
+pdf(file = file.path(figs.dir, "tax-gr-contrib_stations_sand.pdf"), useDingbats = FALSE)
+plot_tax_group_contribution(tax.group.props)
+dev.off()
 
 # by station and year
+pdf(file = file.path(figs.dir, "tax-gr-contrib_st-yrs_sand.pdf"), useDingbats = FALSE)
+plot_tax_group_contribution(tax.group.props, by.years = TRUE)
+dev.off()
 
-
-
-
+  
 ## Diversity indices
 
 ## Alpha diversity (Whittaker, 1960) - description of the diversity in one spot
