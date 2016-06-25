@@ -1,21 +1,20 @@
-plot_div_profiles <- function(div.profiles, stations, one.panel = FALSE) {
+plot_div_profiles <- function(div.profiles, stations, one.panel = TRUE) {
   ## plots the diversity profiles by sampling station.
   ## Arguments: div.profiles - matrix of diversity profiles (in wide format). 
   ##              Each profile is a column (rows = q values, columns = 
   ##              samples/stations).
   ##            stations - vector of station names. The order of its levels is 
   ##              assumed to be the correct one, to be used in the plot.
-  ##            one.panel - logical, should the profiles for each station be 
-  ##              placed in a single panel (for example when average profiles 
-  ##              only), or in separate panels by station? Default - separate 
-  ##              panel for each station.
+  ##            one.panel - should the profiles for each station be plotted in 
+  ##              a single panel (for example when average profiles only), or in
+  ##              separate panels by station? Default - single panel.  
   ## Output: ggplot object.
   
-  # import the necessary libraries
+  # import the necessary packages
   library(ggplot2)
   library(plyr)
   library(reshape2)  
-
+  
   # reshape data matrix for easier plotting with ggplot
   div.prof.long <- melt(div.profiles)
   names(div.prof.long) <- c("q", "replicate", "value")
@@ -31,28 +30,28 @@ plot_div_profiles <- function(div.profiles, stations, one.panel = FALSE) {
   div.prof.long$station <- reorder.factor(div.prof.long$station,
                                           new.order = stations.sand)
   
-  if (one.panel) {
-    # plot the profiles in one panel (e.g., when one average profile/station)  
-    ggplot(data = div.prof.long, aes(x = q, 
-                                     y = value, 
-                                     group = replicate, 
-                                     colour = station)) + 
-      geom_line() +
-      labs(x = "Sensitivity parameter q", y = "Diversity", colour = "Stations") +
-      theme_bw()  
-    
+  # plot the profiles in one panel (e.g., when one average profile/station)  
+  p <- ggplot(data = div.prof.long, aes(x = q, 
+                                        y = value, 
+                                        group = replicate, 
+                                        colour = station)) +
+    scale_color_brewer(palette = "Set1") + 
+    labs(x = "Sensitivity parameter q", y = "Diversity", colour = "Stations") +
+    theme_bw() + 
+    theme(legend.text = element_text(size = rel(1))) 
+  
+  if(!one.panel) {
+    # plot the profiles in separate panels by station, if the option is specified
+    # at input, and remove the legend 
+    p <- p + geom_line() +  
+             facet_wrap(~station) +
+             theme(legend.position = "none")
   } else {
-    # plot the profiles in separate panels by station  
-    ggplot(data = div.prof.long, aes(x = q, 
-                                     y = value, 
-                                     group = replicate, 
-                                     colour = station)) + 
-      geom_line(show.legend = FALSE) +
-      facet_wrap(~station) +
-      labs(x = "Sensitivity parameter q", y = "Diversity") +
-      theme_bw()  
+    # increase the line width to make the lines more visible  
+    p <- p + geom_line(size = 0.7)
   }
-
+  
+  return(p)
 }
 
 
@@ -77,7 +76,7 @@ plot_div_profiles_w_aver <- function(div.profiles,
   # import the necessary libraries
   library(ggplot2)
   library(plyr)
-  library(reshape2)  
+  library(reshape2) 
   
   # reshape data matrices for easier plotting with ggplot. 
   # NB: the names of all variables in the reshaped data frames should match, 
@@ -107,17 +106,18 @@ plot_div_profiles_w_aver <- function(div.profiles,
                                            new.order = stations.sand)
   
   # plot 
-  ggplot(data = div.prof.long, aes(x = q,
-                                   y = value, 
-                                   group = replicate)) + 
+  p <- ggplot(data = div.prof.long, aes(x = q,
+                                        y = value, 
+                                        group = replicate)) + 
     
-    # plot the diversity profiles for each replicate 
-    geom_line(colour = col.profiles[1], show.legend = FALSE) +
+          # plot the diversity profiles for each replicate 
+          geom_line(colour = col.profiles[1], show.legend = FALSE) +
     
-    # plot the average diversity profile for each station
-    geom_line(data = aver.prof.long, lwd = 0.8, colour = col.profiles[2]) +
-    facet_wrap(~station) +
-    labs(x = "Sensitivity parameter q", y = "Diversity") +
-    theme_bw()
+          # plot the average diversity profile for each station
+          geom_line(data = aver.prof.long, lwd = 0.8, colour = col.profiles[2]) +
+          facet_wrap(~station) +
+          labs(x = "Sensitivity parameter q", y = "Diversity") +
+          theme_bw()
 
+  return(p)
 }

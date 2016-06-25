@@ -51,7 +51,7 @@ weighted_div_profiles <- function(community.data, tax.data, q = 50) {
     ## calculates the diversity of order q for a community matrix containing 
     ## species proportions in the samples, weighted by a measure of the 
     ## ordinariness of each species in the community. 
-    4-results-discussion/data-n-analyses/results-analysis/R/tax_group_contribution.R
+    
     # only calculate for species actually present in the community
     out.mat <- ifelse(ord.mat > 0, ord.mat^(q - 1), 0)  
     

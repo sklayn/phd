@@ -187,7 +187,7 @@ weighted.profiles.sand <- weighted_div_profiles(num.zoo.abnd.sand, zoo.taxa)
 
 # plot the profiles in panels by station and save
 pdf(file = file.path(figs.dir, "weighted-diversity-profiles_all_sand.pdf"), useDingbats = FALSE)
-plot_div_profiles(weighted.profiles.sand, stations.sand)
+plot_div_profiles(weighted.profiles.sand, stations.sand, one.panel = FALSE)
 dev.off()
 
 # same procedure, but using the data averaged by station - first column is the station names!
