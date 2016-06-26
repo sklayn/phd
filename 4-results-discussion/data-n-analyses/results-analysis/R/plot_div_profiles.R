@@ -24,11 +24,11 @@ plot_div_profiles <- function(div.profiles, stations, one.panel = TRUE) {
   nq <- nrow(div.profiles)                      # number of q values
   nrep <- ncol(div.profiles)/length(stations)   # number of replicates/station
   
-  div.prof.long$station <- rep(stations.sand, each = nq * nrep)
+  div.prof.long$station <- rep(stations, each = nq * nrep)
   
   # reorder the new factor's levels according to the order of the input factor 
   div.prof.long$station <- reorder.factor(div.prof.long$station,
-                                          new.order = stations.sand)
+                                          new.order = stations)
   
   # plot the profiles in one panel (e.g., when one average profile/station)  
   p <- ggplot(data = div.prof.long, aes(x = q, 
@@ -93,17 +93,17 @@ plot_div_profiles_w_aver <- function(div.profiles,
   # the number of values for each station corresponds to the number of values of
   # q (= nrows of data matrix) * number of replicates per station (assumes that
   # there is the same number of replicates per station).
-  div.prof.long$station <- rep(stations.sand, 
+  div.prof.long$station <- rep(stations, 
                                each = nrow(div.profiles) * ncol(div.profiles)/length(stations))
   
-  aver.prof.long$station <- rep(stations.sand, 
+  aver.prof.long$station <- rep(stations, 
                                 each = nrow(aver.profiles) * ncol(aver.profiles)/length(stations))
 
   # reorder the new factor's levels according to the order of the input factor 
   div.prof.long$station <- reorder.factor(div.prof.long$station,
-                                          new.order = stations.sand)
+                                          new.order = stations)
   aver.prof.long$station <- reorder.factor(aver.prof.long$station,
-                                           new.order = stations.sand)
+                                           new.order = stations)
   
   # plot 
   p <- ggplot(data = div.prof.long, aes(x = q,

@@ -231,28 +231,43 @@ dev.off()
 
 ## Alpha diversity (Whittaker, 1960) - description of the diversity in one spot
 diversity.sand <- alpha_diversity(zoo.abnd.sand)
-
+diversity.zostera <- alpha_diversity(zoo.abnd.zostera)
+  
 # save the data frame of diversity indices and measures in a file
 write.csv(diversity.sand, 
           file = file.path(save.dir, "diversity.sand.csv"), 
           row.names = FALSE)
 
+write.csv(diversity.zostera, 
+          file = file.path(save.dir, "diversity.zostera.csv"), 
+          row.names = FALSE)
 
 # calculate and plot diversity profiles - graphical representation of the shape of the community;
 # show how the perceived diversity changes as the emphasis shifts from common to rare
 # species - we can judge their respective contributions in the community composition.
 diversity.profiles.sand <- diversity_profiles(num.zoo.abnd.sand, q = 50)
+diversity.profiles.zostera <- diversity_profiles(num.zoo.abnd.zostera, q = 50)
 
 # plot the diversity profiles (all samples - in panels by station); save to file.
 # !NB set useDingbats = FALSE, otherwise points might get transformed to letters 
 # when the pdf file is opened in another program!
 pdf(file = file.path(figs.dir, "classical-diversity-profiles_all_sand.pdf"), useDingbats = FALSE)
-plot_div_profiles(diversity.profiles.sand, stations.sand)
+plot_div_profiles(diversity.profiles.sand, stations.sand, one.panel = FALSE)
 dev.off()
+
+pdf(file = file.path(figs.dir, "classical-diversity-profiles_all_zostera.pdf"), useDingbats = FALSE)
+plot_div_profiles(diversity.profiles.zostera, stations.zostera, one.panel = FALSE)
+dev.off()
+
 
 # save diversity profiles to file 
 write.csv(diversity.profiles.sand, 
           file.path(save.dir, "div-profiles-sand_classical.csv"))
+
+write.csv(diversity.profiles.zostera, 
+          file.path(save.dir, "div-profiles-zostera_classical.csv"))
+
+
 
 # add a measure of similarity between species/taxa. 
 # If not already in the workspace, import taxonomic data from which distances will
@@ -263,19 +278,30 @@ write.csv(diversity.profiles.sand,
 # allows for a lot more meaningful ecological and biodiversity comparisons; then
 # calculate and plot diversity profiles again (Leinster & Cobbold, 2012)
 weighted.profiles.sand <- weighted_div_profiles(num.zoo.abnd.sand, zoo.taxa)
+weighted.profiles.zostera <- weighted_div_profiles(num.zoo.abnd.zostera, zoo.taxa)
 
 # plot the profiles in panels by station and save
 pdf(file = file.path(figs.dir, "weighted-diversity-profiles_all_sand.pdf"), useDingbats = FALSE)
 plot_div_profiles(weighted.profiles.sand, stations.sand, one.panel = FALSE)
 dev.off()
 
+pdf(file = file.path(figs.dir, "weighted-diversity-profiles_all_zostera.pdf"), useDingbats = FALSE)
+plot_div_profiles(weighted.profiles.zostera, stations.zostera, one.panel = FALSE)
+dev.off()
+
 # same procedure, but using the data averaged by station - first column is the station names!
-aver.profiles.sand <- weighted_div_profiles(summary.abnd[-1], zoo.taxa)
+aver.profiles.sand <- weighted_div_profiles(summary.abnd.sand[-1], zoo.taxa)
+aver.profiles.zostera <- weighted_div_profiles(summary.abnd.zostera[-1], zoo.taxa)
 
 # plot the profiles; save as pdf 
 pdf(file = file.path(figs.dir, "weighted-diversity-profiles_aver_sand.pdf"), useDingbats = FALSE)
 plot_div_profiles(aver.profiles.sand, stations.sand, one.panel = TRUE)
 dev.off()
+
+pdf(file = file.path(figs.dir, "weighted-diversity-profiles_aver_zostera.pdf"), useDingbats = FALSE)
+plot_div_profiles(aver.profiles.zostera, stations.zostera, one.panel = TRUE)
+dev.off()
+
 
 # plot all the weighted diversity profiles by station, and add the average profiles
 # on the same graph
@@ -283,6 +309,15 @@ pdf(file = file.path(figs.dir, "weighted-div-profiles_allaver_sand.pdf"), useDin
 plot_div_profiles_w_aver(weighted.profiles.sand, 
                          aver.profiles.sand, 
                          stations.sand, 
+                         col.profiles = c("skyblue", "royalblue"))
+
+dev.off()
+
+
+pdf(file = file.path(figs.dir, "weighted-div-profiles_allaver_zostera.pdf"), useDingbats = FALSE)
+plot_div_profiles_w_aver(weighted.profiles.zostera, 
+                         aver.profiles.zostera, 
+                         stations.zostera, 
                          col.profiles = c("skyblue", "royalblue"))
 
 dev.off()
