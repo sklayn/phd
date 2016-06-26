@@ -28,7 +28,7 @@ extract_envfit_scores <- function(envfit.obj, pval = 0.05, r2 = FALSE) {
 }
 
 
-plot_mds <- function(mds.obj, stations) {
+plot_mds <- function(mds.obj, stations, label.groups = TRUE) {
   ## Plots MDS result in ggplot2. 
   ## Arguments: mds.obj - mds result object.
   ##            stations - station labels to use in grouping the points on 
@@ -48,14 +48,6 @@ plot_mds <- function(mds.obj, stations) {
   scrs <- cbind(scrs, stations)
   names(scrs) <- c("NMDS1", "NMDS2", "stations")
   
-  # create a separate data frame with mean NMDS coordinates for 
-  # the group annotations 
-  mds.group.labs <- ddply(scrs, 
-                          .(stations), 
-                          summarize, 
-                          NMDS1.m = mean(NMDS1), 
-                          NMDS2.m = mean(NMDS2)) 
-  
   # make a custom colour scale (to match text label colours with point colours) 
   custom.cols <- brewer.pal(n = length(levels(scrs$stations)), name = "Set2")
   names(custom.cols) <- levels(scrs$stations) 
@@ -66,20 +58,31 @@ plot_mds <- function(mds.obj, stations) {
     stat_ellipse(show.legend = FALSE) +
     custom.col.scale + 
     theme_bw() + 
-    # add group annotations inside the ellipses 
-    annotate("text", 
-             x = mds.group.labs$NMDS1.m, 
-             y = mds.group.labs$NMDS2.m, 
-             label = mds.group.labs$stations, 
-             colour = custom.cols, 
-             size = 5)
+    
+  # annotate the groups (inside the ellipses) if desired (only if plot doesn't 
+  # become too cluttered)
+  if(label.groups) {
+    # first, calculate the label placement (=> mean of each group)
+    mds.group.labs <- ddply(scrs, 
+                            .(stations), 
+                            summarize, 
+                            NMDS1.m = mean(NMDS1), 
+                            NMDS2.m = mean(NMDS2)) 
+    
+    # add labels to plot, matching their colors with the group colors
+    p <- p + annotate("text", 
+                      x = mds.group.labs$NMDS1.m, 
+                      y = mds.group.labs$NMDS2.m, 
+                      label = mds.group.labs$stations, 
+                      colour = custom.cols, 
+                      size = 5) 
+  }
   
   return(p)
 }
 
 
 
-### FIX THIS ONE! CHECK NAMES OF COLUMNS OF DF - EXTRACT_ENVFIT
 plot_mds_factors <- function(mds.obj, envfit.obj, stations, p = 0.05) {
 	## Plots MDS with fitted environmental factors as vectors (factors with 
   ## significant correlations).
@@ -116,7 +119,7 @@ plot_mds_factors <- function(mds.obj, envfit.obj, stations, p = 0.05) {
       					       aes(x = 0, xend = NMDS1, y = 0, yend = NMDS2),
       					       arrow = arrow(length = unit(0.25, "cm")), 
       					       colour = "grey") +
-      	  geom_text(data = sign.vectors, aes(x = NMDS1, y = NMDS2, label = env.vars), size = 5) +
+      	  geom_text(data = sign.vectors, aes(x = NMDS1, y = NMDS2, label = vars), size = 5) +
       	  theme_bw()
 	
 	return(p)

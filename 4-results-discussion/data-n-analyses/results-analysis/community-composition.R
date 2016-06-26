@@ -281,9 +281,21 @@ ggplot(tax.dist.summary, mapping = aes(x = Species, y = Lambda)) +
   theme_bw()
 dev.off()
 
-# plot the (quantitative) average tax.distinctness Delta * - NEEDS STH MORE MEANINGFUL AS X - DISTANCE FROM BURGAS, LUSI, ...
-plot(tax.dist.table$Dstar, xlim = c(1, 100), log = "x")
-text(tax.dist.table$Dstar, labels = row.names(tax.dist.table), pos = 4)
+# plot the (quantitative) average tax.distinctness Delta * 
+# NEEDS STH MEANINGFUL AS X - DISTANCE FROM BURGAS, LUSI, other index/
+# environmental variable - e.g. those identified as most significant in the 
+# analyses of the environmental data...
+
+# example - with distance from the innermost (= most impacted) station (log scale). 
+# NB dist.inn won't be in workspace! 
+pdf(file = file.path(figs.dir, "explor_AvTD-dist.innermost_sand.pdf"), useDingbats = FALSE)
+plot(tax.dist.table$Dstar ~ dist.inn, 
+     type = "n", 
+     xlim = c(0.5, 100), 
+     log = "x", 
+     xlab = "log(dist.innermost.st)", ylab = "AvTD*")
+text(tax.dist.table$Dstar, labels = tax.dist.table$stations)
+dev.off()
 
 
 
