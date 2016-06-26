@@ -455,11 +455,27 @@ mds.sand <- metaMDS(num.zoo.abnd.sand)
 # basic summary of the MDS
 mds.sand
 
-# stress plot and goodness-of-fit (smaller size = better representation) for the MDS
+# diagnostic plots for the MDS
+pdf(file = file.path(figs.dir, "explor_diagnostic-plots-mds_sand.pdf"), 
+    paper = "a4r", 
+    width = 12, 
+    height = 12, 
+    useDingbats = FALSE)
 
-pdf(file = file.path(figs.dir, "explor_stressplots-mds_sand.pdf"), useDingbats = FALSE)
+par(mfrow = c(1, 2))
+
+# stressplot
 stressplot(mds.sand)
+
+# goodness-of-fit plot 
+# first plot the NMDS ordination with sites
+plot(mds.sand, display = 'sites', type = 't', main = 'Goodness of fit') 
+# then, add the points with size reflecting goodness of fit (smaller = better fit)
+points(mds.sand, display = 'sites', cex = goodness(mds.sand)*200) 
+
 dev.off()
+
+par(mfrow = c(1, 1))
 
 # save the MDS result 
 saveRDS(mds.sand, file = file.path(save.dir, "mds_sand.rds"))
