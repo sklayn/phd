@@ -1,4 +1,4 @@
-### Community composition analysis 
+### Community composition & structure analysis 
 
 # define the working subdirectories
 data.dir <- "data"
@@ -21,23 +21,30 @@ library(viridis)
 # source the files containing the necessary funcitons (function from package R.utils)-> MAKE ONE FILE W/ ALL CUSTOM FUNCTIONS??
 sourceDirectory(path = file.path(functions.dir))
 
-
 # import the datasets
 
 # specify the stations, in the order they appear in the input dataset (separately, because vector 
 # will be used by other functions later, so better have it typed out only once at the beginning).
 
-# stations.2012 <- c("Konski1", "Konski2", "Ribka1", "Ribka2", "Gradina1", "Gradina2")
-stations.zostera <- c("Poda", "Otmanli", "Gradina", "Ropotamo", "Vromos") 
 stations.sand <- c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva") 
+# stations.zostera <- c("Poda", "Otmanli", "Gradina", "Ropotamo", "Vromos") 
+# stations.2012 <- c("Konski1", "Konski2", "Ribka1", "Ribka2", "Gradina1", "Gradina2")
 
+zoo.abnd.sand <- import_zoo_data(data.dir = data.dir, 
+                                 zoo.data = "zoo-abnd-sand.csv", 
+                                 station.names = stations.sand, 
+                                 repl = 3)
+
+# zoo.abnd.zostera <- import_zoo_data(data.dir = data.dir, 
+#                                     zoo.data = "zoo-abnd-zostera.csv", 
+#                                     station.names = stations.zostera, 
+#                                     repl = 4)
 
 # TEST TO SEE IF WORKS WITH CURRENT IMPORT FUNCTION! (prob. not because of number at the end of station names)
 # zoo.abnd.2012 <- import_zoo_data(data.dir = data.dir, 
 #                             zoo.data = "zoo-abnd-2012.csv", 
 #                             stations = stations.2012, 
 #                             repl = 4)
-
 # add a column for habitat type (2 adjacent habitats sampled in 2012 - seagrass and bare sand);
 # place it in the beginning with the other factors
 # zoo.abnd.2012 <- data.frame(append(zoo.abnd.2012, 
@@ -45,27 +52,15 @@ stations.sand <- c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paras
 #                                    after = match("stations", names(zoo.abnd.2012))))
 
 
-zoo.abnd.sand <- import_zoo_data(data.dir = data.dir, 
-                                 zoo.data = "zoo-abnd-sand.csv", 
-                                 station.names = stations.sand, 
-                                 repl = 3)
-
-zoo.abnd.zostera <- import_zoo_data(data.dir = data.dir, 
-                                    zoo.data = "zoo-abnd-zostera.csv", 
-                                    station.names = stations.zostera, 
-                                    repl = 4)
-
-
-
 # after-import sanity checks (better safe than sorry!)
 str(zoo.abnd.sand)  # structure & variable classes: factors are factors, numeric variables
                     # are numeric, etc.
 
-str(zoo.abnd.zostera)
+# str(zoo.abnd.zostera)
 # str(zoo.abnd.2012)
 
 names(zoo.abnd.sand)  # variable (species) names
-names(zoo.abnd.zostera)
+# names(zoo.abnd.zostera)
 # names(zoo.abnd.2012)
 
 
@@ -74,9 +69,9 @@ write.csv(zoo.abnd.sand,
           file = file.path(save.dir, "zoo-sand-clean.csv"), 
           row.names = FALSE)
 
-write.csv(zoo.abnd.zostera, 
-          file = file.path(save.dir, "zoo-zostera-clean.csv"), 
-          row.names = FALSE)
+# write.csv(zoo.abnd.zostera, 
+#           file = file.path(save.dir, "zoo-zostera-clean.csv"), 
+#           row.names = FALSE)
 
 # make subsets of the numeric columns (the species data), and the factor columns -
 # to avoid retyping the command, because these subsets will be 
@@ -84,13 +79,12 @@ write.csv(zoo.abnd.zostera,
 num.zoo.abnd.sand <- zoo.abnd.sand[sapply(zoo.abnd.sand, is.numeric)]
 factors.zoo.sand <- zoo.abnd.sand[sapply(zoo.abnd.sand, is.factor)]
 
-num.zoo.abnd.zostera <- zoo.abnd.zostera[sapply(zoo.abnd.zostera, is.numeric)]
-factors.zoo.zostera <- zoo.abnd.zostera[sapply(zoo.abnd.zostera, is.factor)]
+# num.zoo.abnd.zostera <- zoo.abnd.zostera[sapply(zoo.abnd.zostera, is.numeric)]
+# factors.zoo.zostera <- zoo.abnd.zostera[sapply(zoo.abnd.zostera, is.factor)]
 
 # summary of numeric abundance data by station (mean) - for summary plots, etc.
 summary.abnd.sand <- ddply(zoo.abnd.sand, .(stations), colwise(mean, .cols = is.numeric))
-
-summary.abnd.zostera <- ddply(zoo.abnd.zostera, .(stations), colwise(mean, .cols = is.numeric))
+# summary.abnd.zostera <- ddply(zoo.abnd.zostera, .(stations), colwise(mean, .cols = is.numeric))
 
 ## Basic taxonomic composition and structure
 # import taxonomic data (species names are rows, successively higher taxonomic
@@ -101,15 +95,15 @@ zoo.taxa <- read.csv(file.path(data.dir, "zoo-taxonomy.csv"), header = T, row.na
 community.sand <- num.zoo.abnd.sand[colSums(num.zoo.abnd.sand) > 0] 
 current.taxa.sand <- subset(zoo.taxa, row.names(zoo.taxa) %in% names(community.sand))
 
-community.zostera <- num.zoo.abnd.zostera[colSums(num.zoo.abnd.zostera) > 0] 
-current.taxa.zostera <- subset(zoo.taxa, row.names(zoo.taxa) %in% names(community.zostera))
+# community.zostera <- num.zoo.abnd.zostera[colSums(num.zoo.abnd.zostera) > 0] 
+# current.taxa.zostera <- subset(zoo.taxa, row.names(zoo.taxa) %in% names(community.zostera))
 
 # explore the taxonomic composition of the community: number of taxa per phylum/class, etc.
 table(current.taxa.sand$class)
 table(current.taxa.sand$phylum)
 
-table(current.taxa.zostera$class)
-table(current.taxa.zostera$phylum)
+# table(current.taxa.zostera$class)
+# table(current.taxa.zostera$phylum)
 
 # plot comparison of nb taxa/class and nb taxa/phylum side by side, and save for reference
 pdf(file = file.path(figs.dir, "explor_nb-taxa_sand.pdf"), useDingbats = FALSE)
@@ -131,23 +125,21 @@ dev.off()
 rm(p.class, p.phyl)
 
 # idem for zostera communities
-pdf(file = file.path(figs.dir, "explor_nb-taxa_zostera.pdf"), useDingbats = FALSE)
-p.class <- barchart(sort(table(current.taxa.zostera$class)), # sort for easier comparison
-                    main = "Per class", 
-                    xlab = "Number of taxa", 
-                    col = "lightgreen")
-
-p.phyl <- barchart(sort(table(current.taxa.zostera$phylum)), # sort for easier comparison
-                   main = "Per phylum", 
-                   xlab = "Number of taxa", 
-                   col = "lightgreen")
-
-# have to use grid.arrange() from gridExtra to put both plots on the same graphics device, 
-# because barchart() is a lattice function.
-grid.arrange(p.class, p.phyl, nrow = 2)
-
-dev.off()
-rm(p.class, p.phyl)
+# pdf(file = file.path(figs.dir, "explor_nb-taxa_zostera.pdf"), useDingbats = FALSE)
+# p.class <- barchart(sort(table(current.taxa.zostera$class)), # sort for easier comparison
+#                     main = "Per class", 
+#                     xlab = "Number of taxa", 
+#                     col = "lightgreen")
+# 
+# p.phyl <- barchart(sort(table(current.taxa.zostera$phylum)), # sort for easier comparison
+#                    main = "Per phylum", 
+#                    xlab = "Number of taxa", 
+#                    col = "lightgreen")
+# 
+# grid.arrange(p.class, p.phyl, nrow = 2)
+# 
+# dev.off()
+# rm(p.class, p.phyl)
 
 
 # add new column with the most commonly used larger taxonomic groups from the literature
@@ -161,14 +153,14 @@ current.taxa.sand$group <- with(current.taxa.sand,
 table(current.taxa.sand$group)
 
 
-current.taxa.zostera$group <- with(current.taxa.zostera, 
-                                   ifelse(class == "Polychaeta", "Polychaeta", 
-                                   ifelse(class == "Bivalvia" | 
-                                          class == "Gastropoda" | 
-                                          class == "Polyplacophora", "Mollusca", 
-                                   ifelse(class == "Malacostraca", "Crustacea", "Varia"))))
-
-table(current.taxa.zostera$group)
+# current.taxa.zostera$group <- with(current.taxa.zostera, 
+#                                    ifelse(class == "Polychaeta", "Polychaeta", 
+#                                    ifelse(class == "Bivalvia" | 
+#                                           class == "Gastropoda" | 
+#                                           class == "Polyplacophora", "Mollusca", 
+#                                    ifelse(class == "Malacostraca", "Crustacea", "Varia"))))
+# 
+# table(current.taxa.zostera$group)
 
 # plot the number of taxa in each of these taxonomic groups
 pdf(file = file.path(figs.dir, "nb-taxa_sand.pdf"), useDingbats = FALSE)
@@ -179,31 +171,31 @@ barchart(sort(table(current.taxa.sand$group)),
 dev.off()
 
 
-pdf(file = file.path(figs.dir, "nb-taxa_zostera.pdf"), useDingbats = FALSE)
-barchart(sort(table(current.taxa.zostera$group)), 
-         main = "Number of taxa",
-         xlab = "", 
-         col = "lightgreen")
-dev.off()
+# pdf(file = file.path(figs.dir, "nb-taxa_zostera.pdf"), useDingbats = FALSE)
+# barchart(sort(table(current.taxa.zostera$group)), 
+#          main = "Number of taxa",
+#          xlab = "", 
+#          col = "lightgreen")
+# dev.off()
 
 
 ## calculate the contribution of each taxonomic group to the numeric community 
 ## composition by station and by year
 # first calculate proportions by taxonomic group in each station/replicate
 tax.group.props.sand <- tax_group_contribution(community.sand, current.taxa.sand$group)
-tax.group.props.sand <- cbind(factors.zoo.sand, tax.group.props.sand)
+# tax.group.props.sand <- cbind(factors.zoo.sand, tax.group.props.sand)
 
 tax.group.props.zostera <- tax_group_contribution(community.zostera, current.taxa.zostera$group)
-tax.group.props.zostera <- cbind(factors.zoo.zostera, tax.group.props.zostera)
+# tax.group.props.zostera <- cbind(factors.zoo.zostera, tax.group.props.zostera)
 
 # save to file (in case) 
 write.csv(tax.group.props.sand, 
           file = file.path(save.dir, "tax-gr-proportions_sand-clean.csv"), 
           row.names = FALSE)
 
-write.csv(tax.group.props.zostera, 
-          file = file.path(save.dir, "tax-gr-proportions_zostera-clean.csv"), 
-          row.names = FALSE)
+# write.csv(tax.group.props.zostera, 
+#           file = file.path(save.dir, "tax-gr-proportions_zostera-clean.csv"), 
+#           row.names = FALSE)
 
 
 
@@ -213,40 +205,40 @@ pdf(file = file.path(figs.dir, "tax-gr-contrib_stations_sand.pdf"), useDingbats 
 plot_tax_group_contribution(tax.group.props.sand)
 dev.off()
 
-pdf(file = file.path(figs.dir, "tax-gr-contrib_stations_zostera.pdf"), useDingbats = FALSE)
-plot_tax_group_contribution(tax.group.props.zostera)
-dev.off()
+# pdf(file = file.path(figs.dir, "tax-gr-contrib_stations_zostera.pdf"), useDingbats = FALSE)
+# plot_tax_group_contribution(tax.group.props.zostera)
+# dev.off()
 
 # by station and year
 pdf(file = file.path(figs.dir, "tax-gr-contrib_st-yrs_sand.pdf"), useDingbats = FALSE)
 plot_tax_group_contribution(tax.group.props.sand, by.years = TRUE)
 dev.off()
 
-pdf(file = file.path(figs.dir, "tax-gr-contrib_st-yrs_zostera.pdf"), useDingbats = FALSE)
-plot_tax_group_contribution(tax.group.props.zostera, by.years = TRUE)
-dev.off() 
+# pdf(file = file.path(figs.dir, "tax-gr-contrib_st-yrs_zostera.pdf"), useDingbats = FALSE)
+# plot_tax_group_contribution(tax.group.props.zostera, by.years = TRUE)
+# dev.off() 
 
 
 ## Diversity indices
 
 ## Alpha diversity (Whittaker, 1960) - description of the diversity in one spot
 diversity.sand <- alpha_diversity(zoo.abnd.sand)
-diversity.zostera <- alpha_diversity(zoo.abnd.zostera)
+# diversity.zostera <- alpha_diversity(zoo.abnd.zostera)
   
 # save the data frame of diversity indices and measures in a file
 write.csv(diversity.sand, 
           file = file.path(save.dir, "diversity.sand.csv"), 
           row.names = FALSE)
 
-write.csv(diversity.zostera, 
-          file = file.path(save.dir, "diversity.zostera.csv"), 
-          row.names = FALSE)
+# write.csv(diversity.zostera, 
+#           file = file.path(save.dir, "diversity.zostera.csv"), 
+#           row.names = FALSE)
 
 # calculate and plot diversity profiles - graphical representation of the shape of the community;
 # show how the perceived diversity changes as the emphasis shifts from common to rare
 # species - we can judge their respective contributions in the community composition.
 diversity.profiles.sand <- diversity_profiles(num.zoo.abnd.sand, q = 50)
-diversity.profiles.zostera <- diversity_profiles(num.zoo.abnd.zostera, q = 50)
+# diversity.profiles.zostera <- diversity_profiles(num.zoo.abnd.zostera, q = 50)
 
 # plot the diversity profiles (all samples - in panels by station); save to file.
 # !NB set useDingbats = FALSE, otherwise points might get transformed to letters 
@@ -255,17 +247,17 @@ pdf(file = file.path(figs.dir, "classical-diversity-profiles_all_sand.pdf"), use
 plot_div_profiles(diversity.profiles.sand, stations.sand, one.panel = FALSE)
 dev.off()
 
-pdf(file = file.path(figs.dir, "classical-diversity-profiles_all_zostera.pdf"), useDingbats = FALSE)
-plot_div_profiles(diversity.profiles.zostera, stations.zostera, one.panel = FALSE)
-dev.off()
+# pdf(file = file.path(figs.dir, "classical-diversity-profiles_all_zostera.pdf"), useDingbats = FALSE)
+# plot_div_profiles(diversity.profiles.zostera, stations.zostera, one.panel = FALSE)
+# dev.off()
 
 
 # save diversity profiles to file 
 write.csv(diversity.profiles.sand, 
           file.path(save.dir, "div-profiles-sand_classical.csv"))
 
-write.csv(diversity.profiles.zostera, 
-          file.path(save.dir, "div-profiles-zostera_classical.csv"))
+# write.csv(diversity.profiles.zostera, 
+#           file.path(save.dir, "div-profiles-zostera_classical.csv"))
 
 
 
@@ -278,29 +270,29 @@ write.csv(diversity.profiles.zostera,
 # allows for a lot more meaningful ecological and biodiversity comparisons; then
 # calculate and plot diversity profiles again (Leinster & Cobbold, 2012)
 weighted.profiles.sand <- weighted_div_profiles(num.zoo.abnd.sand, zoo.taxa)
-weighted.profiles.zostera <- weighted_div_profiles(num.zoo.abnd.zostera, zoo.taxa)
+# weighted.profiles.zostera <- weighted_div_profiles(num.zoo.abnd.zostera, zoo.taxa)
 
 # plot the profiles in panels by station and save
 pdf(file = file.path(figs.dir, "weighted-diversity-profiles_all_sand.pdf"), useDingbats = FALSE)
 plot_div_profiles(weighted.profiles.sand, stations.sand, one.panel = FALSE)
 dev.off()
 
-pdf(file = file.path(figs.dir, "weighted-diversity-profiles_all_zostera.pdf"), useDingbats = FALSE)
-plot_div_profiles(weighted.profiles.zostera, stations.zostera, one.panel = FALSE)
-dev.off()
+# pdf(file = file.path(figs.dir, "weighted-diversity-profiles_all_zostera.pdf"), useDingbats = FALSE)
+# plot_div_profiles(weighted.profiles.zostera, stations.zostera, one.panel = FALSE)
+# dev.off()
 
 # same procedure, but using the data averaged by station - first column is the station names!
 aver.profiles.sand <- weighted_div_profiles(summary.abnd.sand[-1], zoo.taxa)
-aver.profiles.zostera <- weighted_div_profiles(summary.abnd.zostera[-1], zoo.taxa)
+# aver.profiles.zostera <- weighted_div_profiles(summary.abnd.zostera[-1], zoo.taxa)
 
 # plot the profiles; save as pdf 
 pdf(file = file.path(figs.dir, "weighted-diversity-profiles_aver_sand.pdf"), useDingbats = FALSE)
 plot_div_profiles(aver.profiles.sand, stations.sand, one.panel = TRUE)
 dev.off()
 
-pdf(file = file.path(figs.dir, "weighted-diversity-profiles_aver_zostera.pdf"), useDingbats = FALSE)
-plot_div_profiles(aver.profiles.zostera, stations.zostera, one.panel = TRUE)
-dev.off()
+# pdf(file = file.path(figs.dir, "weighted-diversity-profiles_aver_zostera.pdf"), useDingbats = FALSE)
+# plot_div_profiles(aver.profiles.zostera, stations.zostera, one.panel = TRUE)
+# dev.off()
 
 
 # plot all the weighted diversity profiles by station, and add the average profiles
@@ -314,13 +306,13 @@ plot_div_profiles_w_aver(weighted.profiles.sand,
 dev.off()
 
 
-pdf(file = file.path(figs.dir, "weighted-div-profiles_allaver_zostera.pdf"), useDingbats = FALSE)
-plot_div_profiles_w_aver(weighted.profiles.zostera, 
-                         aver.profiles.zostera, 
-                         stations.zostera, 
-                         col.profiles = c("skyblue", "royalblue"))
-
-dev.off()
+# pdf(file = file.path(figs.dir, "weighted-div-profiles_allaver_zostera.pdf"), useDingbats = FALSE)
+# plot_div_profiles_w_aver(weighted.profiles.zostera, 
+#                          aver.profiles.zostera, 
+#                          stations.zostera, 
+#                          col.profiles = c("skyblue", "royalblue"))
+# 
+# dev.off()
 
 
 ## Taxonomic diversity

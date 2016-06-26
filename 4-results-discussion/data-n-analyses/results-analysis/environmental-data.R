@@ -40,114 +40,113 @@ na.pattern <- aggr(env.sand, col = c("blue", "red"), numbers = TRUE, sortVars = 
 ## Imputation of missing data (package mice, miceadds)
 
 # import the long-term water column parameters (raw - include all available measures)  
-water.param <- read.csv(file.path(data.dir, "waterColumnLT_sand-imputations.csv"),
-                        header = T)
+water.param.sand <- read.csv(file.path(data.dir, "waterColumnLT_sand-imputations.csv"),
+                             header = T)
 
 # here only: rename Atia to Akin, and Maslen nos to Paraskeva - to
 # have more values for the missing value imputation. These stations are located very 
 # close to ours, so it is not too wrong to do this. 
-levels(water.param$station) <- revalue(levels(water.param$station), 
-                                       c("Atia"="Akin", "Maslen nos"="Paraskeva"))
+levels(water.param.sand$station) <- revalue(levels(water.param.sand$station), 
+                                            c("Atia"="Akin", "Maslen nos"="Paraskeva"))
 
 # reorder factor levels for station as desired
-water.param$station <- reorder.factor(water.param$station, 
-                                      new.order = stations.sand)
+water.param.sand$station <- reorder.factor(water.param.sand$station, 
+                                           new.order = stations.sand)
 
 # aggregate the data by year, month and station (-> average of all depths for a
 # particular sampling occasion)
-water.param.aggr <- ddply(water.param, .(year, month, station), colwise(mean, .cols = is.numeric))
+water.param.sand.aggr <- ddply(water.param.sand, .(year, month, station), colwise(mean, .cols = is.numeric))
 
 # remove the depth (not relevant for these particular imputations)
-water.param.aggr$depth <- NULL
+water.param.sand.aggr$depth <- NULL
 
 # check the predictor matrix. The correlation between predictor and target, and 
 # the proportion of usable cases are used for its construction. 
-quickpred(water.param.aggr)
+quickpred(water.param.sand.aggr)
 
 # impute the missing data
-water.imp <- mice(water.param.aggr, method = "pmm", m = 100, seed = 100, printFlag = FALSE)
-summary(water.imp)
+water.sand.imp <- mice(water.param.sand.aggr, method = "pmm", m = 100, seed = 100, printFlag = FALSE)
+summary(water.sand.imp)
 
 # subset the imputed data to only 2013-2014 (the only ones we're interested in)
-water.imp.subs <- subset_datlist(water.imp, index = 1:100, 
-                                 subset = water.imp[[2]]$year == 2013 | water.imp[[2]]$year == 2014)
+water.sand.imp.subs <- subset_datlist(water.sand.imp, index = 1:100, 
+                                      subset = water.sand.imp[[2]]$year == 2013 | water.sand.imp[[2]]$year == 2014)
 
 # sort by station, then years and months
-water.imp.subs <- lapply(water.imp.subs, function(x) arrange(x, station, year, month))
+water.sand.imp.subs <- lapply(water.sand.imp.subs, function(x) arrange(x, station, year, month))
 
 
 # import the sediment parameters (and other parameters for which only short-term 
 # data is available)
-other.env <- read.csv(file.path(data.dir, "other-env_sand-imputations.csv"),
-                      header = TRUE)
+other.env.sand <- read.csv(file.path(data.dir, "other-env_sand-imputations.csv"),
+                           header = TRUE)
 
 # reorder factor station as desired
-other.env$station <- reorder.factor(other.env$station, 
-                                    new.order = stations.sand)
+other.env.sand$station <- reorder.factor(other.env.sand$station, 
+                                         new.order = stations.sand)
 
 
 # impute missing values here, too
 
 # first, exclude the depth as a predictor (not relevant (?))
-# ini <- mice(other.env, maxit = 0, printFlag = FALSE)
+# ini <- mice(other.env.sand, maxit = 0, printFlag = FALSE)
 # pred <- ini$predictorMatrix
 # pred[,"depth"] <- 0
 
 # now, impute the missing values
-other.env.imp <- mice(other.env, 
-                      method = "pmm", 
-                      m = 100, 
-                      seed = 100, 
-                      printFlag = FALSE)
+other.env.sand.imp <- mice(other.env.sand, 
+                           method = "pmm", 
+                           m = 100, 
+                           seed = 100, 
+                           printFlag = FALSE)
 
-summary(other.env.imp)
+summary(other.env.sand.imp)
 
-other.env.imp.subs <- subset_datlist(other.env.imp, index = 1:100, 
-                                     subset = other.env.imp[[2]]$year == 2013 | other.env.imp[[2]]$year == 2014)
+other.env.sand.imp.subs <- subset_datlist(other.env.sand.imp, index = 1:100, 
+                                          subset = other.env.sand.imp[[2]]$year == 2013 | other.env.sand.imp[[2]]$year == 2014)
 
 # combine with the water column (imputed and subsetted) data 
-env.imp.all <- mapply(function(x, y) merge(x, y, by = c("station", "month", "year")), 
-                      water.imp.subs, 
-                      other.env.imp.subs, 
-                      SIMPLIFY = FALSE)
+env.imp.all.sand <- mapply(function(x, y) merge(x, y, by = c("station", "month", "year")), 
+                           water.sand.imp.subs, 
+                           other.env.sand.imp.subs, 
+                           SIMPLIFY = FALSE)
 
 # clean up the no longer useful intermediate data frames, lists etc. 
-rm(water.param, 
-   water.param.aggr, 
-   water.imp, 
-   water.imp.subs, 
-   other.env, 
-   other.env.imp, 
-   other.env.imp.subs 
-   )
+rm(water.param.sand, 
+   water.param.sand.aggr, 
+   water.sand.imp, 
+   water.sand.imp.subs, 
+   other.env.sand, 
+   other.env.sand.imp, 
+   other.env.sand.imp.subs)
 
 
 # (here only) fix the total heavy metals and heavy metals w/o Fe - these variables 
 # don't need to be imputed anyway, because they are sums of the other individual heavy metals, 
 # and if one of those is missing, all are missing (= all constituents are imputed anyway).
-env.imp.all <- lapply(env.imp.all, function(x) { 
+env.imp.all.sand <- lapply(env.imp.all.sand, function(x) { 
                                       x["heavy.metals.all"] <- x$Cu + x$Pb + x$Zn + x$Cd + x$Mn + x$Fe + x$Ni
                                       x["heavy.metals.noFe"] <- x$Cu + x$Pb + x$Zn + x$Cd + x$Mn + x$Ni
                                       return(x)
                                    })
 
 # order data frames by station and date
-env.imp.all <- lapply(env.imp.all, function(x) arrange(x, station, year, month))
+env.imp.all.sand <- lapply(env.imp.all.sand, function(x) arrange(x, station, year, month))
 
 # repeat each row 3 times to match the rows of the mds object and fix row names
 # (very ugly, but working, hack)
-env.imp.all <- lapply(env.imp.all, function(x) x[rep(seq_len(nrow(x)), each=3),])
-env.imp.all <- lapply(env.imp.all, function(x) {rownames(x) <- 1:nrow(x); x})
+env.imp.all.sand <- lapply(env.imp.all.sand, function(x) x[rep(seq_len(nrow(x)), each=3),])
+env.imp.all.sand <- lapply(env.imp.all.sand, function(x) {rownames(x) <- 1:nrow(x); x})
 
 
 # SAVE THIS IF NECESSARY FOR FUTURE USE 
-saveRDS(env.imp.all, file.path(save.dir, "env-data-imputed-clean_sand.rds"))
+saveRDS(env.imp.all.sand, file.path(save.dir, "env-data-imputed-clean_sand.rds"))
 
 
 # run envfit (vegan) on the imputed datasets (env. variables subset only)
 # set seed if we have to repeat the calculation
 set.seed(1)
-env.mds.sand <- lapply(env.imp.all, function(x) {
+env.mds.sand <- lapply(env.imp.all.sand, function(x) {
                                             # subset each data frame to only the variable columns
                                             envfit(mds.sand, 
                                                    subset(x, select = -c(station, month, year)), 
@@ -155,7 +154,7 @@ env.mds.sand <- lapply(env.imp.all, function(x) {
                                         })
 
 # apply Bonferroni correction for multiple testing to the p-values, because there is a large number 
-# of tested variables.
+# of tested variables (calls custom function!).
 env.mds.sand <- lapply(env.mds.sand, p_adjust_envfit)
 
 ## SAVE THE LIST OF ENVFITS
@@ -163,53 +162,53 @@ saveRDS(env.mds.sand, file = file.path(save.dir, "envfit-mds-clean_sand.rds"))
 
 # extract the most significant variables and positions from the list of envfits 
 # (calls custom helper function)
-env.sign.count <- lapply(env.mds.sand, sign_vars_pos_envfit)
+env.sand.sign.count <- lapply(env.mds.sand, sign_vars_pos_envfit)
 
 # get the most significant environmental variables according to the envfits 
 # performed on the imputed datasets (custom helper function)
-sign.vars <- sign_vars_freq(env.sign.count, target.freq = 10)
+sign.vars.sand <- sign_vars_freq(env.sand.sign.count, target.freq = 10)
 
 ## PLOTTING VARIABLES AS SURFACES OVERLAID ON THE MDS
 # get the original numeric values of the environmental variables chosen for plotting
 # from all the imputed datasets
 
 # only use env. variables (no factors) from each df
-vars.for.ordisurf <- lapply(lapply(env.imp.all, function(y) subset(y, select = -c(station, month, year))), # only env.variables from each df
-                            function(x) { 
-                              x <- subset(x, select = names(x) %in% levels(sign.vars[[1]])) # subset according to vector of chosen sign. variables
-                              # add a numeric identifier to be used later for aggregating
-                              # to avoid having to reorder later
-                              x$id <- rownames(x)
-                              x$id <- as.numeric(x$id)
-                              return(x)
-                            }) 
+vars.for.ordisurf.sand <- lapply(lapply(env.imp.all.sand, function(y) subset(y, select = -c(station, month, year))), # only env.variables from each df
+                                 function(x) { 
+                                    x <- subset(x, select = names(x) %in% levels(sign.vars.sand[[1]])) # subset according to vector of chosen sign. variables
+                                    # add a numeric identifier to be used later for aggregating
+                                    # to avoid having to reorder later
+                                    x$id <- rownames(x)
+                                    x$id <- as.numeric(x$id)
+                                    return(x)
+                                 }) 
 
 # combine into a single data frame and average each variable by id (= replicate)
-vars.for.ordisurf <- do.call("rbind", vars.for.ordisurf) 
-vars.for.ordisurf <- ddply(vars.for.ordisurf, .(id), colwise(mean)) 
+vars.for.ordisurf.sand <- do.call("rbind", vars.for.ordisurf.sand) 
+vars.for.ordisurf.sand <- ddply(vars.for.ordisurf.sand, .(id), colwise(mean)) 
  
 # apply ordisurf sequentially to all environmental variables except the first (= id), 
 # which serves no purpose (get back a list of ordisurf objects where each element
 # is an environmental variable)
-ordisurf.list.all <- apply(vars.for.ordisurf[-1], 
-                           MARGIN = 2, 
-                           FUN = function(x) ordi <- ordisurf(mds.sand ~ x, plot = FALSE)) 
+ordisurf.list.all.sand <- apply(vars.for.ordisurf.sand[-1], 
+                                MARGIN = 2, 
+                                FUN = function(x) ordi <- ordisurf(mds.sand ~ x, plot = FALSE)) 
 
 # check out the summaries of the fits
-lapply(ordisurf.list.all, summary)
+lapply(ordisurf.list.all.sand, summary)
 
 ## SAVE FITTED ORDISURFS AS WELL (in case)
-saveRDS(ordisurf.list.all, file = file.path(save.dir, "ordisurf-mds_sand.rds"))
+saveRDS(ordisurf.list.all.sand, file = file.path(save.dir, "ordisurf-mds_sand.rds"))
 
 # rearrange list to have the plots in the desired order.
 # Here: on the first row of the plot will be the sediment parameters, on the 
 # second - the water column parameters, and on the third - the heavy metals.
-names(ordisurf.list.all)
-ordisurf.list.all <- ordisurf.list.all[c("sorting", "mean.grain.size", "dist.innermost", "depth",  
-                                        "Secchi.depth", "O2.bottom", "O2.average", "heavy.metals.noFe")]
+names(ordisurf.list.all.sand)
+ordisurf.list.all.sand <- ordisurf.list.all.sand[c("sorting", "mean.grain.size", "dist.innermost", "depth",  
+                                                   "Secchi.depth", "O2.bottom", "O2.average", "heavy.metals.noFe")]
 
-var.labels <- c("sorting", "mean grain size", "distance to innermost station", "depth", 
-                 "Secchi depth", "O2 bottom", "O2 average", "heavy metals (no Fe)")
+var.labels.sand <- c("sorting", "mean grain size", "distance to innermost station", "depth", 
+                     "Secchi depth", "O2 bottom", "O2 average", "heavy metals (no Fe)")
 
 # set the file name and properties for the output graph
 pdf(file = file.path(figs.dir, "mds_ordisurf_sand_most_sign_vars.pdf"), 
@@ -227,9 +226,8 @@ mapply(function(m, n) {
           plot_mds_ordisurf(mds.sand, m)
           title(main = n, col.main = "grey28")
        }, 
-       ordisurf.list.all, 
-       var.labels
-       )
+       ordisurf.list.all.sand, 
+       var.labels.sand)
 
 dev.off()
 
@@ -237,11 +235,11 @@ dev.off()
 par(mfrow = c(1, 1))
 
 # clean up workspace 
-rm(env.sign.count, 
-   ordisurf.list.all, 
-   sign.vars, 
-   var.labels, 
-   vars.for.ordisurf)
+rm(env.sand.sign.count, 
+   ordisurf.list.all.sand, 
+   sign.vars.sand, 
+   var.labels.sand, 
+   vars.for.ordisurf.sand)
 
 ########################################################################################################
 ### ASIDE: 
@@ -254,7 +252,7 @@ library(gradientForest)
 # prepare the environemental data: use list of all (100) imputed values for the 
 # environmental variables; combine by averaging by station 
 # => equivalent to vars.for.ordisurf
-env.vars.gf <- lapply(lapply(env.imp.all, function(y) subset(y, select = -c(station, month, year))), # only env.variables from each df 
+env.vars.sand.gf <- lapply(lapply(env.imp.all.sand, function(y) subset(y, select = -c(station, month, year))), # only env.variables from each df 
                                   function(x) { 
                                   # add a numeric identifier to be used later for aggregating
                                   # to avoid having to reorder later
@@ -262,8 +260,8 @@ env.vars.gf <- lapply(lapply(env.imp.all, function(y) subset(y, select = -c(stat
                                   x$id <- as.numeric(x$id)
                                   return(x)
                                   })
-env.vars.gf <- do.call("rbind", env.vars.gf)
-env.vars.gf <- ddply(env.vars.gf, .(id), colwise(mean))
+env.vars.sand.gf <- do.call("rbind", env.vars.sand.gf)
+env.vars.sand.gf <- ddply(env.vars.sand.gf, .(id), colwise(mean))
 
 # calculate the maximum number of splits for the random tree analysis
 lev <- floor(log2(nrow(community.sand) * 0.368/2))
@@ -273,8 +271,8 @@ lev <- floor(log2(nrow(community.sand) * 0.368/2))
 # Important: convert the sites x species df to matrix; exclude the id column from
 # the df of environmental variables; include a transformation of the species abundance
 # data (here - square root). 
-gf.sand <- gradientForest(cbind(env.vars.gf[-1], as.matrix(community.sand)), 
-                          predictor.vars = colnames(env.vars.gf[-1]), 
+gf.sand <- gradientForest(cbind(env.vars.sand.gf[-1], as.matrix(community.sand)), 
+                          predictor.vars = colnames(env.vars.sand.gf[-1]), 
                           response.vars = colnames(community.sand), 
                           ntree = 500,
                           transform = function(x) sqrt(x),
