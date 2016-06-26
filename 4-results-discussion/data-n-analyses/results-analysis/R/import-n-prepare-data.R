@@ -10,7 +10,7 @@ import_zoo_data <- function(data.dir = NULL, zoo.data, station.names, repl) {
   ##            stations - vector of station names, in the order they should be
   ##              sorted in the final cleaned dataset. 
   ##            repl - number of replicates per station.
-  ## Returns: data.frame in the form stations x species (format for community 
+  ## Output: data.frame in the form stations x species (format for community 
   ##  analyses used by vegan and similar functions and packages). There are no 
   ##  row names (rather, the row names are consecutive numbers). First 3 columns
   ##  are factors containing the station names, letters indicating the replicate 
@@ -40,12 +40,10 @@ import_zoo_data <- function(data.dir = NULL, zoo.data, station.names, repl) {
   # replicate number) and extract all relevant info from them
   temp.row.names <- row.names(zoo.abnd.transposed)
   
-  # get the station names: all of them end with a ., so truncate each string to the 
-  # first .
-  stations <- gsub(pattern = "\\..*", replacement = "", x = temp.row.names)
+  # get the station names: split each string on the . and get the first part only
+  stations <- sapply(strsplit(temp.row.names, "\\."), "[", 1)
   
-  # get the years: they are contained between two ., so split each string on the ., 
-  # get only the second element (the year)
+  # repeat to get the years: split each string on the ., get only the second element
   years <- sapply(strsplit(temp.row.names, "\\."), "[", 2)
   
   # make the replicates vector: all the replicates for a single sampling of a 

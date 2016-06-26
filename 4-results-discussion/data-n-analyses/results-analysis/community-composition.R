@@ -28,7 +28,7 @@ sourceDirectory(path = file.path(functions.dir))
 # will be used by other functions later, so better have it typed out only once at the beginning).
 
 # stations.2012 <- c("Konski1", "Konski2", "Ribka1", "Ribka2", "Gradina1", "Gradina2")
-# stations.zostera <- c("Poda", "Otmanli", "Gradina", "Ropotamo", "Vromos") 
+stations.zostera <- c("Poda", "Otmanli", "Gradina", "Ropotamo", "Vromos") 
 stations.sand <- c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva") 
 
 
@@ -50,10 +50,10 @@ zoo.abnd.sand <- import_zoo_data(data.dir = data.dir,
                                  station.names = stations.sand, 
                                  repl = 3)
 
-# zoo.abnd.zostera <- import_zoo_data(data.dir = data.dir, 
-#                                  zoo.data = "zoo-abnd-zostera.csv", 
-#                                  station.names = stations.zostera, 
-#                                  repl = 4)
+zoo.abnd.zostera <- import_zoo_data(data.dir = data.dir, 
+                                    zoo.data = "zoo-abnd-zostera.csv", 
+                                    station.names = stations.zostera, 
+                                    repl = 4)
 
 
 
@@ -61,17 +61,21 @@ zoo.abnd.sand <- import_zoo_data(data.dir = data.dir,
 str(zoo.abnd.sand)  # structure & variable classes: factors are factors, numeric variables
                     # are numeric, etc.
 
-# str(zoo.abnd.zostera)
+str(zoo.abnd.zostera)
 # str(zoo.abnd.2012)
 
 names(zoo.abnd.sand)  # variable (species) names
-
+names(zoo.abnd.zostera)
 # names(zoo.abnd.2012)
-# names(zoo.abnd.zostera)
+
 
 ## SAVE THE CLEANED AND REARRANGED DATA
 write.csv(zoo.abnd.sand, 
           file = file.path(save.dir, "zoo-sand-clean.csv"), 
+          row.names = FALSE)
+
+write.csv(zoo.abnd.zostera, 
+          file = file.path(save.dir, "zoo-zostera-clean.csv"), 
           row.names = FALSE)
 
 # make subsets of the numeric columns (the species data), and the factor columns -
@@ -80,9 +84,13 @@ write.csv(zoo.abnd.sand,
 num.zoo.abnd.sand <- zoo.abnd.sand[sapply(zoo.abnd.sand, is.numeric)]
 factors.zoo.sand <- zoo.abnd.sand[sapply(zoo.abnd.sand, is.factor)]
 
-# summary of numeric abundance data by station (mean) - for summary plots, etc.
-summary.abnd <- ddply(zoo.abnd.sand, .(stations), colwise(mean, .cols = is.numeric))
+num.zoo.abnd.zostera <- zoo.abnd.zostera[sapply(zoo.abnd.zostera, is.numeric)]
+factors.zoo.zostera <- zoo.abnd.zostera[sapply(zoo.abnd.zostera, is.factor)]
 
+# summary of numeric abundance data by station (mean) - for summary plots, etc.
+summary.abnd.sand <- ddply(zoo.abnd.sand, .(stations), colwise(mean, .cols = is.numeric))
+
+summary.abnd.zostera <- ddply(zoo.abnd.zostera, .(stations), colwise(mean, .cols = is.numeric))
 
 ## Basic taxonomic composition and structure
 # import taxonomic data (species names are rows, successively higher taxonomic
@@ -91,20 +99,26 @@ zoo.taxa <- read.csv(file.path(data.dir, "zoo-taxonomy.csv"), header = T, row.na
 
 # get the present taxa only (abundance > 0 in all samples)
 community.sand <- num.zoo.abnd.sand[colSums(num.zoo.abnd.sand) > 0] 
-current.zoo.taxa <- subset(zoo.taxa, row.names(zoo.taxa) %in% names(community.sand))
+current.taxa.sand <- subset(zoo.taxa, row.names(zoo.taxa) %in% names(community.sand))
+
+community.zostera <- num.zoo.abnd.zostera[colSums(num.zoo.abnd.zostera) > 0] 
+current.taxa.zostera <- subset(zoo.taxa, row.names(zoo.taxa) %in% names(community.zostera))
 
 # explore the taxonomic composition of the community: number of taxa per phylum/class, etc.
-table(current.zoo.taxa$class)
-table(current.zoo.taxa$phylum)
+table(current.taxa.sand$class)
+table(current.taxa.sand$phylum)
+
+table(current.taxa.zostera$class)
+table(current.taxa.zostera$phylum)
 
 # plot comparison of nb taxa/class and nb taxa/phylum side by side, and save for reference
 pdf(file = file.path(figs.dir, "explor_nb-taxa_sand.pdf"), useDingbats = FALSE)
-p.class <- barchart(sort(table(current.zoo.taxa$class)), # sort for easier comparison
+p.class <- barchart(sort(table(current.taxa.sand$class)), # sort for easier comparison
                                          main = "Per class", 
                                          xlab = "Number of taxa", 
                                          col = "skyblue")
 
-p.phyl <- barchart(sort(table(current.zoo.taxa$phylum)), # sort for easier comparison
+p.phyl <- barchart(sort(table(current.taxa.sand$phylum)), # sort for easier comparison
                    main = "Per phylum", 
                    xlab = "Number of taxa", 
                    col = "skyblue")
@@ -116,47 +130,103 @@ grid.arrange(p.class, p.phyl, nrow = 2)
 dev.off()
 rm(p.class, p.phyl)
 
-# add new column with the most commonly used larger taxonomic groups from the literature
-current.zoo.taxa$group <- with(current.zoo.taxa, 
-                                  ifelse(class == "Polychaeta", "Polychaeta", 
-                                  ifelse(class == "Bivalvia" | 
-                                         class == "Gastropoda" | 
-                                         class == "Polyplacophora", "Mollusca", 
-                                  ifelse(class == "Malacostraca", "Crustacea", "Varia"))))
+# idem for zostera communities
+pdf(file = file.path(figs.dir, "explor_nb-taxa_zostera.pdf"), useDingbats = FALSE)
+p.class <- barchart(sort(table(current.taxa.zostera$class)), # sort for easier comparison
+                    main = "Per class", 
+                    xlab = "Number of taxa", 
+                    col = "lightgreen")
 
-table(current.zoo.taxa$group)
+p.phyl <- barchart(sort(table(current.taxa.zostera$phylum)), # sort for easier comparison
+                   main = "Per phylum", 
+                   xlab = "Number of taxa", 
+                   col = "lightgreen")
+
+# have to use grid.arrange() from gridExtra to put both plots on the same graphics device, 
+# because barchart() is a lattice function.
+grid.arrange(p.class, p.phyl, nrow = 2)
+
+dev.off()
+rm(p.class, p.phyl)
+
+
+# add new column with the most commonly used larger taxonomic groups from the literature
+current.taxa.sand$group <- with(current.taxa.sand, 
+                                ifelse(class == "Polychaeta", "Polychaeta", 
+                                ifelse(class == "Bivalvia" | 
+                                       class == "Gastropoda" | 
+                                       class == "Polyplacophora", "Mollusca", 
+                                ifelse(class == "Malacostraca", "Crustacea", "Varia"))))
+
+table(current.taxa.sand$group)
+
+
+current.taxa.zostera$group <- with(current.taxa.zostera, 
+                                   ifelse(class == "Polychaeta", "Polychaeta", 
+                                   ifelse(class == "Bivalvia" | 
+                                          class == "Gastropoda" | 
+                                          class == "Polyplacophora", "Mollusca", 
+                                   ifelse(class == "Malacostraca", "Crustacea", "Varia"))))
+
+table(current.taxa.zostera$group)
 
 # plot the number of taxa in each of these taxonomic groups
 pdf(file = file.path(figs.dir, "nb-taxa_sand.pdf"), useDingbats = FALSE)
-barchart(sort(table(current.zoo.taxa$group)), 
+barchart(sort(table(current.taxa.sand$group)), 
          main = "Number of taxa",
          xlab = "", 
          col = "skyblue")
 dev.off()
 
 
+pdf(file = file.path(figs.dir, "nb-taxa_zostera.pdf"), useDingbats = FALSE)
+barchart(sort(table(current.taxa.zostera$group)), 
+         main = "Number of taxa",
+         xlab = "", 
+         col = "lightgreen")
+dev.off()
+
+
 ## calculate the contribution of each taxonomic group to the numeric community 
 ## composition by station and by year
 # first calculate proportions by taxonomic group in each station/replicate
-tax.group.props <- tax_group_contribution(community.sand, current.zoo.taxa$group)
+tax.group.props.sand <- tax_group_contribution(community.sand, current.taxa.sand$group)
+tax.group.props.sand <- cbind(factors.zoo.sand, tax.group.props.sand)
+
+tax.group.props.zostera <- tax_group_contribution(community.zostera, current.taxa.zostera$group)
+tax.group.props.zostera <- cbind(factors.zoo.zostera, tax.group.props.zostera)
 
 # save to file (in case) 
-write.csv(tax.group.props, 
+write.csv(tax.group.props.sand, 
           file = file.path(save.dir, "tax-gr-proportions_sand-clean.csv"), 
           row.names = FALSE)
+
+write.csv(tax.group.props.zostera, 
+          file = file.path(save.dir, "tax-gr-proportions_zostera-clean.csv"), 
+          row.names = FALSE)
+
+
 
 # plot the contribution of taxonomic groups: 
 # by station
 pdf(file = file.path(figs.dir, "tax-gr-contrib_stations_sand.pdf"), useDingbats = FALSE)
-plot_tax_group_contribution(tax.group.props)
+plot_tax_group_contribution(tax.group.props.sand)
+dev.off()
+
+pdf(file = file.path(figs.dir, "tax-gr-contrib_stations_zostera.pdf"), useDingbats = FALSE)
+plot_tax_group_contribution(tax.group.props.zostera)
 dev.off()
 
 # by station and year
 pdf(file = file.path(figs.dir, "tax-gr-contrib_st-yrs_sand.pdf"), useDingbats = FALSE)
-plot_tax_group_contribution(tax.group.props, by.years = TRUE)
+plot_tax_group_contribution(tax.group.props.sand, by.years = TRUE)
 dev.off()
 
-  
+pdf(file = file.path(figs.dir, "tax-gr-contrib_st-yrs_zostera.pdf"), useDingbats = FALSE)
+plot_tax_group_contribution(tax.group.props.zostera, by.years = TRUE)
+dev.off() 
+
+
 ## Diversity indices
 
 ## Alpha diversity (Whittaker, 1960) - description of the diversity in one spot
