@@ -14,7 +14,7 @@ library(VIM)
 ## (missing values, etc.) and decide what to do next
 # env.sand <- read.csv()
 
-## First, explore and deal with missing values
+## First, explore and decide how to deal with missing values
 
 # get the proportion of missing values in each row (sample) and each column
 # (variable)
@@ -88,15 +88,14 @@ other.env$station <- reorder.factor(other.env$station,
 
 # impute missing values here, too
 
-# first, exclude the depth as a predictor (not relevant)
-ini <- mice(other.env, maxit = 0, printFlag = FALSE)
-pred <- ini$predictorMatrix
-pred[,"depth"] <- 0
+# first, exclude the depth as a predictor (not relevant (?))
+# ini <- mice(other.env, maxit = 0, printFlag = FALSE)
+# pred <- ini$predictorMatrix
+# pred[,"depth"] <- 0
 
 # now, impute the missing values
 other.env.imp <- mice(other.env, 
                       method = "pmm", 
-                      predictorMatrix = pred, 
                       m = 100, 
                       seed = 100, 
                       printFlag = FALSE)
@@ -119,9 +118,8 @@ rm(water.param,
    water.imp.subs, 
    other.env, 
    other.env.imp, 
-   other.env.imp.subs, 
-   pred, 
-   ini)
+   other.env.imp.subs 
+   )
 
 
 # (here only) fix the total heavy metals and heavy metals w/o Fe - these variables 
@@ -137,12 +135,18 @@ env.imp.all <- lapply(env.imp.all, function(x) {
 env.imp.all <- lapply(env.imp.all, function(x) arrange(x, station, year, month))
 
 # repeat each row 3 times to match the rows of the mds object and fix row names
-# (very ugly hack)
+# (very ugly, but working, hack)
 env.imp.all <- lapply(env.imp.all, function(x) x[rep(seq_len(nrow(x)), each=3),])
 env.imp.all <- lapply(env.imp.all, function(x) {rownames(x) <- 1:nrow(x); x})
 
 
+# SAVE THIS IF NECESSARY FOR FUTURE USE 
+saveRDS(env.imp.all, file.path(save.dir, "env-data-imputed-clean_sand.rds"))
+
+
 # run envfit (vegan) on the imputed datasets (env. variables subset only)
+# set seed if we have to repeat the calculation
+set.seed(1)
 env.mds.sand <- lapply(env.imp.all, function(x) {
                                             # subset each data frame to only the variable columns
                                             envfit(mds.sand, 
@@ -150,75 +154,26 @@ env.mds.sand <- lapply(env.imp.all, function(x) {
                                                    permutations = 999)
                                         })
 
-sign_vars_pos_envfit <- function(envfit.obj) {
-  ## helper function to extract the most significant (p < 0.05) variables
-  ## and their position (based on p and r2).
-  
-  # extract the most significant variables (p < 0.05) from the fit
-  envfit.sign.vars <- extract_envfit_scores(envfit.obj, p = 0.05, r2 = TRUE)
-  
-  # sort the resulting data frame by p-value and descending r-squared
-  envfit.sign.vars <- arrange(envfit.sign.vars, pvals, desc(r2))
-  
-  # count the number of times a variable occurs at a particular position:   
-  # only get vars + row names (variable & position) from the data frame
-  envfit.sign.vars$pos <- row.names(envfit.sign.vars)
-  sign.vars.pos <- subset(envfit.sign.vars, select = c(vars, pos))
-  
-  # covert pos to numeric for easier sorting
-  sign.vars.pos$pos <- as.numeric(sign.vars.pos$pos)
-  
-  return(sign.vars.pos)  
-} 
+# apply Bonferroni correction for multiple testing to the p-values, because there is a large number 
+# of tested variables.
+env.mds.sand <- lapply(env.mds.sand, p_adjust_envfit)
 
-# extract the most significant variables and positions from the list of envfits
+## SAVE THE LIST OF ENVFITS
+saveRDS(env.mds.sand, file = file.path(save.dir, "envfit-mds-clean_sand.rds"))
+
+# extract the most significant variables and positions from the list of envfits 
+# (calls custom helper function)
 env.sign.count <- lapply(env.mds.sand, sign_vars_pos_envfit)
 
-sign_vars_freq <- function(env.vars.count, target.freq) {
-  ## completely useless helper function, to be applied only here, for examining
-  ## the frequency of occurence of environemental variables across a list of 
-  ## variables and their positions obtained from the respective envfits. 
-  ## Extracts the names of the final variables - to be plotted as surfaces or
-  ## vectors over an mds.
-  ## Input is a list of data frames (each - columns vars and pos).
-  
-  # convert list of data frames to 1 big data frame
-  sign.count.df <- do.call("rbind", env.vars.count)
-  
-  # 1. count the total number of times a variable appears as significant across the 
-  # imputed datasets
-  sign.count.all <- arrange(count(sign.count.df, vars = "vars"), desc(freq))
-
-  # 2. count the occurrences of each variable in each position
-  sign.count.pos <- count(sign.count.df, vars = c("vars", "pos"))
-  sign.count.pos <- arrange(sign.count.pos, pos, desc(freq))
-
-  # examine the distribution of the variables and select the most significant 
-  # (the ones that appear the most often, i.e. with a frequency >= target frequency)
-  # at the topmost positions after the envfit procedure)
-  sign.vars <- unique(subset(sign.count.pos, freq >= target.freq)$vars)
-  
-  # drop the unused factor levels & reorder the factor (order is important here = 
-  # decreasing significance)
-  sign.vars <- droplevels(sign.vars)
-  sign.vars <- reorder.factor(sign.vars, new.order = unique(sign.vars))
-  
-  # return the variables as well as all counts in a list, just in case
-  sign.vars.list <- list("sign.vars" = sign.vars, 
-                         "sign.freq" = sign.count.all, 
-                         "sign.pos.freq" = sign.count.pos) 
-  return(sign.vars.list)
-}
-
 # get the most significant environmental variables according to the envfits 
-# performed on the imputed datasets
+# performed on the imputed datasets (custom helper function)
 sign.vars <- sign_vars_freq(env.sign.count, target.freq = 10)
 
 ## PLOTTING VARIABLES AS SURFACES OVERLAID ON THE MDS
 # get the original numeric values of the environmental variables chosen for plotting
 # from all the imputed datasets
 
-# only use env. variables from each df
+# only use env. variables (no factors) from each df
 vars.for.ordisurf <- lapply(lapply(env.imp.all, function(y) subset(y, select = -c(station, month, year))), # only env.variables from each df
                             function(x) { 
                               x <- subset(x, select = names(x) %in% levels(sign.vars[[1]])) # subset according to vector of chosen sign. variables
@@ -229,7 +184,6 @@ vars.for.ordisurf <- lapply(lapply(env.imp.all, function(y) subset(y, select = -
                               return(x)
                             }) 
 
-
 # combine into a single data frame and average each variable by id (= replicate)
 vars.for.ordisurf <- do.call("rbind", vars.for.ordisurf) 
 vars.for.ordisurf <- ddply(vars.for.ordisurf, .(id), colwise(mean)) 
@@ -238,38 +192,34 @@ vars.for.ordisurf <- ddply(vars.for.ordisurf, .(id), colwise(mean))
 # which serves no purpose (get back a list of ordisurf objects where each element
 # is an environmental variable)
 ordisurf.list.all <- apply(vars.for.ordisurf[-1], 
-                       MARGIN = 2, 
-                       FUN = function(x) ordi <- ordisurf(mds.sand ~ x, plot = FALSE)) 
+                           MARGIN = 2, 
+                           FUN = function(x) ordi <- ordisurf(mds.sand ~ x, plot = FALSE)) 
 
 # check out the summaries of the fits
 lapply(ordisurf.list.all, summary)
 
-# drop O2.average - mostly the same as O2.bottom (make new list, in case it's 
-# actually needed later)
-ordisurf.list.noO2 <- ordisurf.list.all
-ordisurf.list.noO2$O2.average <- NULL
+## SAVE FITTED ORDISURFS AS WELL (in case)
+saveRDS(ordisurf.list.all, file = file.path(save.dir, "ordisurf-mds_sand.rds"))
 
 # rearrange list to have the plots in the desired order.
 # Here: on the first row of the plot will be the sediment parameters, on the 
 # second - the water column parameters, and on the third - the heavy metals.
-names(ordisurf.list.noO2)
-ordisurf.list.noO2 <- ordisurf.list.noO2[c("sorting", "mean.grain.size", "org.matter", "depth",  
-                                   "O2.bottom", "Secchi.depth", "seston", "salinity",
-                                   "dist.innermost", "Pb", "heavy.metals.noFe", "Ni")]
+names(ordisurf.list.all)
+ordisurf.list.all <- ordisurf.list.all[c("sorting", "mean.grain.size", "dist.innermost", "depth",  
+                                        "Secchi.depth", "O2.bottom", "O2.average", "heavy.metals.noFe")]
 
-var.labels <- c("sorting", "mean grain size", "organic matter", "depth", 
-                 "O2 bottom", "Secchi depth", "seston", "salinity",  
-                 "distance to innermost station", "Pb", "heavy metals (no Fe)", "Ni")
+var.labels <- c("sorting", "mean grain size", "distance to innermost station", "depth", 
+                 "Secchi depth", "O2 bottom", "O2 average", "heavy metals (no Fe)")
 
 # set the file name and properties for the output graph
 pdf(file = file.path(figs.dir, "mds_ordisurf_sand_most_sign_vars.pdf"), 
-    paper = "a4r",
+    paper = "a4",
     width = 12,
     height = 12,
     useDingbats = FALSE)
 
 # modify par to fit all plots on one page (here, 4 plots per row)
-par(mfrow = c(3, 4))
+par(mfrow = c(4, 2))
 
 # plot all variables, using the custom plot_mds_ordisurf function, and adding the
 # corresponding main title (variable name) on each subplot
@@ -277,7 +227,7 @@ mapply(function(m, n) {
           plot_mds_ordisurf(mds.sand, m)
           title(main = n, col.main = "grey28")
        }, 
-       ordisurf.list.noO2, 
+       ordisurf.list.all, 
        var.labels
        )
 
@@ -288,7 +238,6 @@ par(mfrow = c(1, 1))
 
 # clean up workspace 
 rm(env.sign.count, 
-   ordisurf.list.noO2, 
    ordisurf.list.all, 
    sign.vars, 
    var.labels, 

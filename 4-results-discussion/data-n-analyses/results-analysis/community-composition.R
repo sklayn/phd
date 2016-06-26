@@ -455,8 +455,9 @@ mds.sand <- metaMDS(num.zoo.abnd.sand)
 # basic summary of the MDS
 mds.sand
 
-# stress plot for the MDS
-pdf(file = file.path(figs.dir, "explor_stressplot-mds_sand.pdf"), useDingbats = FALSE)
+# stress plot and goodness-of-fit (smaller size = better representation) for the MDS
+
+pdf(file = file.path(figs.dir, "explor_stressplots-mds_sand.pdf"), useDingbats = FALSE)
 stressplot(mds.sand)
 dev.off()
 
