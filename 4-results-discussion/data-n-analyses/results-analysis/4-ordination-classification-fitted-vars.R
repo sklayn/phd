@@ -70,7 +70,7 @@ sign.vars.sand <- sign_vars_freq(env.sand.sign.count, target.freq = 10)
 # from all the imputed datasets
 
 # only use env. variables (no factors) from each df
-vars.for.ordisurf.sand <- lapply(lapply(env.imp.all.sand, function(y) subset(y, select = -c(station, month, year))), # only env.variables from each df
+sign.vars.mean.sand <- lapply(lapply(env.imp.all.sand, function(y) subset(y, select = -c(station, month, year))), # only env.variables from each df
                                  function(x) { 
                                    x <- subset(x, select = names(x) %in% levels(sign.vars.sand[[1]])) # subset according to vector of chosen sign. variables
                                    # add a numeric identifier to be used later for aggregating
@@ -81,13 +81,13 @@ vars.for.ordisurf.sand <- lapply(lapply(env.imp.all.sand, function(y) subset(y, 
                                  }) 
 
 # combine into a single data frame and average each variable by id (= replicate)
-vars.for.ordisurf.sand <- do.call("rbind", vars.for.ordisurf.sand) 
-vars.for.ordisurf.sand <- ddply(vars.for.ordisurf.sand, .(id), colwise(mean)) 
+sign.vars.mean.sand <- do.call("rbind", sign.vars.mean.sand) 
+sign.vars.mean.sand <- ddply(sign.vars.mean.sand, .(id), colwise(mean)) 
 
 # apply ordisurf sequentially to all environmental variables except the first (= id), 
 # which serves no purpose (get back a list of ordisurf objects where each element
 # is an environmental variable)
-ordisurf.list.all.sand <- apply(vars.for.ordisurf.sand[-1], 
+ordisurf.list.all.sand <- apply(sign.vars.mean.sand[-1], 
                                 MARGIN = 2, 
                                 FUN = function(x) ordi <- ordisurf(mds.sand ~ x, plot = FALSE)) 
 
@@ -136,27 +136,68 @@ rm(env.sand.sign.count,
    ordisurf.list.all.sand, 
    sign.vars.sand, 
    var.labels.sand, 
-   vars.for.ordisurf.sand)
+   sign.vars.mean.sand)
 
 
-## Classification of the communities - FINISH THIS!!
-dendr.sand <- hclust(vegdist(sqrt(num.zoo.abnd.sand)), "average")
+## Classification of the communities 
 
-# plot and examine the dendrogram 
-plot(dendr.sand, hang = -1)
-rect.hclust(dendr.sand, k = 4) # here, it appears to have about 4 meaningful groups
-gr.dendr.sand <- cutree(dendr.sand, k = 4)
+# dendrogram of dissimilarities between samples
+set.seed(1)
+dendr.sand <- hclust(vegdist(sqrt(num.zoo.abnd.sand), method = "bray"), 
+                     "average")
 
+# add station names as labels 
+dendr.sand$labels <- factors.zoo.sand$stations
 
-# reorder dendrogram by some variable
-dendr.by.O2 <- with(sign.vars.mean, reorder(dendr.sand, O2.bottom))
-plot(dendr.by.O2, label = round(sign.vars.mean$O2.bottom, 2), hang = -1, main = "O2 bottom")
+# plot and examine the dendrogram
+pdf(file.path(figs.dir, "explor_dendrogram-sand.pdf"), useDingbats = FALSE)
+plot(dendr.sand, hang = -1, 
+     main = "", ylab = "Distance (Bray-Curtis)", xlab = "")
+rect.hclust(dendr.sand, k = 4) # here, it appears there are about 4 distinct groups
+
+dev.off()
+
+gr.dendr.sand <- cutree(dendr.sand, k = 4) # or the tree can be cut at any given height, too
+
+# reorder dendrogram by some variable (variables - same as aggregated data frame 
+# used for ordisurf & plotting over ordination)
+## => plots can be redone - leaves colored by cluster; values of the variable used
+##    for rearranging the tree plotted below as a colored bar..   
+dendr.sand.by.O2 <- with(sign.vars.mean, reorder(dendr.sand, O2.bottom))
+
+pdf(file.path(figs.dir, "explor_dendrogram-by-O2_sand.pdf"), useDingbats = FALSE)
+plot(dendr.sand.by.O2, hang = -1, 
+     main = "O2 bottom", xlab = "", ylab = "Distance (Bray-Curtis)")
+rect.hclust(dendr.sand.by.O2, k = 4)
+dev.off()
 
 # numerical analysis of the grouping
 anova(lm(O2.bottom ~ gr.dendr.sand, data = sign.vars.mean))
 
 
-## ANOSIM on the groups identified by the MDS and the classification
-## SIMPER to id the most significant species
+#### MAYBE USE THE SIGNIFICANT VARIABLES & RECLASSIFY - TURN INTO FACTORS
+### (O2 < 4 = hypoxic, 4 < O2 < 6 = limited, etc.) - THEN APPLY ANOSIM & SIMPER.
 
+## ANOSIM - groups = stations.  
+## This is a non-parametric permutation procedure applied to the rank (similarity)
+## matrix underlying the ordination or classification of the samples. R statistic:
+##  -1 to 1; 1 = all replicates within sites are more similar to each other than
+## to any other replicate from a different site; 0 = H0 is true (the same average
+## similarities between and within sites). Usually 0 < R < 1 => some degree of
+## difference observed between sites.
+## Best course of analysis: 1) global ANOSIM - overall difference between groups; 
+## if significant - 2) where does the main between-group difference come from? 
+## => examine R values for each pairwise comparison: large = complete separation, 
+## small - little or no difference.
+anosim.sand <- anosim(vegdist(sqrt(num.zoo.abnd.sand), method = "bray"), 
+                      grouping = factors.zoo.sand$stations)
+
+anosim.sand
+
+
+## SIMPER to id the species with the highest contribution to the differences
+## between groups. 
+## Good discriminating species - high contribution + small sd. 
+simper.sand <- simper(sqrt(num.zoo.abnd.sand), group = factors.zoo.sand$stations)
+simper.sand
 
