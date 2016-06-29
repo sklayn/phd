@@ -76,12 +76,17 @@ quickpred(water.param.sand.aggr)
 water.sand.imp <- mice(water.param.sand.aggr, method = "pmm", m = 100, seed = 100, printFlag = FALSE)
 summary(water.sand.imp)
 
-# subset the imputed data to only 2013-2014 (the only ones we're interested in)
-water.sand.imp.subs <- subset_datlist(water.sand.imp, index = 1:100, 
-                                      subset = water.sand.imp[[2]]$year == 2013 | water.sand.imp[[2]]$year == 2014)
+# extract the imputed data (long format) and subset to 2013-2014 only (the only
+# ones we're interested in)
+water.sand.imp.df <- complete(water.sand.imp, action = "long", include = FALSE)
+water.sand.imp.subs <- subset(water.sand.imp.df, year == 2013 | year == 2014)
 
-# sort by station, then years and months
-water.sand.imp.subs <- lapply(water.sand.imp.subs, function(x) arrange(x, station, year, month))
+# sort each imputation (id contained within column .imp) by station, then years and months
+water.sand.imp.subs <- ddply(water.sand.imp.subs, .(.imp), function(x) arrange(x, station, year, month))
+
+# get rid of the (confusing) .id column
+water.sand.imp.subs$.id <- NULL  
+
 
 # import the sediment parameters (and other parameters for which only short-term 
 # data is available)
@@ -111,38 +116,38 @@ other.env.sand.imp <- mice(other.env.sand,
 
 summary(other.env.sand.imp)
 
-other.env.sand.imp.subs <- subset_datlist(other.env.sand.imp, index = 1:100, 
-                                          subset = other.env.sand.imp[[2]]$year == 2013 | other.env.sand.imp[[2]]$year == 2014)
+# extract the imputed data (long format) and subset to 2013-2014 only
+other.env.sand.imp.df <- complete(other.env.sand.imp, action = "long", include = FALSE)
+
+# fix the heavy metals and heavy metals w/o Fe (doesn't seem to work before imputation)
+other.env.sand.imp.subs <- ddply(other.env.sand.imp.df, 
+                                 .(.imp), 
+                                 transform, 
+                                 heavy.metals.all = Cu + Pb + Zn + Cd + Mn + Fe + Ni, 
+                                 heavy.metals.noFe = Cu + Pb + Zn + Cd + Mn + Ni)
+
+# sort each imputation (id contained within column .imp) by station, then years and months
+other.env.sand.imp.subs <- ddply(other.env.sand.imp.subs, .(.imp), function(x) arrange(x, station, year, month))
+
+# get rid of the (confusing) .id column
+other.env.sand.imp.subs$.id <- NULL  
+
+# subset to 2013-2014 only
+other.env.sand.imp.subs <- subset(other.env.sand.imp.subs, year == 2013 | year == 2014)
+
 
 # combine with the water column (imputed and subsetted) data 
-env.imp.all.sand <- mapply(function(x, y) merge(x, y, by = c("station", "month", "year")), 
-                           water.sand.imp.subs, 
-                           other.env.sand.imp.subs, 
-                           SIMPLIFY = FALSE)
+env.imp.all.sand <- join(water.sand.imp.subs, other.env.sand.imp.subs)
 
 
 ## get the long-term average data for our stations (from both imputed data sets - water column and sediment - 
 ## basically combine without subsetting & clean); then set aside (will perform all analyses with them, too)
 
-# extract all completed datasets (in long format)
-water.imp.LT.sand <- complete(water.sand.imp, action = "long", include = FALSE)
-head(water.imp.LT.sand)
-
-other.env.imp.LT.sand <- complete(other.env.sand.imp, action = "long", include = FALSE)
-head(other.env.imp.LT.sand)
-
-# fix the heavy metals and heavy metals w/o Fe (doesn't seem to work before imputation)
-other.env.imp.LT.sand <- ddply(other.env.imp.LT.sand, 
-                               .(.imp), 
-                               transform, 
-                               heavy.metals.all = Cu + Pb + Zn + Cd + Mn + Fe + Ni, 
-                               heavy.metals.noFe = Cu + Pb + Zn + Cd + Mn + Ni)
-
 # average the observations by station & get rid of no longer necessary year & month
-water.imp.LT.sand <- ddply(water.imp.LT.sand[, !names(water.imp.LT.sand) %in% c("month", "year")], 
+water.imp.LT.sand <- ddply(water.sand.imp.df[, !names(water.sand.imp.df) %in% c("month", "year")], 
                            .(station), colwise(mean, .cols = is.numeric))
 
-other.env.imp.LT.sand <- ddply(other.env.imp.LT.sand[, !names(other.env.imp.LT.sand) %in% c("month", "year")], 
+other.env.imp.LT.sand <- ddply(other.env.sand.imp.df[, !names(other.env.sand.imp.df) %in% c("month", "year")], 
                                .(station), colwise(mean, .cols = is.numeric))
 
 # merge the two long-term environmental data frames
@@ -160,33 +165,22 @@ saveRDS(env.imp.all.LT.sand, file.path(save.dir, "env-data-imputed-LT-clean_sand
 
 # clean up the no longer useful intermediate data frames, lists etc. 
 rm(water.param.sand, 
-   water.param.sand.aggr, 
+   water.param.sand.aggr,
+   water.sand.imp.df,
    water.sand.imp, 
    water.sand.imp.subs,
    water.imp.LT.sand,
    other.env.sand, 
+   other.env.sand.imp.df,
    other.env.sand.imp, 
    other.env.sand.imp.subs, 
    other.env.imp.LT.sand)
 # rm(ini, meth)
 
-# (here only) fix the total heavy metals and heavy metals w/o Fe - these variables 
-# don't need to be imputed anyway, because they are sums of the other individual heavy metals, 
-# and if one of those is missing, all are missing (= all constituents are imputed anyway).
-env.imp.all.sand <- lapply(env.imp.all.sand, function(x) { 
-                                      x["heavy.metals.all"] <- x$Cu + x$Pb + x$Zn + x$Cd + x$Mn + x$Fe + x$Ni
-                                      x["heavy.metals.noFe"] <- x$Cu + x$Pb + x$Zn + x$Cd + x$Mn + x$Ni
-                                      return(x)
-                                   })
-
-# order data frames by station and date
-env.imp.all.sand <- lapply(env.imp.all.sand, function(x) arrange(x, station, year, month))
-
 # repeat each row 3 times to match the rows of the mds object and fix row names
 # (very ugly, but working, hack)
-env.imp.all.sand <- lapply(env.imp.all.sand, function(x) x[rep(seq_len(nrow(x)), each=3),])
-env.imp.all.sand <- lapply(env.imp.all.sand, function(x) {rownames(x) <- 1:nrow(x); x})
-
+env.imp.all.sand <- env.imp.all.sand[rep(seq_len(nrow(env.imp.all.sand)), each = 3), ]
+rownames(env.imp.all.sand) <- 1:nrow(env.imp.all.sand)
 
 # SAVE THIS IF NECESSARY FOR FUTURE USE 
 saveRDS(env.imp.all.sand, file.path(save.dir, "env-data-imputed-clean_sand.rds"))
@@ -203,27 +197,24 @@ library(gradientForest)
 # prepare the environemental data: use list of all (100) imputed values for the 
 # environmental variables; combine by averaging by station 
 # => equivalent to vars.for.ordisurf
-env.vars.sand.gf <- lapply(lapply(env.imp.all.sand, function(y) subset(y, select = -c(station, month, year))), # only env.variables from each df 
-                                  function(x) { 
-                                  # add a numeric identifier to be used later for aggregating
-                                  # to avoid having to reorder later
-                                  x$id <- rownames(x)
-                                  x$id <- as.numeric(x$id)
-                                  return(x)
-                                  })
-env.vars.sand.gf <- do.call("rbind", env.vars.sand.gf)
-env.vars.sand.gf <- ddply(env.vars.sand.gf, .(id), colwise(mean))
+env.vars.sand.gf <- ddply(env.imp.all.sand,
+                          .(station, year, month), colwise(mean, .cols = is.numeric))
+
+# repeat each row 3 times (to match the 3 replicates per station in the abundance data)
+env.vars.sand.gf <- env.vars.sand.gf[rep(seq_len(nrow(env.vars.sand.gf)), each = 3), ]
+rownames(env.vars.sand.gf) <- 1:nrow(env.vars.sand.gf)
+
 
 # calculate the maximum number of splits for the random tree analysis
 lev <- floor(log2(nrow(num.zoo.abnd.sand) * 0.368/2))
 
 # apply the gradient forest analysis (using the subset of species present at the 
 # current sites).
-# Important: convert the sites x species df to matrix; exclude the id column from
-# the df of environmental variables; include a transformation of the species abundance
-# data (here - square root). 
-gf.sand <- gradientForest(cbind(env.vars.sand.gf[-1], as.matrix(num.zoo.abnd.sand)), 
-                          predictor.vars = colnames(env.vars.sand.gf[-1]), 
+# Important: convert the sites x species df to matrix; exclude the first 3 columns
+# (station, year and month) from the df of environmental variables; include a 
+# transformation of the species abundance data (here - square root). 
+gf.sand <- gradientForest(cbind(env.vars.sand.gf[-c(1:3)], as.matrix(num.zoo.abnd.sand)), 
+                          predictor.vars = colnames(env.vars.sand.gf[-c(1:3)]), 
                           response.vars = colnames(num.zoo.abnd.sand), 
                           ntree = 500,
                           transform = function(x) sqrt(x),
@@ -238,6 +229,29 @@ gf.sand
 # plots to explore the results... 
 
 ######################################################################################################################
+
+## PCA on environmental parameters
+library(FactoMineR)
+library(factoextra)
+
+# if not installed:
+# devtools::install_github("kassambara/factoextra")
+# install.packages("FactoMineR", "factoextra")
+
+# only on 2013-2014 data (with previously imputed missing values)
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ## Dissimilarities and environment
