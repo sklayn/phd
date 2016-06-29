@@ -83,7 +83,6 @@ water.sand.imp.subs <- subset_datlist(water.sand.imp, index = 1:100,
 # sort by station, then years and months
 water.sand.imp.subs <- lapply(water.sand.imp.subs, function(x) arrange(x, station, year, month))
 
-
 # import the sediment parameters (and other parameters for which only short-term 
 # data is available)
 other.env.sand <- read.csv(file.path(data.dir, "other-env_sand-imputations.csv"),
@@ -96,10 +95,12 @@ other.env.sand$station <- reorder.factor(other.env.sand$station,
 
 # impute missing values here, too
 
-# first, exclude the depth as a predictor (not relevant (?))
+# first, change the predictor matrix so that the total heavy metals is always the
+# sum of all other heavy metals (idem for heavy metals w/o Fe).
 # ini <- mice(other.env.sand, maxit = 0, printFlag = FALSE)
-# pred <- ini$predictorMatrix
-# pred[,"depth"] <- 0
+# meth <- ini$meth
+# meth["heavy.metals.all"] <- "~I(Cu + Pb + Zn + Cd + Mn + Fe + Ni)"
+# meth["heavy.metals.noFe"] <- "~I(Cu + Pb + Zn + Cd + Mn + Ni)"
 
 # now, impute the missing values
 other.env.sand.imp <- mice(other.env.sand, 
@@ -119,15 +120,55 @@ env.imp.all.sand <- mapply(function(x, y) merge(x, y, by = c("station", "month",
                            other.env.sand.imp.subs, 
                            SIMPLIFY = FALSE)
 
+
+## get the long-term average data for our stations (from both imputed data sets - water column and sediment - 
+## basically combine without subsetting & clean); then set aside (will perform all analyses with them, too)
+
+# extract all completed datasets (in long format)
+water.imp.LT.sand <- complete(water.sand.imp, action = "long", include = FALSE)
+head(water.imp.LT.sand)
+
+other.env.imp.LT.sand <- complete(other.env.sand.imp, action = "long", include = FALSE)
+head(other.env.imp.LT.sand)
+
+# fix the heavy metals and heavy metals w/o Fe (doesn't seem to work before imputation)
+other.env.imp.LT.sand <- ddply(other.env.imp.LT.sand, 
+                               .(.imp), 
+                               transform, 
+                               heavy.metals.all = Cu + Pb + Zn + Cd + Mn + Fe + Ni, 
+                               heavy.metals.noFe = Cu + Pb + Zn + Cd + Mn + Ni)
+
+# average the observations by station & get rid of no longer necessary year & month
+water.imp.LT.sand <- ddply(water.imp.LT.sand[, !names(water.imp.LT.sand) %in% c("month", "year")], 
+                           .(station), colwise(mean, .cols = is.numeric))
+
+other.env.imp.LT.sand <- ddply(other.env.imp.LT.sand[, !names(other.env.imp.LT.sand) %in% c("month", "year")], 
+                               .(station), colwise(mean, .cols = is.numeric))
+
+# merge the two long-term environmental data frames
+env.imp.all.LT.sand <- join(water.imp.LT.sand, other.env.imp.LT.sand, by = "station") 
+
+# repeat the ugly hack to obtain the same number of rows for all replicates
+# (copy each row 9 times so that the LT values here match the station replicates 
+# in the abundance data frame, etc.)
+env.imp.all.LT.sand <- env.imp.all.LT.sand[rep(seq_len(nrow(env.imp.all.LT.sand)), each = 9), ]
+rownames(env.imp.all.LT.sand) <- 1:nrow(env.imp.all.LT.sand)
+
+# save LT data and set aside for later analyses                              
+saveRDS(env.imp.all.LT.sand, file.path(save.dir, "env-data-imputed-LT-clean_sand.rds"))
+
+
 # clean up the no longer useful intermediate data frames, lists etc. 
 rm(water.param.sand, 
    water.param.sand.aggr, 
    water.sand.imp, 
-   water.sand.imp.subs, 
+   water.sand.imp.subs,
+   water.imp.LT.sand,
    other.env.sand, 
    other.env.sand.imp, 
-   other.env.sand.imp.subs)
-
+   other.env.sand.imp.subs, 
+   other.env.imp.LT.sand)
+# rm(ini, meth)
 
 # (here only) fix the total heavy metals and heavy metals w/o Fe - these variables 
 # don't need to be imputed anyway, because they are sums of the other individual heavy metals, 

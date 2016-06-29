@@ -1,3 +1,9 @@
+# R files
 .Rproj.user
 .Rhistory
 .RData
+
+# project-specific potentially sensitive stuff
+data/				# data directories 
+*clean*				# cleaned-up data
+**/*clean*

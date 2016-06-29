@@ -175,8 +175,6 @@ dev.off()
 anova(lm(O2.bottom ~ gr.dendr.sand, data = sign.vars.mean))
 
 
-#### MAYBE USE THE SIGNIFICANT VARIABLES & RECLASSIFY - TURN INTO FACTORS
-### (O2 < 4 = hypoxic, 4 < O2 < 6 = limited, etc.) - THEN APPLY ANOSIM & SIMPER.
 
 ## ANOSIM - groups = stations.  
 ## This is a non-parametric permutation procedure applied to the rank (similarity)
@@ -195,9 +193,29 @@ anosim.sand <- anosim(vegdist(sqrt(num.zoo.abnd.sand), method = "bray"),
 anosim.sand
 
 
+## import and reclassify environmental variables to use for grouping - can be used 
+## to colour/order classification or ordination, too 
+env.qualit <- read.csv(file.path(data.dir, "env-qualit-vars_sand.csv"), header = TRUE)
+str(env.qualit)
+names(env.qualit)
+
+# copy each row (to match replicates in the zoo abundancee date frame) 
+env.qualit <- env.qualit[rep(seq_len(nrow(env.qualit)), each=3),]
+rownames(env.qualit) <- 1:nrow(env.qualit)
+
+
+## repeat the ANOSIM using these new groups 
+anosim.sand2 <- apply(env.qualit, 2, function(x) 
+                                      anos <- anosim(vegdist(sqrt(num.zoo.abnd.sand), method = "bray"), 
+                                                             grouping = x))
+anosim.sand2
+
 ## SIMPER to id the species with the highest contribution to the differences
 ## between groups. 
 ## Good discriminating species - high contribution + small sd. 
-simper.sand <- simper(sqrt(num.zoo.abnd.sand), group = factors.zoo.sand$stations)
-simper.sand
+simper.sand <- simper(sqrt(num.zoo.abnd.sand), 
+                      group = factors.zoo.sand$stations)
+summary(simper.sand, ordered = TRUE)
 
+simper.sand2 <- apply(env.qualit, 2, function(x) simp <- simper(sqrt(num.zoo.abnd.sand), 
+                                                                group = x))
