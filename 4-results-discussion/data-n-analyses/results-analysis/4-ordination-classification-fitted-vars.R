@@ -43,12 +43,12 @@ dev.off()
 # envfit (vegan) on the imputed datasets (env. variables subset only)
 # set seed if we have to repeat the calculation
 set.seed(1)
-env.mds.sand <- lapply(env.imp.all.sand, function(x) {
-  # subset each data frame to only the variable columns
-  envfit(mds.sand, 
-         subset(x, select = -c(station, month, year)), 
-         permutations = 999)
-})
+env.mds.sand <- dlply(env.imp.all.sand[, !names(env.imp.all.sand) %in% c("station", "month", "year")], 
+                      .(.imp), 
+                      function(x) {
+                        x$.imp <- NULL
+                        envfit(mds.sand, x, permutations = 999)
+                      })
 
 # apply Bonferroni correction for multiple testing to the p-values, because there is a large number 
 # of tested variables (calls custom function!).
@@ -69,20 +69,19 @@ sign.vars.sand <- sign_vars_freq(env.sand.sign.count, target.freq = 10)
 # get the original numeric values of the environmental variables chosen for plotting
 # from all the imputed datasets
 
-# only use env. variables (no factors) from each df
-sign.vars.mean.sand <- lapply(lapply(env.imp.all.sand, function(y) subset(y, select = -c(station, month, year))), # only env.variables from each df
-                                 function(x) { 
-                                   x <- subset(x, select = names(x) %in% levels(sign.vars.sand[[1]])) # subset according to vector of chosen sign. variables
-                                   # add a numeric identifier to be used later for aggregating
-                                   # to avoid having to reorder later
-                                   x$id <- rownames(x)
-                                   x$id <- as.numeric(x$id)
-                                   return(x)
-                                 }) 
+# only use env. variables (no factors) from each the imputed data df
+sign.vars.mean.sand <- ddply(env.imp.all.sand,
+                             .(.imp),
+                             # subset according to vector of chosen significant variables
+                             function(x) {
+                               x <- subset(x, select = names(x) %in% levels(sign.vars.sand[[1]]))
+                               x$id <- as.numeric(rownames(x))
+                               return(x)
+                               }
+                            ) 
 
-# combine into a single data frame and average each variable by id (= replicate)
-sign.vars.mean.sand <- do.call("rbind", sign.vars.mean.sand) 
-sign.vars.mean.sand <- ddply(sign.vars.mean.sand, .(id), colwise(mean)) 
+# average each variable by id (= replicate)
+sign.vars.mean.sand <- ddply(sign.vars.mean.sand, .(id), colwise(mean, .cols = is.numeric)) 
 
 # apply ordisurf sequentially to all environmental variables except the first (= id), 
 # which serves no purpose (get back a list of ordisurf objects where each element
@@ -120,11 +119,11 @@ par(mfrow = c(4, 2))
 # plot all variables, using the custom plot_mds_ordisurf function, and adding the
 # corresponding main title (variable name) on each subplot
 mapply(function(m, n) {
-  plot_mds_ordisurf(mds.sand, m)
-  title(main = n, col.main = "grey28")
-}, 
-ordisurf.list.all.sand, 
-var.labels.sand)
+        plot_mds_ordisurf(mds.sand, m)
+        title(main = n, col.main = "grey28")
+      }, 
+      ordisurf.list.all.sand, 
+      var.labels.sand)
 
 dev.off()
 
