@@ -13,31 +13,7 @@ library(factoextra)
 # install.packages("FactoMineR", "factoextra")
 
 
-prepare_data_pca <- function(env.data, summarize.by) {
-  ## helper for PCA. Prepares a data frame of environmental data for performing a
-  ## PCA: summarizes according to the desired factors; removes the factors; 
-  ## standardizes the data.
-  
-  library(plyr)
-  
-  # summarize (average) the data by the levels of the specified factor 
-  env.pca <- ddply(env.data, 
-                   .variables = summarize.by, 
-                   colwise(mean, .cols = is.numeric))
-  
-  # standardize the data (only the variables)
-  env.pca.std <- as.data.frame(scale(env.pca[, !names(env.pca) %in% c("station", "year", "month")], 
-                                     center = TRUE, scale = TRUE))
-  
-  # add back the factors (useful for labeling later)
-  env.pca.std <- cbind(env.pca[, names(env.pca) %in% c("station", "year", "month")], 
-                       env.pca.std)
-  
-  return(env.pca.std)
-}
-
-
-## 1. only on 2013-2014 data (with previously imputed missing values) - 
+## 1. PCA only on 2013-2014 data (with previously imputed missing values) - 
 ## 18 unique values per station (3 samplings x 6 stations)
 env.sand.pca1 <- prepare_data_pca(env.imp.all.sand, summarize.by = c("station", "year", "month"))
 pca1.sand <- PCA(env.sand.pca1, quali.sup = c(1:3), graph = FALSE)
@@ -107,39 +83,6 @@ fviz_pca_var(pca1.sand) + theme_bw()
 # then - variables positioned inside circle of correlations. Variables close to 
 # the center of the plot - less important for the first components.
 
-pca_repres_quality <- function(pca.res, choice = c("var", "ind"), param = c("cos2", "contrib")) {
-  ## Extracts data frame of PCA parameters (cos2 and contribution) and their 
-  ## relation to the PCs, then arranges it successively for each PC in 
-  ## descending order (of contribution, correlation, etc.) for easier reading.
-  
-  library(plyr)
-  
-  # select the variables
-  if(choice == "var") {
-    # get their correlation with the axes
-    vars.cos2 <- as.data.frame(pca.res$var$cos2)
-    vars.contrib <- as.data.frame(pca.res$var$contrib)
-  
-  # select the individuals
-  } else {
-    vars.cos2 <- as.data.frame(pca.res$ind$cos2)
-    vars.contrib <- as.data.frame(pca.res$ind$contrib)
-  }
-  
-  # sort each dimension in descending order
-  vars.cos2 <- cbind(x = row.names(vars.cos2), vars.cos2)
-  vars.contrib <- cbind(x = row.names(vars.contrib), vars.contrib)
-  
-  # return only the selected (ordered) parameter 
-  if (param == "cos2"){
-    apply(vars.cos2[-1], 2, function(m) arrange(vars.cos2, desc(m)))
-  } else {
-    apply(vars.contrib[-1], 2, function(m) arrange(vars.contrib, desc(m)))
-  }
-  
-}
-
-
 # rearrange the data frame successively by PC axes so that it's easier to read
 # and find the variables most correlated with each axis
 pca_repres_quality(pca.res = pca1.sand, choice = "var", param = "cos2")
@@ -183,20 +126,6 @@ pca_repres_quality(pca.res = pca1.sand, choice = "var", param = "contrib")
 # contribution larger than that cutoff could be considered as important.
 
 # variable contributions on PC1, PC2 and PC3 (+ all 3 axes together)
-plot_pca_var_contrib <- function(pca.res, choice = c("var", "ind"), axes = c(start : end)) {
-  ## helper plotting variable/individuals contributions (as bars) to the specified
-  ## axes. 
-
-  # plot contributions for each axis separately
-  for(i in axes){
-    print(fviz_contrib(pca.res, choice = choice, axes = i))
-  }
-  
-  # plot the overall contributions to the specified axes
-  print(fviz_contrib(pca.res, choice = choice, axes = axes))
-}
-
-
 plot_pca_var_contrib(pca1.sand, 
                      choice = "var", 
                      axes = c(1, 3))
@@ -266,99 +195,12 @@ fviz_pca_ind(pca1.sand, col.ind = "contrib") +
   theme_bw()
 
 
-
 ## put all diagnostic plots for the PCA in one file 
-plot_pca_diagnostic <- function(pca.res, file.name) {
-  ## quick PCA diagnostic plots in one pdf file. Crap with many hard-coded 
-  ## choices and values + calls other custom functions. Only acceptable to avoid 
-  ## retyping, has to be modified if at all useful for later work. 
-  
-  pdf(file.path(figs.dir, file.name), 
-      paper = "a4r", width = 12, height = 12,
-      useDingbats = FALSE)
-  
-  # scree plot
-  print(fviz_screeplot(pca.res) + theme_bw())
-  
-  ## VARIABLES
-  # variables factor map, with vectors colored according to the amount of 
-  # correlation to the PCs
-  # PC1-PC2
-  print(fviz_pca_var(pca.res, axes = c(1, 2), select.var = list(cos2 = 0.5), col.var = "cos2") + 
-          scale_color_gradient2(low = "skyblue", mid = "navyblue", high = "red", midpoint = 0.7) +
-          theme_minimal()
-  )
-  
-  # PC1-PC3    
-  print(fviz_pca_var(pca.res, axes = c(1, 3), select.var = list(cos2 = 0.5), col.var = "cos2") + 
-          scale_color_gradient2(low = "skyblue", mid = "navyblue", high = "red", midpoint = 0.7) +
-          theme_minimal()
-  )
-  # variable contributions to the PC axes (1-3 + all 3 together)
-  plot_pca_var_contrib(pca.res, 
-                       choice = "var", 
-                       axes = c(1:3))
-  
-  # variable map with contribution to PCs
-  # variable contributions to PC1-2
-  print(fviz_pca_var(pca.res, axes = c(1, 2), 
-                     select.var = list(contrib = 50), 
-                     col.var = "contrib") 
-        + theme_bw())
-  # PC1-3
-  print(fviz_pca_var(pca.res, axes = c(1, 3), 
-                     select.var = list(contrib = 50), 
-                     col.var = "contrib") 
-        + theme_bw())
-  
-  
-  ## INDIVIDUALS
-  # individuals map - PC1-2
-  print(fviz_pca_ind(pca.res,
-                     axes = c(1, 2),
-                     geom = "text",
-                     habillage = "station", 
-                     jitter = list(what = "label", width = 0.2, height = 0.3)) + 
-          theme_bw() + 
-          theme(legend.position = "none")
-  )
-  # individuals map - PC1-3
-  print(fviz_pca_ind(pca.res,
-                     axes = c(1, 3),
-                     geom = "text",
-                     habillage = "station", 
-                     jitter = list(what = "label", width = 0.2, height = 0.3)) + 
-          theme_bw() + 
-          theme(legend.position = "none")
-  )
-  
-  # individuals map, colored by representation quality (cos2)
-  # PC1-2
-  print(fviz_pca_ind(pca.res, axes = c(1, 2), col.ind = "cos2") + 
-          scale_color_gradient2(low = "skyblue", mid = "navyblue", high = "red", midpoint = 0.5) +
-          theme_minimal()
-  )
-  # PC1-3
-  print(fviz_pca_ind(pca.res, axes = c(1, 3), col.ind = "cos2") + 
-          scale_color_gradient2(low = "skyblue", mid = "navyblue", high = "red", midpoint = 0.5) +
-          theme_minimal()
-  )
-  
-  # contribution of individuals to the PCs
-  # PC1-3 + all 3 together
-  plot_pca_var_contrib(pca.res, 
-                       choice = "ind", 
-                       axes = c(1:3))
-  
-  
-  dev.off()
-}
-
-
 plot_pca_diagnostic(pca.res = pca1.sand, file.name = "explor_pca1_sand.pdf")
 
 
-## 2. only on 2013-2014 data (with previously imputed missing values) - 
+
+## 2. PCA only on 2013-2014 data (with previously imputed missing values) - 
 ## averaged by STATION - 6 unique values 
 env.sand.pca2 <- prepare_data_pca(env.imp.all.sand, summarize.by = "station")
 pca2.sand <- PCA(env.sand.pca2, quali.sup = c(1:3), graph = FALSE)
@@ -398,7 +240,7 @@ plot_pca_diagnostic(pca2.sand, file.name = "explor_pca2_sand.pdf")
 
 
 
-## 3. only on 2013-2014 data (with previously imputed missing values) - 
+## 3. PCA only on 2013-2014 data (with previously imputed missing values) - 
 ## averaged by STATION & YEAR - 12 unique values
 env.sand.pca3 <- prepare_data_pca(env.imp.all.sand, summarize.by = c("station", "year"))
 pca3.sand <- PCA(env.sand.pca3, quali.sup = c(1:3), graph = FALSE)
@@ -437,7 +279,7 @@ dev.off()
 plot_pca_diagnostic(pca3.sand, file.name = "explor_pca3_sand.pdf")
 
 
-## 4. on long-term data - averaged by STATION - 6 unique values
+## 4. PCA on long-term data - averaged by STATION - 6 unique values
 
 # remove duplicates (there is technically only 1 valid row per station; all the
 # others are obtained by copying it - so that the dataset can be used with the 
