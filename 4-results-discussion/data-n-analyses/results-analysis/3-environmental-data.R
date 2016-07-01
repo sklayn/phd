@@ -8,13 +8,8 @@ save.dir <- "output"
 figs.dir <- "figs"
 
 # import necessary packages
-library(ggplot2)
-library(grid)
 library(mice)
 library(miceadds)
-library(plyr)
-library(reshape2)
-library(vegan)
 library(VIM)
 
 
@@ -120,14 +115,14 @@ summary(other.env.sand.imp)
 other.env.sand.imp.df <- complete(other.env.sand.imp, action = "long", include = FALSE)
 
 # fix the heavy metals and heavy metals w/o Fe (doesn't seem to work before imputation)
-other.env.sand.imp.subs <- ddply(other.env.sand.imp.df, 
+other.env.sand.imp.df <- ddply(other.env.sand.imp.df, 
                                  .(.imp), 
                                  transform, 
                                  heavy.metals.all = Cu + Pb + Zn + Cd + Mn + Fe + Ni, 
                                  heavy.metals.noFe = Cu + Pb + Zn + Cd + Mn + Ni)
 
 # sort each imputation (id contained within column .imp) by station, then years and months
-other.env.sand.imp.subs <- ddply(other.env.sand.imp.subs, .(.imp), function(x) arrange(x, station, year, month))
+other.env.sand.imp.subs <- ddply(other.env.sand.imp.df, .(.imp), function(x) arrange(x, station, year, month))
 
 # get rid of the (confusing) .id column
 other.env.sand.imp.subs$.id <- NULL  
@@ -204,7 +199,6 @@ env.vars.sand.gf <- ddply(env.imp.all.sand,
 env.vars.sand.gf <- env.vars.sand.gf[rep(seq_len(nrow(env.vars.sand.gf)), each = 3), ]
 rownames(env.vars.sand.gf) <- 1:nrow(env.vars.sand.gf)
 
-
 # calculate the maximum number of splits for the random tree analysis
 lev <- floor(log2(nrow(num.zoo.abnd.sand) * 0.368/2))
 
@@ -229,30 +223,6 @@ gf.sand
 # plots to explore the results... 
 
 ######################################################################################################################
-
-## PCA on environmental parameters
-library(FactoMineR)
-library(factoextra)
-
-# if not installed:
-# devtools::install_github("kassambara/factoextra")
-# install.packages("FactoMineR", "factoextra")
-
-# only on 2013-2014 data (with previously imputed missing values)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ## Dissimilarities and environment
 # PERMANOVA - multivariate ANOVA based on dissimilarities (=> adonis in vegan)
