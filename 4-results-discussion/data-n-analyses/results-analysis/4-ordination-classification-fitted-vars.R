@@ -42,6 +42,17 @@ dev.off()
 
 # envfit (vegan) on the imputed datasets (env. variables subset only)
 # set seed if we have to repeat the calculation
+
+###############
+# repeat each row 3 times to match the rows of the mds object and fix row names
+# (very ugly, but working, hack)
+env.imp.all.sand <- env.imp.all.sand[rep(seq_len(nrow(env.imp.all.sand)), each = 3), ]
+rownames(env.imp.all.sand) <- 1:nrow(env.imp.all.sand)
+
+# SAVE THIS IF NECESSARY FOR FUTURE USE 
+saveRDS(env.imp.all.sand, file.path(save.dir, "env-data-imputed-clean_sand.rds"))
+
+
 set.seed(1)
 env.mds.sand <- dlply(env.imp.all.sand[, !names(env.imp.all.sand) %in% c("station", "month", "year")], 
                       .(.imp), 

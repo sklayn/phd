@@ -68,19 +68,26 @@ water.param.sand.aggr$depth <- NULL
 quickpred(water.param.sand.aggr)
 
 # impute the missing data
-water.sand.imp <- mice(water.param.sand.aggr, method = "pmm", m = 100, seed = 100, printFlag = FALSE)
+water.sand.imp <- mice(water.param.sand.aggr, 
+                             method = "pmm", 
+                             m = 100, 
+                             seed = 100, 
+                             printFlag = FALSE)
 summary(water.sand.imp)
 
-# extract the imputed data (long format) and subset to 2013-2014 only (the only
-# ones we're interested in)
+# extract the imputed data (long format) 
 water.sand.imp.df <- complete(water.sand.imp, action = "long", include = FALSE)
-water.sand.imp.subs <- subset(water.sand.imp.df, year == 2013 | year == 2014)
 
 # sort each imputation (id contained within column .imp) by station, then years and months
-water.sand.imp.subs <- ddply(water.sand.imp.subs, .(.imp), function(x) arrange(x, station, year, month))
+water.sand.imp.df <- ddply(water.sand.imp.df, 
+                           .(.imp), 
+                           function(x) arrange(x, station, year, month))
 
 # get rid of the (confusing) .id column
-water.sand.imp.subs$.id <- NULL  
+water.sand.imp.df$.id <- NULL  
+
+## SAVE THIS TO AVOID REPEATING THE IMPUTATION PROCEDURE WHICH IS A RESOURCE HOG
+saveRDS(water.sand.imp.df, file = file.path(save.dir, "water-column-imputed_clean_sand.rds"))
 
 
 # import the sediment parameters (and other parameters for which only short-term 
@@ -92,17 +99,7 @@ other.env.sand <- read.csv(file.path(data.dir, "other-env_sand-imputations.csv")
 other.env.sand$station <- reorder.factor(other.env.sand$station, 
                                          new.order = stations.sand)
 
-
 # impute missing values here, too
-
-# first, change the predictor matrix so that the total heavy metals is always the
-# sum of all other heavy metals (idem for heavy metals w/o Fe).
-# ini <- mice(other.env.sand, maxit = 0, printFlag = FALSE)
-# meth <- ini$meth
-# meth["heavy.metals.all"] <- "~I(Cu + Pb + Zn + Cd + Mn + Fe + Ni)"
-# meth["heavy.metals.noFe"] <- "~I(Cu + Pb + Zn + Cd + Mn + Ni)"
-
-# now, impute the missing values
 other.env.sand.imp <- mice(other.env.sand, 
                            method = "pmm", 
                            m = 100, 
@@ -114,71 +111,25 @@ summary(other.env.sand.imp)
 # extract the imputed data (long format) and subset to 2013-2014 only
 other.env.sand.imp.df <- complete(other.env.sand.imp, action = "long", include = FALSE)
 
-# fix the heavy metals and heavy metals w/o Fe (doesn't seem to work before imputation)
+# sort each imputation (id contained within column .imp) by station, then years
+# and months (also unnecessary, since already sorted)
 other.env.sand.imp.df <- ddply(other.env.sand.imp.df, 
                                  .(.imp), 
-                                 transform, 
-                                 heavy.metals.all = Cu + Pb + Zn + Cd + Mn + Fe + Ni, 
-                                 heavy.metals.noFe = Cu + Pb + Zn + Cd + Mn + Ni)
-
-# sort each imputation (id contained within column .imp) by station, then years and months
-other.env.sand.imp.subs <- ddply(other.env.sand.imp.df, .(.imp), function(x) arrange(x, station, year, month))
+                                 function(x) arrange(x, station, year, month))
 
 # get rid of the (confusing) .id column
-other.env.sand.imp.subs$.id <- NULL  
+other.env.sand.imp.df$.id <- NULL  
 
-# subset to 2013-2014 only
-other.env.sand.imp.subs <- subset(other.env.sand.imp.subs, year == 2013 | year == 2014)
-
-
-# combine with the water column (imputed and subsetted) data 
-env.imp.all.sand <- join(water.sand.imp.subs, other.env.sand.imp.subs)
-
-
-## get the long-term average data for our stations (from both imputed data sets - water column and sediment - 
-## basically combine without subsetting & clean); then set aside (will perform all analyses with them, too)
-
-# average the observations by station & get rid of no longer necessary year & month
-water.imp.LT.sand <- ddply(water.sand.imp.df[, !names(water.sand.imp.df) %in% c("month", "year")], 
-                           .(station), colwise(mean, .cols = is.numeric))
-
-other.env.imp.LT.sand <- ddply(other.env.sand.imp.df[, !names(other.env.sand.imp.df) %in% c("month", "year")], 
-                               .(station), colwise(mean, .cols = is.numeric))
-
-# merge the two long-term environmental data frames
-env.imp.all.LT.sand <- join(water.imp.LT.sand, other.env.imp.LT.sand, by = "station") 
-
-# repeat the ugly hack to obtain the same number of rows for all replicates
-# (copy each row 9 times so that the LT values here match the station replicates 
-# in the abundance data frame, etc.)
-env.imp.all.LT.sand <- env.imp.all.LT.sand[rep(seq_len(nrow(env.imp.all.LT.sand)), each = 9), ]
-rownames(env.imp.all.LT.sand) <- 1:nrow(env.imp.all.LT.sand)
-
-# save LT data and set aside for later analyses                              
-saveRDS(env.imp.all.LT.sand, file.path(save.dir, "env-data-imputed-LT-clean_sand.rds"))
+## SAVE THIS DATASET TOO - TO AVOID IMPUTING AGAIN
+saveRDS(other.env.sand.imp.df, file = file.path(save.dir, "other-env-imputed_clean_sand.rds"))
 
 
 # clean up the no longer useful intermediate data frames, lists etc. 
 rm(water.param.sand, 
    water.param.sand.aggr,
-   water.sand.imp.df,
-   water.sand.imp, 
-   water.sand.imp.subs,
-   water.imp.LT.sand,
+   water.sand.imp,
    other.env.sand, 
-   other.env.sand.imp.df,
-   other.env.sand.imp, 
-   other.env.sand.imp.subs, 
-   other.env.imp.LT.sand)
-# rm(ini, meth)
-
-# repeat each row 3 times to match the rows of the mds object and fix row names
-# (very ugly, but working, hack)
-env.imp.all.sand <- env.imp.all.sand[rep(seq_len(nrow(env.imp.all.sand)), each = 3), ]
-rownames(env.imp.all.sand) <- 1:nrow(env.imp.all.sand)
-
-# SAVE THIS IF NECESSARY FOR FUTURE USE 
-saveRDS(env.imp.all.sand, file.path(save.dir, "env-data-imputed-clean_sand.rds"))
+   other.env.sand.imp)
 
 
 ########################################################################################################
