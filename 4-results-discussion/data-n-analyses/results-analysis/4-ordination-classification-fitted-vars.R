@@ -40,64 +40,81 @@ dev.off()
 ## Fit environmental variables to the ordination (datasets from environmental 
 ## data script)
 
-# envfit (vegan) on the imputed datasets (env. variables subset only)
+## envfit (vegan) on the (imputed) environmental data. 
+# use the long-term water column data - summarized by station
+water.sand.by.st <- ddply(water.sand.imp.df[, !names(water.sand.imp.df) %in% c("year", "month")], 
+                          .(station), 
+                          colwise(mean, .cols = is.numeric))
+
+# repeat each row - to match the number of replicate zoobenthic samples 
+# (unfortunately, hardcoded here and below for expediency)
+water.sand.envfit <- water.sand.by.st[rep(seq_len(nrow(water.sand.by.st)), each = 9), ]
+rownames(water.sand.envfit) <- 1:nrow(water.sand.envfit)
+
+# for the other environmental parameters, summarize the imputed datasets by month
+# and year (these were only measured in 2013-2014 anyway) 
+other.env.sand.by.st <- ddply(other.env.sand.imp.df, 
+                              .(station, year, month), 
+                              colwise(mean, .cols = is.numeric))
+
+# repeat each row 3 times to match the number of replicate zoobenthic samples
+other.env.sand.envfit <- other.env.sand.st[rep(seq_len(nrow(other.env.sand.st)), each = 3), ]
+rownames(other.env.sand.envfit) <- 1:nrow(other.env.sand.envfit)
+
+# quick workspace cleanup
+rm(water.sand.by.st, other.env.sand.by.st)
+
+# add the heavy metals 
+# import heavy metal data, if not already imported
+# heavy.metals.sand <- read.csv(file.path(data.dir, "heavy-metals-sand.csv"), header = TRUE) 
+
+# repeat each row - to match the number of replicate zoobenthic samples
+heavy.metals.sand.envfit <- heavy.metals.sand[rep(seq_len(nrow(heavy.metals.sand)), each = 9), ]
+rownames(heavy.metals.sand.envfit) <- 1:nrow(heavy.metals.sand.envfit)
+
+# remove the month and year from the heavy metals dataset (only measured once, so 
+# not relevant)
+heavy.metals.sand.envfit <- heavy.metals.sand.envfit[, !names(heavy.metals.sand.envfit) %in% c("month", "year", "station")]
+
+# join all 3 (water column, sediments and heavy metals) together
+env.all.sand.envfit <- cbind(other.env.sand.envfit,
+                             heavy.metals.sand.envfit, 
+                             water.sand.envfit[, !names(water.sand.envfit) == "station"])
+
+## SAVE IN CASE WE NEED IT 
+saveRDS(env.all.sand.envfit, file = file.path(save.dir, "env-all-for-envfit_clean_sand.rds"))
+
 # set seed if we have to repeat the calculation
-
-###############
-# repeat each row 3 times to match the rows of the mds object and fix row names
-# (very ugly, but working, hack)
-env.imp.all.sand <- env.imp.all.sand[rep(seq_len(nrow(env.imp.all.sand)), each = 3), ]
-rownames(env.imp.all.sand) <- 1:nrow(env.imp.all.sand)
-
-# SAVE THIS IF NECESSARY FOR FUTURE USE 
-saveRDS(env.imp.all.sand, file.path(save.dir, "env-data-imputed-clean_sand.rds"))
-
-
 set.seed(1)
-env.mds.sand <- dlply(env.imp.all.sand[, !names(env.imp.all.sand) %in% c("station", "month", "year")], 
-                      .(.imp), 
-                      function(x) {
-                        x$.imp <- NULL
-                        envfit(mds.sand, x, permutations = 999)
-                      })
-
+envfit.mds.sand <- envfit(mds.sand,
+                       env.all.sand.envfit[, !names(env.all.sand.envfit) %in% c("station", "month", "year")], 
+                       permutations = 999)
+                      
 # apply Bonferroni correction for multiple testing to the p-values, because there is a large number 
 # of tested variables (calls custom function!).
-env.mds.sand <- lapply(env.mds.sand, p_adjust_envfit)
+envfit.mds.sand <- p_adjust_envfit(envfit.mds.sand)
 
-## SAVE THE LIST OF ENVFITS
-saveRDS(env.mds.sand, file = file.path(save.dir, "envfit-mds-clean_sand.rds"))
+## SAVE THE ENVFIT
+saveRDS(envfit.mds.sand, file = file.path(save.dir, "envfit-mds_sand.rds"))
 
-# extract the most significant variables and positions from the list of envfits 
-# (calls custom helper function)
-env.sand.sign.count <- lapply(env.mds.sand, sign_vars_pos_envfit)
+# extract significant variables & order by r2
+envfit.sand.sign.vars <- extract_envfit_scores(envfit.mds.sand, p = 0.05, r2 = TRUE)
+envfit.sand.sign.vars <- arrange(envfit.sand.sign.vars, pvals, desc(r2))
 
-# get the most significant environmental variables according to the envfits 
-# performed on the imputed datasets (custom helper function)
-sign.vars.sand <- sign_vars_freq(env.sand.sign.count, target.freq = 10)
 
-## PLOTTING VARIABLES AS SURFACES OVERLAID ON THE MDS
-# get the original numeric values of the environmental variables chosen for plotting
-# from all the imputed datasets
+## PLOT VARIABLES AS SURFACES OVERLAID ON THE MDS (ORDISURF)
 
-# only use env. variables (no factors) from each the imputed data df
-sign.vars.mean.sand <- ddply(env.imp.all.sand,
-                             .(.imp),
-                             # subset according to vector of chosen significant variables
-                             function(x) {
-                               x <- subset(x, select = names(x) %in% levels(sign.vars.sand[[1]]))
-                               x$id <- as.numeric(rownames(x))
-                               return(x)
-                               }
-                            ) 
+# ordisurf needs the original numeric values of the environmental variables chosen
+# for plotting (= the significant variables from envfit, p < 0.05)
+sign.vars.sand.ordisurf <- subset(env.all.sand.envfit, 
+                                  select = names(env.all.sand.envfit) %in% envfit.sand.sign.vars$vars)
 
-# average each variable by id (= replicate)
-sign.vars.mean.sand <- ddply(sign.vars.mean.sand, .(id), colwise(mean, .cols = is.numeric)) 
+dim(sign.vars.sand.ordisurf) # just to check that everything we need is there
 
-# apply ordisurf sequentially to all environmental variables except the first (= id), 
+# apply ordisurf sequentially to all significant environmental variables, 
 # which serves no purpose (get back a list of ordisurf objects where each element
 # is an environmental variable)
-ordisurf.list.all.sand <- apply(sign.vars.mean.sand[-1], 
+ordisurf.list.all.sand <- apply(sign.vars.sand.ordisurf, 
                                 MARGIN = 2, 
                                 FUN = function(x) ordi <- ordisurf(mds.sand ~ x, plot = FALSE)) 
 
@@ -108,24 +125,27 @@ lapply(ordisurf.list.all.sand, summary)
 saveRDS(ordisurf.list.all.sand, file = file.path(save.dir, "ordisurf-mds_sand.rds"))
 
 # rearrange list to have the plots in the desired order.
-# Here: on the first row of the plot will be the sediment parameters, on the 
-# second - the water column parameters, and on the third - the heavy metals.
+# Here: first the sediment parameters, then the water column parameters, and 
+# finally the heavy metals.
 names(ordisurf.list.all.sand)
-ordisurf.list.all.sand <- ordisurf.list.all.sand[c("sorting", "mean.grain.size", "dist.innermost", "depth",  
-                                                   "Secchi.depth", "O2.bottom", "O2.average", "heavy.metals.noFe")]
+ordisurf.list.all.sand <- ordisurf.list.all.sand[c("Ninorg", "Ntot", "NH4", "NO2", "PO4", 
+                                                   "O2.bottom", "O2.average", "Secchi.depth",
+                                                   "seston", "dist.innermost", "depth", "sand",
+                                                   "gravel", "sorting", "mean.grain.size",
+                                                   "org.matter", "heavy.metals.noFe", "heavy.metals.all",
+                                                   "Mn", "Pb", "Ni", "Cu")]
 
-var.labels.sand <- c("sorting", "mean grain size", "distance to innermost station", "depth", 
-                     "Secchi depth", "O2 bottom", "O2 average", "heavy metals (no Fe)")
+var.labels.sand <- c("N-inorganic", "N-total", "NH4", "NO2", "PO4", 
+                     "O2 bottom", "O2 average", "Secchi depth",
+                     "seston", "distance to innermost station", "depth", "% sand",
+                     "% gravel", "sorting", "mean grain size",
+                     "organic matter", "heavy metals (no Fe)", "total heavy metals",
+                     "Mn", "Pb", "Ni", "Cu")
 
-# set the file name and properties for the output graph
+# set the file name and properties for the output graph --> REDO TO FIT MULTIPLE PLOTS/PAGE!
 pdf(file = file.path(figs.dir, "mds_ordisurf_sand_most_sign_vars.pdf"), 
     paper = "a4",
-    width = 12,
-    height = 12,
     useDingbats = FALSE)
-
-# modify par to fit all plots on one page (here, 4 plots per row)
-par(mfrow = c(4, 2))
 
 # plot all variables, using the custom plot_mds_ordisurf function, and adding the
 # corresponding main title (variable name) on each subplot
@@ -138,15 +158,15 @@ mapply(function(m, n) {
 
 dev.off()
 
-# return the graphics device to the original settings
-par(mfrow = c(1, 1))
 
 # clean up workspace 
-rm(env.sand.sign.count, 
+rm(envfit.sand.sign.vars, 
    ordisurf.list.all.sand, 
-   sign.vars.sand, 
-   var.labels.sand, 
-   sign.vars.mean.sand)
+   sign.vars.sand.ordisurf, 
+   var.labels.sand,
+   heavy.metals.sand.envfit, 
+   water.sand.envfit, 
+   other.env.sand.envfit)
 
 
 ## Classification of the communities 

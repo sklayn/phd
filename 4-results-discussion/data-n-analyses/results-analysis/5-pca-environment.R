@@ -165,13 +165,13 @@ fviz_pca_ind(pca.result, col.ind = "contrib") +
 ## AND SEDIMENTS (MAYBE 3, IF HEAVY METALS ON THEIR OWN) - 6 unique values/dataset
 
 # summarize water column parameters by station (excluding the month and year) 
-# -> for use in PCA & envfit
+# -> for use in PCA
 water.sand.by.st <- ddply(water.sand.imp.df[, !names(water.sand.imp.df) %in% c("year", "month")], 
                           .(station), 
                           colwise(mean, .cols = is.numeric))
 
 # summarize other environmental parameters by station (mean values) -> for use in 
-# PCA & envfit
+# PCA
 other.env.sand.by.st <- ddply(other.env.sand.imp.df[, !names(other.env.sand.imp.df) %in% c("year", "month")], 
                               .(station), 
                               colwise(mean, .cols = is.numeric))
