@@ -1,27 +1,3 @@
-prepare_data_pca <- function(env.data, summarize.by) {
-  ## helper for PCA. Prepares a data frame of environmental data for performing a
-  ## PCA: summarizes according to the desired factors; removes the factors; 
-  ## standardizes the data.
-  
-  library(plyr)
-  
-  # summarize (average) the data by the levels of the specified factor 
-  env.pca <- ddply(env.data, 
-                   .variables = summarize.by, 
-                   colwise(mean, .cols = is.numeric))
-  
-  # standardize the data (only the variables)
-  env.pca.std <- as.data.frame(scale(env.pca[, !names(env.pca) %in% c("station", "year", "month")], 
-                                     center = TRUE, scale = TRUE))
-  
-  # add back the factors (useful for labeling later)
-  env.pca.std <- cbind(env.pca[, names(env.pca) %in% c("station", "year", "month")], 
-                       env.pca.std)
-  
-  return(env.pca.std)
-}
-
-
 pca_repres_quality <- function(pca.res, choice = c("var", "ind"), param = c("cos2", "contrib")) {
   ## Extracts data frame of PCA parameters (cos2 and contribution) and their 
   ## relation to the PCs, then arranges it successively for each PC in 

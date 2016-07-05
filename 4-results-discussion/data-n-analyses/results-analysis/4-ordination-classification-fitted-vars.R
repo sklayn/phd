@@ -73,7 +73,7 @@ heavy.metals.sand.envfit <- heavy.metals.sand[rep(seq_len(nrow(heavy.metals.sand
 rownames(heavy.metals.sand.envfit) <- 1:nrow(heavy.metals.sand.envfit)
 
 # remove the month and year from the heavy metals dataset (only measured once, so 
-# not relevant)
+# not relevant) + the stations - not needed for envfit
 heavy.metals.sand.envfit <- heavy.metals.sand.envfit[, !names(heavy.metals.sand.envfit) %in% c("month", "year", "station")]
 
 # join all 3 (water column, sediments and heavy metals) together
