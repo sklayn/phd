@@ -2,7 +2,8 @@
 ### (continued from environmental data script; references objects from it)
 
 # source: http://www.sthda.com/english/wiki/principal-component-analysis-how-to-reveal-the-most-important-variables-in-your-data-r-software-and-data-mining#at_pco=smlwn-1.0&at_si=56ab2ae7c9bd86b4&at_ab=per-2&at_pos=0&at_tot=1
-
+library(corrplot)
+library(Hmisc)
 library(plyr)
 library(vegan)
 library(FactoMineR)
@@ -207,17 +208,224 @@ heavy.metals.sand$station <- reorder.factor(heavy.metals.sand$station,
 # remove the no longer necessary data frames and subsets
 rm(other.env.sand.by.st, water.sand.by.st)
 
-### perform PCAs
+
+### perform variable pruning to reduce variable redundancy in the dataset
+## prune water column parameters
+# group = station here
+# select_vars_pruning <- function(env.data.df, group, p.val = 0.05) {
+#   ## select variables for pruning based on their significance.
+#   ## group should be a factor column in the data frame!
+#   ## NB calls custom helper functions! 
+# 
+#   env.data.pruning <- env.data.df
+#   
+#   # rename the factor column used for grouping (hard-coded in the significance
+#   # functions, unfortunately)
+#   names(env.data.pruning)[names(env.data.pruning) == group] <- "group"
+# 
+#   # calculate the variables' significance
+#   env.data.sframe <- get_chiscores(dframe = env.data.pruning,
+#                                    varnames = setdiff(colnames(env.data.pruning), "group"))
+#   
+#   # be generous in accepting a variable (1/20 false positive rate)
+#   print(scoreplot(env.data.sframe, threshold = p.val))
+#   env.vars.sel <- env.data.sframe[env.data.sframe$scores < p.val, ]$var
+#   
+#   # subset the original data frame using the significant variables
+#   env.data.pruned <- subset(env.data.pruning, select = env.vars.sel)
+#   
+#   return(env.data.pruned)
+# }
+
+
+# find and eliminate highly correlated variables in the datasets
+filter_correlated_vars <- function(env.df, cor.threshold = 0.75) {
+  ## wrapper for several functions finding highly correlated variables 
+  ## in the dataset and eliminating them
+  
+  library(caret)
+  
+  # calculate the correlation matrix (on the numeric variables only)
+  env.vars.cors <- cor(env.df[, sapply(env.df, is.numeric)])
+  
+  # find and eliminate the highly correlated variables
+  highly.cor.vars <- findCorrelation(env.vars.cors, cutoff = cor.threshold, names = FALSE)
+  env.vars.fin <- env.df[, -highly.cor.vars]
+  
+  return(env.vars.fin)
+}
+
+water.vars.fin <- filter_correlated_vars(water.sand.pca, cor.threshold = 0.75)
+
+### standardize the data and perform the PCA
+water.vars.std <- as.data.frame(scale(water.vars.fin[, sapply(water.vars.fin, is.numeric)], 
+                                      center = TRUE, scale = TRUE))
+
+water.vars.std <- cbind(station = water.sand.pca$station, water.vars.std)
+
+pca.water.sand.pruned <- PCA(water.vars.std, scale.unit = FALSE, quali.sup = 1, graph = FALSE)
+summary(pca.water.sand.pruned)
+
+## save for reference
+saveRDS(pca.water.sand.pruned, file.path(save.dir, "pca_water-column_sand_pruned.rds"))
+
+## clean up 
+rm(water.vars.fin, water.vars.std)
+
+## plot & check
+# PCA biplots - save as pdf!
+pdf(file.path(figs.dir, "explor_pca_water-column_sand_pruned_biplot.pdf"), 
+    paper = "a4r", width = 12, height = 12, 
+    useDingbats = FALSE)
+
+# PC1-2
+fviz_pca_biplot(pca.water.sand.pruned, 
+                axes = c(1, 2),
+                label = "var", 
+                habillage = "station", 
+                select.var = list(cos2 = 0.5), 
+                col.var = "grey50", 
+                repel = TRUE) + 
+  theme_bw()
+
+# PC1-3
+fviz_pca_biplot(pca.water.sand.pruned, 
+                axes = c(1, 3),
+                label = "var", 
+                habillage = "station", 
+                select.var = list(cos2 = 0.5), 
+                col.var = "grey50", 
+                repel = TRUE) + 
+  theme_bw()
+
+dev.off()
+
+# various PCA diagnostic & exploratory plots
+plot_pca_diagnostic(pca.water.sand.pruned, file.name = "explor_pca_water-column_sand_pruned.pdf")
+
+
+
+### same for other environmental parameters
+# prune & filter
+other.env.pruned <- filter_correlated_vars(other.env.sand.pca, cor.threshold = 0.75)
+
+# standardize and perform PCA
+other.env.pruned.std <- as.data.frame(scale(other.env.pruned[, sapply(other.env.pruned, is.numeric)], 
+                                            center = TRUE, scale = TRUE))
+
+other.env.pruned.std <- cbind(station = other.env.sand.pca$station, other.env.pruned.std)
+
+pca.other.env.sand.pruned <- PCA(other.env.pruned.std, scale.unit = FALSE, quali.sup = 1, graph = FALSE)
+summary(pca.other.env.sand.pruned)
+
+## save PCA result
+saveRDS(pca.other.env.sand.pruned, file.path(save.dir, "pca_other-env_sand_pruned.rds"))
+
+## clean up workspace
+rm(other.env.pruned.std, other.env.pruned)
+
+## plot & check
+# PCA biplots
+pdf(file.path(figs.dir, "explor_pca_sediment-params_sand_pruned_biplot.pdf"), 
+    paper = "a4r", width = 12, height = 12, 
+    useDingbats = FALSE)
+
+# PC1-2
+fviz_pca_biplot(pca.other.env.sand.pruned, 
+                axes = c(1, 2),
+                label = "var", 
+                habillage = "station", 
+                select.var = list(cos2 = 0.5), 
+                col.var = "grey50", 
+                repel = TRUE) + 
+  theme_bw()
+
+# PC1-3
+fviz_pca_biplot(pca.other.env.sand.pruned, 
+                axes = c(1, 3),
+                label = "var", 
+                habillage = "station", 
+                select.var = list(cos2 = 0.5), 
+                col.var = "grey50", 
+                repel = TRUE) + 
+  theme_bw()
+
+dev.off()
+
+# various PCA diagnostic & exploratory plots
+plot_pca_diagnostic(pca.other.env.sand.pruned, file.name = "explor_pca_sediment-params_sand_pruned.pdf")
+
+
+### same for the heavy metals
+names(heavy.metals.sand)
+# drop the month and year column
+heavy.metals.pca <- heavy.metals.sand[, setdiff(names(heavy.metals.sand), c("month", "year"))]
+
+# prune and filter correlated variables
+heavy.metals.pruned <- filter_correlated_vars(heavy.metals.pca, cor.threshold = 0.75)
+
+# standardize and perform PCA
+heavy.metals.pruned.std <- as.data.frame(scale(heavy.metals.pruned[, sapply(heavy.metals.pruned, is.numeric)], 
+                                               center = TRUE, scale = TRUE))
+
+heavy.metals.pruned.std <- cbind(station = heavy.metals.pca$station, heavy.metals.pruned.std)
+
+pca.heavy.metals.sand.pruned <- PCA(heavy.metals.pruned.std, scale.unit = FALSE, quali.sup = 1, graph = FALSE)
+summary(pca.heavy.metals.sand.pruned)
+
+# save
+saveRDS(pca.heavy.metals.sand.pruned, file.path(save.dir, "pca_heavy-metals_sand_pruned.rds"))
+
+# clean workspace
+rm(heavy.metals.pruned, heavy.metals.pruned.std, heavy.metals.pca)
+
+
+# plot PCA biplots - save as pdf!
+pdf(file.path(figs.dir, "explor_pca_heavy-metals_sand_pruned_biplot.pdf"), 
+    paper = "a4r", width = 12, height = 12, 
+    useDingbats = FALSE)
+
+# PC1-2
+fviz_pca_biplot(pca.heavy.metals.sand.pruned, 
+                axes = c(1, 2),
+                label = "var", 
+                habillage = "station", 
+                select.var = list(cos2 = 0.5), 
+                col.var = "grey50", 
+                repel = TRUE) + 
+  theme_bw()
+
+# PC1-3
+fviz_pca_biplot(pca.heavy.metals.sand.pruned, 
+                axes = c(1, 3),
+                label = "var", 
+                habillage = "station", 
+                select.var = list(cos2 = 0.5), 
+                col.var = "grey50", 
+                repel = TRUE) + 
+  theme_bw()
+
+
+dev.off()
+
+# various PCA diagnostic & exploratory plots - have to fix axes (only 2 PCs here, prob. sth wrong)!
+plot_pca_diagnostic(pca.heavy.metals.sand.pruned, file.name = "explor_pca_heavy-metals_sand_pruned.pdf")
+
+
+
+######################################################################################################################
+### perform PCAs on the full datasets 
 ## PCA on water column parameters
 # standardize the data (only the numeric variables)
 water.sand.pca.std <- as.data.frame(scale(water.sand.pca[, sapply(water.sand.pca, is.numeric)], 
                                    center = TRUE, scale = TRUE))
 
+
 # add back the factors (useful for labeling later)
 water.sand.pca.std <- cbind(station = water.sand.pca$station, water.sand.pca.std)
 
 # run the PCA
-pca.water.sand <- PCA(water.sand.pca.std, quali.sup = 1, graph = FALSE)
+pca.water.sand <- PCA(water.sand.pca.std, scale.unit = FALSE, quali.sup = 1, graph = FALSE)
 
 # SAVE FOR FUTURE REFERENCE
 saveRDS(pca.water.sand, file.path(save.dir, "pca_water-column_sand.rds"))
@@ -265,7 +473,7 @@ other.env.sand.pca.std <- as.data.frame(scale(other.env.sand.pca[, sapply(other.
 other.env.sand.pca.std <- cbind(station = other.env.sand.pca$station, other.env.sand.pca.std)
 
 # run the PCA
-pca.other.env.sand <- PCA(other.env.sand.pca.std, quali.sup = 1, graph = FALSE)
+pca.other.env.sand <- PCA(other.env.sand.pca.std, scale.unit = FALSE, quali.sup = 1, graph = FALSE)
 
 # SAVE FOR FUTURE REFERENCE
 saveRDS(pca.other.env.sand, file.path(save.dir, "pca_sediment-params_sand.rds"))
@@ -313,7 +521,7 @@ heavy.metals.sand.pca.std <- as.data.frame(scale(heavy.metals.sand[, !names(heav
 heavy.metals.sand.pca.std <- cbind(station = heavy.metals.sand$station, heavy.metals.sand.pca.std)
 
 # run the PCA
-pca.heavy.metals.sand <- PCA(heavy.metals.sand.pca.std, quali.sup = 1, graph = FALSE)
+pca.heavy.metals.sand <- PCA(heavy.metals.sand.pca.std, scale.unit = FALSE, quali.sup = 1, graph = FALSE)
 
 # SAVE FOR FUTURE REFERENCE
 saveRDS(pca.heavy.metals.sand, file.path(save.dir, "pca_heavy-metals_sand.rds"))
