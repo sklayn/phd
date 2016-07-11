@@ -138,6 +138,9 @@ print(anova.sp.env.glm.sand$table)
 ## interpretation: does automatic model selection, setting to zero any interaction
 ## coefficients that don’t help reduce BIC.
 
+## try with different factors (should be factors!): groups in the MDS / LUSI / sth else..
+
+
 ## NB should use reduced env.variables dataset => for ex. important variables 
 ## identified through PCA, CCA, envfit,.. -> OR RUN AT HOME W/ EVERYTHING AND THEN COMPARE
 ft.sp.env <- traitglm(sand.mvabund.reduced, 
