@@ -67,6 +67,7 @@ repl.blocks <- rep(1:3, each = 3, times = 6)  # probably no good, because also r
   
 sand.anova.glm <- anova.manyglm(sand.glms, 
                                 test = "LR",
+                                nBoot = 50,
                                 p.uni = "adjusted", 
                                 show.time = "all")
 
@@ -104,7 +105,7 @@ sum(sand.anova.glm$uni.test[2, uniSorted$ix[1:50]]) / sum(sand.anova.glm$uni.tes
 
 
 
-## Relate the species abundances to environmental data
+### Relate the species abundances to environmental data
 
 # prepare the environmental data (=> reduced nb of variables, because otherwise
 # fries all my computers) 
@@ -127,7 +128,49 @@ anova.sp.env.glm.sand <- anova.manyglm(sp.env.glm.sand,
                                        )
 print(anova.sp.env.glm.sand$table)
 
+## try try with different factors (should be factors!): groups in the MDS / LUSI / sth else..
+# LUSI levels = anthropogenic impact from coastal sources
+sp.sand.glm.lusi <- manyglm(sand.mvabund.reduced ~ env.qualit$LUSI.3000.impact, 
+                            family = "negative.binomial")
 
+# check the fit (several times, because randomness)
+# .... looks fine
+plot(sp.sand.glm.lusi)
+
+#tst.blocks2 <- rep(tst.blocks, each = 3)
+
+anova.sp.sand.glm.lusi <- anova.manyglm(sp.sand.glm.lusi, 
+                                       test = "LR",
+                                       p.uni = "adjusted",
+                                       nBoot = 100,
+                                       show.time = "all")
+print(anova.sp.sand.glm.lusi$table)
+
+
+# retrieve and plot species with the highest contribution to the patterns tested 
+tst.lusi.uniSorted <- sort(anova.sp.sand.glm.lusi$uni.test, index.return = TRUE, decreasing = TRUE)
+plot(sand.mvabund.reduced ~ env.qualit$LUSI.3000.impact, var.subset = tst.lusi.uniSorted$ix[1:20]) 
+
+
+# get the percentage of change in deviance due to these top ten/twenty => only about 
+# 45%, so cannot focus on just them if we want the whole story
+sum(anova.sp.sand.glm.lusi$uni.test[2, tst.lusi.uniSorted$ix[1:20]]) / sum(anova.sp.sand.glm.lusi$uni.test[2, ])
+
+# with 50 species, most of the change in deviance is explained (78%)
+sum(anova.sp.sand.glm.lusi$uni.test[2, tst.lusi.uniSorted$ix[1:50]]) / sum(anova.sp.sand.glm.lusi$uni.test[2, ])
+
+############################################################################################################################
+## try to recreate the plots, because originals are fugly
+# extract the data for plotting - where are the groups? 
+tst.df <- data.frame(sp = colnames(sand.mvabund.reduced[, tst.lusi.uniSorted$ix]),
+                     abnd = tst.lusi.uniSorted$x)
+
+
+
+
+############################################################################################################################
+
+## fit some other factor? - gravel/sand? sorting? O2 saturation? 
 
 
 ## see which species respond differently to different environmental parameters
@@ -137,8 +180,6 @@ print(anova.sp.env.glm.sand$table)
 ## Use a LASSO penalty (by setting the term method) when applying, to simplify 
 ## interpretation: does automatic model selection, setting to zero any interaction
 ## coefficients that don’t help reduce BIC.
-
-## try with different factors (should be factors!): groups in the MDS / LUSI / sth else..
 
 
 ## NB should use reduced env.variables dataset => for ex. important variables 
@@ -159,13 +200,16 @@ print(plot.spp)
 
 
 
-
 ###################################################################################################################
 ###################################################################################################################
 ### TESTINGGG
 
-## average abundances by replicate (=> 18 rows = 6 stations x 3 samplings)
-tst.mvabund <- cbind(num.zoo.abnd.sand, factors.zoo.sand)
+## remove singletons
+tst.mvabund <- num.zoo.abnd.sand[, which(specnumber(num.zoo.abnd.sand, MARGIN = 2) > 1)]
+
+## average abundances by replicate (=> 18 rows = 6 stations x 3 samplings) 
+## => INCORRECT, BECAUSE NEGATIVE BINOMIAL EXPECTS COUNTS = INTEGERS
+tst.mvabund <- cbind(tst.mvabund, factors.zoo.sand)
 tst.mvabund$replicates <-  rep(1:3, each = 3, times = 6)
 tst.mvabund <- ddply(tst.mvabund, .(replicates, stations), colwise(mean, .cols = is.numeric))
 tst.mvabund <- arrange(tst.mvabund, stations)
@@ -202,7 +246,7 @@ summary(tst.sand.glms, test = "LR", nBoot = 30, p.uni = "adjusted", show.time = 
 # -> anova on manyglm result. NB Can take a long time (depending on number of resamplings!)
 # NB 2 temporal autocorrelation (revisited sites!)
 
-tst.strata <- rep(1:3, times = 6)  
+tst.blocks <- rep(1:3, times = 6)  
 
 tst.sand.anova.glm <- anova.manyglm(tst.sand.glms, 
                                     test = "LR", 
@@ -215,5 +259,5 @@ tst.uniSorted <- sort(tst.sand.anova.glm$uni.test, index.return = TRUE, decreasi
 plot(tst.sand.mvabund[ , tst.uniSorted$ix[1:10]]) 
 
 
-
+######################################################################################################################
 ######################################################################################################################
