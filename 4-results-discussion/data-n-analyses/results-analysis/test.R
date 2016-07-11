@@ -140,14 +140,13 @@ print(anova.sp.env.glm.sand$table)
 
 ## NB should use reduced env.variables dataset => for ex. important variables 
 ## identified through PCA, CCA, envfit,.. -> OR RUN AT HOME W/ EVERYTHING AND THEN COMPARE
-ft.sp.env <- traitglm(sand.mvabund, 
-                      env.all.sand, 
-                      subset = c("heavy.metals.all", "O2.average", "mean.grain.size", "org.matter"), 
+ft.sp.env <- traitglm(sand.mvabund.reduced, 
+                      env.all.sand.glm, 
                       method = "glm1path")
 
 ft.sp.env$fourth
 
-# plot this -> NB might not fit on graphics device!
+# plot this -> make 2 subplots w/ ~50 species each, or will be unreadable!
 a <- max(abs(ft.sp.env$fourth.corner))
 colort <- colorRampPalette(c("blue","white","red")) 
 plot.spp <- levelplot(t(as.matrix(ft.sp.env$fourth.corner)), xlab = "Environmental Variables",

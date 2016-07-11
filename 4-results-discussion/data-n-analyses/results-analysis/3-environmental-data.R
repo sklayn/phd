@@ -132,7 +132,9 @@ rm(water.param.sand,
    other.env.sand.imp)
 
 
-########################################################################################################
+
+##########################################################################################################
+##########################################################################################################
 ### ASIDE: 
 ### Gradient forest analysis -> try to predict species presence by the available 
 ### environmental variables (package extendedForest, gradientForest). Most probably
@@ -219,7 +221,8 @@ tst.permanova <- arrange(tst.permanova, stations)
 
 # add in the grouping factor = groups identified in the MDS and dendrogram: 
 # 1 = Kraimorie-Chukalya; 2 = Akin; 3 = Sozopol-Paraskeva; 4 = Agalina.
-tst.permanova$groups <- c(rep(1, 6), rep(2, 3), rep(3, 3), rep(4, 3), rep(3, 3))
+tst.groups <- c(rep(1, 6), rep(2, 3), rep(3, 3), rep(4, 3), rep(3, 3))
+tst.permanova$groups <- tst.groups
 
 # make a distance matrix (Bray-Curtis) and check the multivariate dispersion of 
 # the groups
@@ -239,7 +242,7 @@ ordispider(meta.tst2, group = tst.permanova$groups)
 ## the PERMANOVA.
 
 ### compute the true R2-value
-num.tst.permanova <- tst.permanova[-c(1,2,150)]
+num.tst.permanova <- tst.permanova[-which(names(tst.permanova) %in% c("stations", "replicates", "groups"))]
 fit <- adonis(num.tst.permanova ~ tst.permanova$groups, permutations = 1)
 fit
 
@@ -255,7 +258,7 @@ pop[1] <- fit$aov.tab[1, 5]
 
 ### set up a "permControl" object which will control how the samples are shuffled. 
 ### We want to test the effect of site, so we shuffle sites within years (each site
-### was revisited 3 times)
+### was revisited 3 times, so there are 3 blocks of samples)
 ctrl <- how(blocks = tst.permanova$replicates, within = Within(type = "series", mirror = FALSE)) 
 
 ### Number of observations:
