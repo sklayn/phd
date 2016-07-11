@@ -130,22 +130,43 @@ scoreplot <- function(frm, threshold, sort = 1) {
 # remove the LUSI columns (decided they're not useful here). Keep the stations, in case
 # (but have to be excluded in the next lines).
 env.sand.pruning <- env.sand.pruning[-which(names(env.sand.pruning) %in% 
-                                    c("LUSI.3000.impact", "LUSI.3000.impact.binary"))]
-
-sframe <- get_chiscores(dframe = env.sand.pruning, 
-                        varnames = setdiff(colnames(env.sand.pruning[-1]), "group"))
+                                    c("LUSI.3000.impact", "LUSI.3000.impact.binary", "station"))]
 
 
-threshold <- 0.05  # be generous in accepting a variable (1/20 false positive rate)
-scoreplot(sframe, threshold)
-vars.sel <- sframe[sframe$scores < threshold,]$var
+select_vars_pruning <- function(env.data.df, group, p.val = 0.05) {
+  ## select variables for pruning based on their significance.
+  ## group should be a factor column in the data frame!
+  ## NB calls custom helper functions!
+
+  env.data.pruning <- env.data.df
+
+  # rename the factor column used for grouping (hard-coded in the significance
+  # functions, unfortunately)
+  names(env.data.pruning)[names(env.data.pruning) == group] <- "group"
+
+  # calculate the variables' significance
+  env.data.sframe <- get_chiscores(dframe = env.data.pruning,
+                                   varnames = setdiff(colnames(env.data.pruning), "group"))
+
+  # be generous in accepting a variable (1/20 false positive rate)
+  print(scoreplot(env.data.sframe, threshold = p.val))
+  env.vars.sel <- env.data.sframe[env.data.sframe$scores < p.val, ]$var
+
+  # subset the original data frame using the significant variables
+  env.data.pruned <- subset(env.data.pruning, select = env.vars.sel)
+
+  return(env.data.pruned)
+}
+
+# here - groups from the MDS/classification
+env.sand.pruned <- select_vars_pruning(env.sand.pruning, group = "group", p.val = 0.05)
+
 
 # find correlated variables among those selected -> could be eliminated without 
 # losing too much information
-sand.pruned.vars <- subset(env.sand.pruning, select = vars.sel)
 
-# use this function to calculate the correlations, because it also gives the p-values
-sand.pruned.vars.cors <- rcorr(as.matrix(sand.pruned.vars))
+# use this function (in Hmisc) to calculate the correlations, because it also gives the p-values
+env.sand.pruned.cors <- rcorr(as.matrix(env.sand.pruned[, sapply(env.sand.pruned, is.numeric)]))
 
 # plot correlation matrix to inspect visually (and save as pdf in case needed later)
 pdf(file = file.path(figs.dir, "explor_corrplot_env-vars-pruned.pdf"), 
@@ -155,23 +176,39 @@ corrplot(sand.pruned.vars.cors$r, type ="lower", order = "hclust", tl.col="black
 dev.off()
 
 
-# get rid of the most strongly correlated variables (redundant and cumbersome if fitting 
-# a model)
+## get rid of the most strongly correlated variables (redundant and cumbersome if fitting 
+## a model)
 
-# set the cutoff value of r2 pretty high, anyway. NB names = FALSE, to return column index
-highly.cor.vars <- findCorrelation(sand.pruned.vars.cors$r, cutoff = 0.8, names = FALSE)
-sand.pruned.vars.fin <- sand.pruned.vars[, -highly.cor.vars]
-names(sand.pruned.vars.fin)
+filter_correlated_vars <- function(env.df, cor.threshold = 0.75) {
+  ## wrapper for several functions finding highly correlated variables 
+  ## in the dataset and eliminating them
+  
+  library(caret)
+  
+  # calculate the correlation matrix (on the numeric variables only)
+  env.vars.cors <- cor(env.df[, sapply(env.df, is.numeric)])
+  
+  # find and eliminate the highly correlated variables. NB names = FALSE, to return column index
+  highly.cor.vars <- findCorrelation(env.vars.cors, cutoff = cor.threshold, names = FALSE)
+  env.vars.fin <- env.df[, -highly.cor.vars]
+  
+  return(env.vars.fin)
+}
+
+
+# set the cutoff value of r2 pretty high, anyway. 
+env.sand.pruned.fin <- filter_correlated_vars(env.sand.pruned, cor.threshold = 0.75)
+names(env.sand.pruned.fin)
 
 # remove one of the oxygen variables, too - no need for two, even if they are not correlated
-sand.pruned.vars.fin$O2.average <- NULL
+env.sand.pruned.fin$O2.average <- NULL
 
 
 # PCA with pruned dataset, but only x-aware (variables scaled and centered to cope 
 # with different unit variances) => this is just for checking if the 
 # stations/groups get separated as expected, and with a satisfactory amount of 
 # variance explained by the retained variables. 
-tst.princ <- prcomp(sand.pruned.vars.fin, center = TRUE, scale. = TRUE) 
+tst.princ <- prcomp(env.sand.pruned.fin, center = TRUE, scale. = TRUE) 
 
 # check the results
 summary(tst.princ)
@@ -188,8 +225,8 @@ biplot(tst.princ)
 
 
 ## cleanup
-rm(sframe, highly.cor.vars, threshold, sand.pruned.vars, 
-   sand.pruned.vars.cors, vars.sel, tst.princ, env.sand.pruning)
+rm(env.sand.pruned.fin, sand.pruned.vars.fin, tst.princ, 
+   env.sand.pruning, env.sand.pruned)
 
 
 

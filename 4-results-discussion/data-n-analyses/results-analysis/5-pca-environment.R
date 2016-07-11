@@ -2,8 +2,6 @@
 ### (continued from environmental data script; references objects from it)
 
 # source: http://www.sthda.com/english/wiki/principal-component-analysis-how-to-reveal-the-most-important-variables-in-your-data-r-software-and-data-mining#at_pco=smlwn-1.0&at_si=56ab2ae7c9bd86b4&at_ab=per-2&at_pos=0&at_tot=1
-library(corrplot)
-library(Hmisc)
 library(plyr)
 library(vegan)
 library(FactoMineR)
@@ -210,33 +208,9 @@ rm(other.env.sand.by.st, water.sand.by.st)
 
 
 ### perform variable pruning to reduce variable redundancy in the dataset
-## prune water column parameters
-# group = station here
-# select_vars_pruning <- function(env.data.df, group, p.val = 0.05) {
-#   ## select variables for pruning based on their significance.
-#   ## group should be a factor column in the data frame!
-#   ## NB calls custom helper functions! 
-# 
-#   env.data.pruning <- env.data.df
-#   
-#   # rename the factor column used for grouping (hard-coded in the significance
-#   # functions, unfortunately)
-#   names(env.data.pruning)[names(env.data.pruning) == group] <- "group"
-# 
-#   # calculate the variables' significance
-#   env.data.sframe <- get_chiscores(dframe = env.data.pruning,
-#                                    varnames = setdiff(colnames(env.data.pruning), "group"))
-#   
-#   # be generous in accepting a variable (1/20 false positive rate)
-#   print(scoreplot(env.data.sframe, threshold = p.val))
-#   env.vars.sel <- env.data.sframe[env.data.sframe$scores < p.val, ]$var
-#   
-#   # subset the original data frame using the significant variables
-#   env.data.pruned <- subset(env.data.pruning, select = env.vars.sel)
-#   
-#   return(env.data.pruned)
-# }
-
+## prune water column parameters - NO PRUNING DONE HERE, BECAUSE NOT SURE THE 
+## VARIABLE SELECTION PROCEDURE IS CORRECT (OUTCOME IS NOT BINARY!). KEPT THE 
+## WRAPPER FUNCTION IN CASE, AND ONLY ELIMINATED HIGHLY INTERCORRELATED VARIABLES. 
 
 # find and eliminate highly correlated variables in the datasets
 filter_correlated_vars <- function(env.df, cor.threshold = 0.75) {
@@ -315,7 +289,8 @@ other.env.pruned.std <- as.data.frame(scale(other.env.pruned[, sapply(other.env.
 
 other.env.pruned.std <- cbind(station = other.env.sand.pca$station, other.env.pruned.std)
 
-pca.other.env.sand.pruned <- PCA(other.env.pruned.std, scale.unit = FALSE, quali.sup = 1, graph = FALSE)
+pca.other.env.sand.pruned <- PCA(other.env.pruned.std, scale.unit = FALSE, 
+                                 quali.sup = 1, graph = FALSE)
 summary(pca.other.env.sand.pruned)
 
 ## save PCA result
@@ -370,7 +345,8 @@ heavy.metals.pruned.std <- as.data.frame(scale(heavy.metals.pruned[, sapply(heav
 
 heavy.metals.pruned.std <- cbind(station = heavy.metals.pca$station, heavy.metals.pruned.std)
 
-pca.heavy.metals.sand.pruned <- PCA(heavy.metals.pruned.std, scale.unit = FALSE, quali.sup = 1, graph = FALSE)
+pca.heavy.metals.sand.pruned <- PCA(heavy.metals.pruned.std, scale.unit = FALSE, 
+                                    quali.sup = 1, graph = FALSE)
 summary(pca.heavy.metals.sand.pruned)
 
 # save
@@ -408,8 +384,9 @@ fviz_pca_biplot(pca.heavy.metals.sand.pruned,
 
 dev.off()
 
-# various PCA diagnostic & exploratory plots - have to fix axes (only 2 PCs here, prob. sth wrong)!
-plot_pca_diagnostic(pca.heavy.metals.sand.pruned, file.name = "explor_pca_heavy-metals_sand_pruned.pdf")
+# various PCA diagnostic & exploratory plots
+plot_pca_diagnostic(pca.heavy.metals.sand.pruned, 
+                    file.name = "explor_pca_heavy-metals_sand_pruned.pdf")
 
 
 
