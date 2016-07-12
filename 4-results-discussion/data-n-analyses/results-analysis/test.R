@@ -60,14 +60,16 @@ summary(sand.glms, test = "LR", p.uni = "adjusted", show.time = "total")
 
 
 ## Testing hypotheses about the community-environment association
-# -> anova on manyglm result. NB Can take a long time (depending on number of resamplings!)
-# NB 2 temporal autocorrelation (revisited sites!)
+# -> anova on manyglm result. 
+# NB can take a long time (depending on number of resamplings!)
+# NB2 no iid for rows - revisited sites!
 
-repl.blocks <- rep(1:3, each = 3, times = 6)  # probably no good, because also replicates at each site
-  
+tst.sites <- rep(1:6, each = 9)  # using site ID as block, to ensure valid permutations
+
 sand.anova.glm <- anova.manyglm(sand.glms, 
                                 test = "LR",
                                 nBoot = 50,
+                                block = tst.sites,
                                 p.uni = "adjusted", 
                                 show.time = "all")
 
@@ -130,47 +132,61 @@ print(anova.sp.env.glm.sand$table)
 
 ## try try with different factors (should be factors!): groups in the MDS / LUSI / sth else..
 # LUSI levels = anthropogenic impact from coastal sources
-sp.sand.glm.lusi <- manyglm(sand.mvabund.reduced ~ env.qualit$LUSI.3000.impact, 
+sand.glm.lusi <- manyglm(sand.mvabund.reduced ~ env.qualit$LUSI.3000.impact, 
                             family = "negative.binomial")
 
 # check the fit (several times, because randomness)
 # .... looks fine
-plot(sp.sand.glm.lusi)
+plot(sand.glm.lusi)
 
-#tst.blocks2 <- rep(tst.blocks, each = 3)
+anova.sand.glm.lusi <- anova.manyglm(sand.glm.lusi, 
+                                     test = "LR",
+                                     p.uni = "adjusted",
+                                     blocks = tst.sites,
+                                     nBoot = 50,
+                                     show.time = "all")
 
-anova.sp.sand.glm.lusi <- anova.manyglm(sp.sand.glm.lusi, 
-                                       test = "LR",
-                                       p.uni = "adjusted",
-                                       nBoot = 100,
-                                       show.time = "all")
-print(anova.sp.sand.glm.lusi$table)
+print(anova.sand.glm.lusi$table)
 
 
 # retrieve and plot species with the highest contribution to the patterns tested 
-tst.lusi.uniSorted <- sort(anova.sp.sand.glm.lusi$uni.test, index.return = TRUE, decreasing = TRUE)
+tst.lusi.uniSorted <- sort(anova.sand.glm.lusi$uni.test, index.return = TRUE, decreasing = TRUE)
 plot(sand.mvabund.reduced ~ env.qualit$LUSI.3000.impact, var.subset = tst.lusi.uniSorted$ix[1:20]) 
 
 
 # get the percentage of change in deviance due to these top ten/twenty => only about 
-# 45%, so cannot focus on just them if we want the whole story
-sum(anova.sp.sand.glm.lusi$uni.test[2, tst.lusi.uniSorted$ix[1:20]]) / sum(anova.sp.sand.glm.lusi$uni.test[2, ])
+# 46%, so it's not right to focus on just them, we need more to explain the variability
+sum(anova.sand.glm.lusi$uni.test[2, tst.lusi.uniSorted$ix[1:20]]) / sum(anova.sand.glm.lusi$uni.test[2, ])
 
-# with 50 species, most of the change in deviance is explained (78%)
-sum(anova.sp.sand.glm.lusi$uni.test[2, tst.lusi.uniSorted$ix[1:50]]) / sum(anova.sp.sand.glm.lusi$uni.test[2, ])
-
-############################################################################################################################
-## try to recreate the plots, because originals are fugly
-# extract the data for plotting - where are the groups? 
-tst.df <- data.frame(sp = colnames(sand.mvabund.reduced[, tst.lusi.uniSorted$ix]),
-                     abnd = tst.lusi.uniSorted$x)
-
-
-
+# with 50 species, most of the change in deviance is explained (~78%)
+sum(anova.sand.glm.lusi$uni.test[2, tst.lusi.uniSorted$ix[1:50]]) / sum(anova.sand.glm.lusi$uni.test[2, ])
 
 ############################################################################################################################
+## try to recreate the plots, because originals using base graphics are fugly
 
-## fit some other factor? - gravel/sand? sorting? O2 saturation? 
+# extract the data for plotting from the mvabund object - columns (species) now 
+# sorted according to their contribution to explain the pattern tested -> subsetted, 
+# because otherwise unreadable
+tst.df <- as.data.frame(sand.mvabund.reduced[, tst.lusi.uniSorted$ix[1:50]])
+
+# row order has not changed, so add the factor whose levels (= pattern) we tested 
+tst.df$LUSI <- env.qualit$LUSI.3000.impact                     
+
+# convert the df to long format -> easier for ggplot2 to handle  
+tst.df.melted <- melt(tst.df, id.vars = "LUSI") # doesn't keep row names, which here denote stations/replicates (does keep row order, so easy to recover, if needed)
+
+# plot
+tst.plot <- ggplot(tst.df.melted, aes(x = variable, y = value, colour = LUSI, shape = LUSI)) + 
+              geom_point() + 
+              scale_y_log10() + # use a better transformation, maybe?
+              scale_x_discrete(limits = rev(levels(tst.df.melted$variable))) + # reverse, so highest-contributing species are on top
+              coord_flip() + # put species on y axis - easier to read
+              theme_bw()
+
+
+############################################################################################################################
+
+## fit some other factor? - gravel/sand? sorting? O2 saturation? - COMBINATION OF FACTORS, MAYBE IDed FROM MDS ORDISURF? 
 
 
 ## see which species respond differently to different environmental parameters
@@ -202,62 +218,3 @@ print(plot.spp)
 
 ###################################################################################################################
 ###################################################################################################################
-### TESTINGGG
-
-## remove singletons
-tst.mvabund <- num.zoo.abnd.sand[, which(specnumber(num.zoo.abnd.sand, MARGIN = 2) > 1)]
-
-## average abundances by replicate (=> 18 rows = 6 stations x 3 samplings) 
-## => INCORRECT, BECAUSE NEGATIVE BINOMIAL EXPECTS COUNTS = INTEGERS
-tst.mvabund <- cbind(tst.mvabund, factors.zoo.sand)
-tst.mvabund$replicates <-  rep(1:3, each = 3, times = 6)
-tst.mvabund <- ddply(tst.mvabund, .(replicates, stations), colwise(mean, .cols = is.numeric))
-tst.mvabund <- arrange(tst.mvabund, stations)
-head(tst.mvabund)
-
-tst.sand.mvabund <- mvabund(tst.mvabund[-c(1:2)])
-
-# make new grouping factors ot correspond to order of rows in the new matrix:
-# dendr. groups
-tst.groups <- c(rep(1, 6), rep(2, 3), rep(3, 3), rep(4, 3), rep(3, 3))
-
-# plot
-plot(tst.sand.mvabund ~ as.factor(tst.groups)) 
-
-## check model assumptions
-plot(manyglm(tst.sand.mvabund ~ tst.groups, family = "negative.binomial"))
-meanvar.plot(tst.sand.mvabund ~ as.factor(tst.groups), table = TRUE)
-
-## look ok; fit model
-tst.sand.glms <- manyglm(tst.sand.mvabund ~ tst.groups, family = "negative.binomial")
-
-## explore the fit
-plot(tst.sand.glms)  # residuals vs fitted values
-plot.manyglm(tst.sand.glms, which = 1:4)  # all traditional lm diagnostic plots
-
-residuals(tst.sand.glms)
-coef(tst.sand.glms)
-fitted.values(tst.sand.glms)
-
-summary(tst.sand.glms, test = "LR", nBoot = 30, p.uni = "adjusted", show.time = "total")
-
-
-## Testing hypotheses about the community-environment association
-# -> anova on manyglm result. NB Can take a long time (depending on number of resamplings!)
-# NB 2 temporal autocorrelation (revisited sites!)
-
-tst.blocks <- rep(1:3, times = 6)  
-
-tst.sand.anova.glm <- anova.manyglm(tst.sand.glms, 
-                                    test = "LR", 
-                                    nBoot = 30,
-                                    p.uni = "adjusted", 
-                                    show.time = "total")
-
-# retrieve and plot species with the highest contribution to the patterns tested -> DOESN'T WORK IN THIS 
-tst.uniSorted <- sort(tst.sand.anova.glm$uni.test, index.return = TRUE, decreasing = TRUE)
-plot(tst.sand.mvabund[ , tst.uniSorted$ix[1:10]]) 
-
-
-######################################################################################################################
-######################################################################################################################
