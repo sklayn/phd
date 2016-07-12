@@ -20,7 +20,7 @@ plot(sand.mvabund ~ env.qualit$LUSI.3000.impact)  # by level of anthropogenic pr
 # another way: direct plotting (variance ~ mean), for each species w/n each factor
 # level.
 
-# here: using groups from dendrogram as factors. 
+# 1. Groups from MDS/dendrogram as grouping factor 
 # NB do this plot several times: these residuals use random number generation, so 
 # replicate runs will not be identical, but the pattern should stay consistent
 # across replicate plots. 
@@ -30,7 +30,7 @@ meanvar.plot(sand.mvabund ~ as.factor(gr.dendr.sand), table = TRUE)
 meanvar.plot(sand.mvabund, table = TRUE)
 
 # check if transforming the data helps with the mean-varaiance relationship - 
-# no, not at all, actually makes it worse. # This happens because of all the 
+# no, not at all, actually makes it worse. This happens because of all the 
 # zeros in the data, and is typical of this type of data.
 meanvar.plot(log(sand.mvabund + 1) ~ as.factor(gr.dendr.sand))
 meanvar.plot(sqrt(sand.mvabund) ~ as.factor(gr.dendr.sand))
@@ -56,7 +56,7 @@ coef(sand.glms)
 fitted.values(sand.glms)
 
 # NB summary can take a long time, depending on number of resamplings!
-summary(sand.glms, test = "LR", p.uni = "adjusted", show.time = "total")
+summary(sand.glms, test = "LR", p.uni = "adjusted", show.time = "all")
 
 
 ## Testing hypotheses about the community-environment association
@@ -64,11 +64,12 @@ summary(sand.glms, test = "LR", p.uni = "adjusted", show.time = "total")
 # NB can take a long time (depending on number of resamplings!)
 # NB2 no iid for rows - revisited sites!
 
-tst.sites <- rep(1:6, each = 9)  # using site ID as block, to ensure valid permutations
+# using site IDs as blocks, to ensure valid permutations
+tst.sites <- rep(1:6, each = 9)
 
 sand.anova.glm <- anova.manyglm(sand.glms, 
                                 test = "LR",
-                                nBoot = 50,
+                                nBoot = 50, # limited number of permutations for now  
                                 block = tst.sites,
                                 p.uni = "adjusted", 
                                 show.time = "all")
@@ -107,7 +108,7 @@ sum(sand.anova.glm$uni.test[2, uniSorted$ix[1:50]]) / sum(sand.anova.glm$uni.tes
 
 
 
-### Relate the species abundances to environmental data
+### Relate the species abundances to environmental data  #####
 
 # prepare the environmental data (=> reduced nb of variables, because otherwise
 # fries all my computers) 
@@ -126,14 +127,14 @@ anova.sp.env.glm.sand <- anova.manyglm(sp.env.glm.sand,
                                        test = "LR",
                                        p.uni = "adjusted",
                                        nBoot = 10,
-                                       show.time = "all" 
-                                       )
+                                       show.time = "all")
+
 print(anova.sp.env.glm.sand$table)
 
-## try try with different factors (should be factors!): groups in the MDS / LUSI / sth else..
-# LUSI levels = anthropogenic impact from coastal sources
+## try with different factors (should be factors!): groups in the MDS / LUSI / sth else..
+# LUSI levels = measure of anthropogenic impact from coastal sources
 sand.glm.lusi <- manyglm(sand.mvabund.reduced ~ env.qualit$LUSI.3000.impact, 
-                            family = "negative.binomial")
+                         family = "negative.binomial")
 
 # check the fit (several times, because randomness)
 # .... looks fine
@@ -153,7 +154,6 @@ print(anova.sand.glm.lusi$table)
 tst.lusi.uniSorted <- sort(anova.sand.glm.lusi$uni.test, index.return = TRUE, decreasing = TRUE)
 plot(sand.mvabund.reduced ~ env.qualit$LUSI.3000.impact, var.subset = tst.lusi.uniSorted$ix[1:20]) 
 
-
 # get the percentage of change in deviance due to these top ten/twenty => only about 
 # 46%, so it's not right to focus on just them, we need more to explain the variability
 sum(anova.sand.glm.lusi$uni.test[2, tst.lusi.uniSorted$ix[1:20]]) / sum(anova.sand.glm.lusi$uni.test[2, ])
@@ -162,7 +162,40 @@ sum(anova.sand.glm.lusi$uni.test[2, tst.lusi.uniSorted$ix[1:20]]) / sum(anova.sa
 sum(anova.sand.glm.lusi$uni.test[2, tst.lusi.uniSorted$ix[1:50]]) / sum(anova.sand.glm.lusi$uni.test[2, ])
 
 ############################################################################################################################
-## try to recreate the plots, because originals using base graphics are fugly
+## try to recreate the plots, because originals using base graphics are kinda ugly
+plot_mvabund <- function(abnd.df, gr.factor) {
+  ## plots transformed abundance of species contributing the most to the 
+  ## pattern studied by GLMs in mvabund (revision of plotting function from 
+  ## package to make prettier plots).
+  
+  library(reshape2)
+  library(ggplot2)
+  
+  # convert the df to long format -> easier for ggplot2 to handle  
+  abnd.df.melted <- melt(abnd.df, id.vars = gr.factor) 
+  
+  # this doesn't keep row names, which here denote stations/replicates (does keep
+  # row order, so easy to recover, if needed)
+  
+  ## use custom transformation for abundance values (log(y/min + 1)) - as in the 
+  ## mvabund package
+  # calculate the minimum non-0 value in the dataset 
+  min.val <- min(abnd.df.melted$value[abnd.df.melted$value > 0]) 
+  abnd.df.melted$value.tr <- log(abnd.df.melted$value / min.val + 1)
+  
+  ggplot(abnd.df.melted, aes_string(x = "variable", y = "value.tr", colour = gr.factor, shape = gr.factor)) + 
+    geom_point(size = 2) + 
+    # reverse the order of x axis, so highest-contributing species are on top
+    scale_x_discrete(name = "", limits = rev(levels(tst.df.melted$variable))) + 
+    scale_y_continuous(name = "Abundance (log(y/min + 1))") + 
+    coord_flip() + # put species on y axis - easier to read
+    theme_bw()
+}
+
+## other kinds of raw data plots...
+
+
+############################################################################################################################
 
 # extract the data for plotting from the mvabund object - columns (species) now 
 # sorted according to their contribution to explain the pattern tested -> subsetted, 
@@ -170,21 +203,16 @@ sum(anova.sand.glm.lusi$uni.test[2, tst.lusi.uniSorted$ix[1:50]]) / sum(anova.sa
 tst.df <- as.data.frame(sand.mvabund.reduced[, tst.lusi.uniSorted$ix[1:50]])
 
 # row order has not changed, so add the factor whose levels (= pattern) we tested 
-tst.df$LUSI <- env.qualit$LUSI.3000.impact                     
+tst.df$LUSI <- env.qualit$LUSI.3000.impact   
 
-# convert the df to long format -> easier for ggplot2 to handle  
-tst.df.melted <- melt(tst.df, id.vars = "LUSI") # doesn't keep row names, which here denote stations/replicates (does keep row order, so easy to recover, if needed)
+# plot & save (exploratory; will need subsetting to make it more presentable)
+pdf(file.path(figs.dir, "explor_log-abnd_lusi_sand.pdf"),
+    useDingbats = FALSE)
+plot_mvabund(tst.df, "LUSI")
+dev.off()
 
-# plot
-tst.plot <- ggplot(tst.df.melted, aes(x = variable, y = value, colour = LUSI, shape = LUSI)) + 
-              geom_point() + 
-              scale_y_log10() + # use a better transformation, maybe?
-              scale_x_discrete(limits = rev(levels(tst.df.melted$variable))) + # reverse, so highest-contributing species are on top
-              coord_flip() + # put species on y axis - easier to read
-              theme_bw()
+rm(tst.df)
 
-
-############################################################################################################################
 
 ## fit some other factor? - gravel/sand? sorting? O2 saturation? - COMBINATION OF FACTORS, MAYBE IDed FROM MDS ORDISURF? 
 
