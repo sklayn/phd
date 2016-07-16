@@ -5,9 +5,16 @@ library(mvabund)
 ## analyses)
 sand.mvabund <- mvabund(num.zoo.abnd.sand)
 
+## turn dendrogram groups into a factor
+gr.dendr.sand <- as.factor(gr.dendr.sand) 
+
 ## visualize the data (by certain factors that we suspect might influence the 
 # community structure) --> IF USING THESE, FIX PLOTS (MOVE LEGEND & ADD LEGEND TITLE, FIX MARGINS)
-plot(sand.mvabund ~ as.factor(gr.dendr.sand)) # by clusters identified from the dendrogram
+## NB CHECK THAT YOU HAVE FACTORS AS GROUPS!
+class(gr.dendr.sand)
+class(env.qualit$LUSI.3000.impact)
+
+plot(sand.mvabund ~ gr.dendr.sand) # by clusters identified from the dendrogram
 plot(sand.mvabund ~ env.qualit$LUSI.3000.impact)  # by level of anthropogenic pressure (LUSI)
 # do it for other factors (group has to be a factor!)
 
@@ -23,17 +30,19 @@ plot(sand.mvabund ~ env.qualit$LUSI.3000.impact)  # by level of anthropogenic pr
 # 1. Groups from MDS/dendrogram as grouping factor 
 # NB do this plot several times: these residuals use random number generation, so 
 # replicate runs will not be identical, but the pattern should stay consistent
-# across replicate plots. 
+# across replicate plots.
+class(gr.dendr.sand)  # first make sure your factor is a factor! 
+
 plot(manyglm(sand.mvabund ~ gr.dendr.sand, family = "negative.binomial"))
 
-meanvar.plot(sand.mvabund ~ as.factor(gr.dendr.sand), table = TRUE)
+meanvar.plot(sand.mvabund ~ gr.dendr.sand, table = TRUE)
 meanvar.plot(sand.mvabund, table = TRUE)
 
 # check if transforming the data helps with the mean-varaiance relationship - 
 # no, not at all, actually makes it worse. This happens because of all the 
 # zeros in the data, and is typical of this type of data.
-meanvar.plot(log(sand.mvabund + 1) ~ as.factor(gr.dendr.sand))
-meanvar.plot(sqrt(sand.mvabund) ~ as.factor(gr.dendr.sand))
+meanvar.plot(log(sand.mvabund + 1) ~ gr.dendr.sand)
+meanvar.plot(sqrt(sand.mvabund) ~ gr.dendr.sand)
 
 
 # 2. assumed relationship b/n mean abundance and environmental variables - link 
@@ -51,12 +60,15 @@ plot(sand.glms)  # residuals vs fitted values
 plot.manyglm(sand.glms, which = 1:4)  # all traditional lm diagnostic plots
 
 # get specific model parameters
-residuals(sand.glms)
 coef(sand.glms)
+residuals(sand.glms)
 fitted.values(sand.glms)
 
 # NB summary can take a long time, depending on number of resamplings!
-summary(sand.glms, test = "LR", p.uni = "adjusted", show.time = "all")
+sand.glms.summ <- summary(sand.glms, test = "LR", 
+                          p.uni = "adjusted", 
+                          nBoot = 50, # limit the number of permutations for now, otherwise computer will choke
+                          show.time = "all")
 
 
 ## Testing hypotheses about the community-environment association
@@ -92,13 +104,13 @@ uniSorted <- sort(sand.anova.glm$uni.test[2, ], decreasing = TRUE, index.return 
 
 # get those species' names and plot them
 dimnames(sand.mvabund)[[2]][uniSorted$ix[1:10]]
-plot(sand.mvabund ~ as.factor(gr.dendr.sand), var.subset = uniSorted$ix[1:10]) 
+plot(sand.mvabund ~ gr.dendr.sand, var.subset = uniSorted$ix[1:10]) 
 
 # get the percentage of change in deviance due to this "top ten" => only about 
-# 50%, so cannot focus on just them if we want the whole story
+# 28%, so cannot focus on just them if we want the whole story
 sum(sand.anova.glm$uni.test[2, uniSorted$ix[1:10]]) / sum(sand.anova.glm$uni.test[2, ])
 
-# with 50 species, most of the change in deviance is explained
+# with 50 species, most of the change in deviance is explained (76%)
 sum(sand.anova.glm$uni.test[2, uniSorted$ix[1:50]]) / sum(sand.anova.glm$uni.test[2, ])
 
 
@@ -139,6 +151,14 @@ sand.glm.lusi <- manyglm(sand.mvabund.reduced ~ env.qualit$LUSI.3000.impact,
 # check the fit (several times, because randomness)
 # .... looks fine
 plot(sand.glm.lusi)
+
+sand.glm.lusi.summ <- summary(sand.glm.lusi, 
+                              test = "LR", 
+                              p.uni = "adjusted",
+                              nBoot = 20, 
+                              show.time = "all")
+
+coef(sand.glm.lusi.summ)
 
 anova.sand.glm.lusi <- anova.manyglm(sand.glm.lusi, 
                                      test = "LR",
@@ -241,6 +261,17 @@ plot.spp <- levelplot(t(as.matrix(ft.sp.env$fourth.corner)), xlab = "Environment
                      ylab = "Species", col.regions = colort(100), at = seq(-a, a, length = 100),
                      scales = list(x = list(rot = 45)))
 print(plot.spp)
+
+
+
+### experiment with 50 most contributing species only
+ft.sp.env.reduced <- traitglm(sand.mvabund.reduced[, tst.lusi.uniSorted$ix[1:50]], 
+                      env.all.sand.glm, 
+                      method = "glm1path")
+
+ft.sp.env.reduced$fourth
+
+
 
 
 
