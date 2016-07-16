@@ -158,7 +158,20 @@ sand.glm.lusi.summ <- summary(sand.glm.lusi,
                               nBoot = 20, 
                               show.time = "all")
 
+# check the coefficients
 coef(sand.glm.lusi.summ)
+
+# check the reference group for the factor, and change if you want
+contrasts(env.qualit$LUSI.3000.impact)
+
+# to change the factor's reference group: 
+coef(manyglm(sand.mvabund.reduced ~ C(env.qualit$LUSI.3000.impact, base = 3), 
+             family = "negative.binomial"))
+
+## because in a glm it's hard to interpret the coefficients directly (glms use 
+## link functions), better examine the predicted values
+predict(sand.glm.lusi, type  =  "response")
+
 
 anova.sand.glm.lusi <- anova.manyglm(sand.glm.lusi, 
                                      test = "LR",
@@ -203,7 +216,10 @@ plot_mvabund <- function(abnd.df, gr.factor) {
   min.val <- min(abnd.df.melted$value[abnd.df.melted$value > 0]) 
   abnd.df.melted$value.tr <- log(abnd.df.melted$value / min.val + 1)
   
-  ggplot(abnd.df.melted, aes_string(x = "variable", y = "value.tr", colour = gr.factor, shape = gr.factor)) + 
+  ggplot(abnd.df.melted, aes_string(x = "variable", 
+                                    y = "value.tr", 
+                                    colour = gr.factor, 
+                                    shape = gr.factor)) + 
     geom_point(size = 2) + 
     # reverse the order of x axis, so highest-contributing species are on top
     scale_x_discrete(name = "", limits = rev(levels(tst.df.melted$variable))) + 
@@ -233,6 +249,13 @@ dev.off()
 
 rm(tst.df)
 
+## other simple abundance plots
+
+
+
+
+
+
 
 ## fit some other factor? - gravel/sand? sorting? O2 saturation? - COMBINATION OF FACTORS, MAYBE IDed FROM MDS ORDISURF? 
 
@@ -261,18 +284,6 @@ plot.spp <- levelplot(t(as.matrix(ft.sp.env$fourth.corner)), xlab = "Environment
                      ylab = "Species", col.regions = colort(100), at = seq(-a, a, length = 100),
                      scales = list(x = list(rot = 45)))
 print(plot.spp)
-
-
-
-### experiment with 50 most contributing species only
-ft.sp.env.reduced <- traitglm(sand.mvabund.reduced[, tst.lusi.uniSorted$ix[1:50]], 
-                      env.all.sand.glm, 
-                      method = "glm1path")
-
-ft.sp.env.reduced$fourth
-
-
-
 
 
 ###################################################################################################################
