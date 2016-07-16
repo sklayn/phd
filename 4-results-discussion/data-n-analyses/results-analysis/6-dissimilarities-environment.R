@@ -125,3 +125,21 @@ adonis(num.tst.permanova ~ tst.permanova$groups, strata = c(rep(1:3, times = 6))
 ## looks ok... 
 
 #### plot the groups and color prettily according to different factors (for ex. LUSI, O2, other significant...)
+
+
+
+
+## cca - but biased towards rare species, so probably not the best..
+cca(num.zoo.abnd.sand ~ sand + O2.bottom + Cu + Pb + env.qualit$LUSI.3000.impact, 
+    data = env.all.sand.envfit)
+anova(cca(num.zoo.abnd.sand ~ sand + O2.bottom + Cu + Pb + env.qualit$LUSI.3000.impact, 
+          data = env.all.sand.envfit), by = "term")
+
+## dbrda
+capscale(num.zoo.abnd.sand ~ sand + O2.bottom + Cu + Pb + env.qualit$LUSI.3000.impact, 
+         data = env.all.sand.envfit)
+
+### both give distributions that are probably distorted (first - triangle, 
+### second - arch...) - either change constraints - choose more judiciously, or 
+### don't use either analysis..
+

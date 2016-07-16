@@ -228,7 +228,7 @@ plot_mvabund <- function(abnd.df, gr.factor) {
     theme_bw()
 }
 
-## other kinds of raw data plots...
+## other kinds of raw data plots -> LUSI + gravel/sand - qualit. somehow? + Pb-Mn-Cu
 
 
 ############################################################################################################################
