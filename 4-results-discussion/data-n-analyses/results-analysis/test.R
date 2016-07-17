@@ -230,6 +230,35 @@ plot_mvabund <- function(abnd.df, gr.factor) {
 
 ## other kinds of raw data plots -> LUSI + gravel/sand - qualit. somehow? + Pb-Mn-Cu
 
+## try another model with more environmental explanatory variables
+# env. varables painstakingly selected as most likely to influence macrobenthos (literature);
+# best correlation with PCA axes 1 and 2; then tried with CCA, some eliminated because 
+# of correlation with others in the model.. 
+env.sand.glms <- manyglm(sand.mvabund.reduced ~ env.qualit$LUSI.3000.impact + gravel + 
+                           moisture.content + org.matter,
+                         data = env.all.sand.envfit, family = "negative.binomial")
+
+env.sand.glms.summary <- summary(env.sand.glms, 
+                                 nBoot = 10,
+                                 test = "LR",
+                                 p.uni = "adjusted",
+                                 show.time = "all")
+env.sand.glms.summary
+
+
+## ... and the other one - DO WITH MANY MORE PERMUTATIONS!
+env.sand.glms2 <- manyglm(sand.mvabund.reduced ~ env.qualit$LUSI.3000.impact + 
+                            heavy.metals.all + gravel + silt.clay,
+                          data = env.all.sand.envfit, 
+                          family = "negative.binomial")
+
+env.sand.glms.summary2 <- summary(env.sand.glms2, 
+                                 nBoot = 10,
+                                 test = "LR",
+                                 p.uni = "adjusted",
+                                 show.time = "all")
+
+
 
 ############################################################################################################################
 

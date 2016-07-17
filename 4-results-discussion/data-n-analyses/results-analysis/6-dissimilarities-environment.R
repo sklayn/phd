@@ -128,12 +128,19 @@ adonis(num.tst.permanova ~ tst.permanova$groups, strata = c(rep(1:3, times = 6))
 
 
 
+#### try some other tests
+tr <- log(env.all.sand.envfit[sapply(env.all.sand.envfit, is.numeric)] + 1)
+tr$year <- NULL
+tr$month <- NULL
+tr$dist.innermost <- NULL
 
 ## cca - but biased towards rare species, so probably not the best..
-cca(num.zoo.abnd.sand ~ sand + O2.bottom + Cu + Pb + env.qualit$LUSI.3000.impact, 
+cca(sand.mvabund.reduced ~ sand + O2.bottom + env.qualit$LUSI.3000.impact, 
     data = env.all.sand.envfit)
-anova(cca(num.zoo.abnd.sand ~ sand + O2.bottom + Cu + Pb + env.qualit$LUSI.3000.impact, 
+anova(cca(num.zoo.abnd.sand ~ sand + O2.bottom + env.qualit$LUSI.3000.impact, 
           data = env.all.sand.envfit), by = "term")
+vif.cca(cca(sand.mvabund.reduced ~ sand + O2.bottom + env.qualit$LUSI.3000.impact, 
+           data = env.all.sand.envfit))
 
 ## dbrda
 capscale(num.zoo.abnd.sand ~ sand + O2.bottom + Cu + Pb + env.qualit$LUSI.3000.impact, 
