@@ -223,15 +223,53 @@ dev.off()
 # dev.off() 
 
 
-## frequency of occurrence of the species - by station
-zoo.freq <- cbind(factors.zoo.sand$stations, num.zoo.abnd.sand)
+## number of families/genera/sp per taxonomic group
+# families
+poly <- ddply(current.taxa.sand, .(group), function(x) table(x$family))[3, ]
+sum(poly > 0) # total number of families
+# number of species in each family (descending order)
+sort(poly, decreasing = T)
+
+moll <- ddply(current.taxa.sand, .(group), function(x) table(x$family))[2, ]
+sum(moll > 0) # total number of families
+# number of species in each family (descending order)
+sort(moll, decreasing = T)
+
+cr <-  ddply(current.taxa.sand, .(group), function(x) table(x$family))[1, ]
+sum(cr > 0) # total number of families
+# number of species in each family (descending order)
+sort(cr, decreasing = T)
+
+v <- ddply(current.taxa.sand, .(group), function(x) table(x$class))[4, ]
+sum(v > 0) # total number of families
+# number of species in each family (descending order)
+sort(v, decreasing = T)
+
+rm(cr, moll, poly, v)
+
+## frequency of occurrence of the species - all sites combined
+zoo.freq <- cbind(num.zoo.abnd.sand, factors.zoo.sand$stations)
+names(zoo.freq) <- c(names(num.zoo.abnd.sand), "station")
 str(zoo.freq)
-names(zoo.freq) <- c("stations", names(num.zoo.abnd.sand))
 
-# calculate relative frequencies by station
+# aggregate by station
+zoo.freq <- ddply(zoo.freq, .(station), colwise(mean, .cols = is.numeric))
+# transpose & add tax.group
+# zoo.freq.t <- as.data.frame(t(zoo.freq[, 2:ncol(zoo.freq)]))
+# colnames(zoo.freq.t) <- zoo.freq[1, ]
+
+
+# calculate frequency of occurrence of each species
+fr <- apply(zoo.freq.t, 1, function(x) sum(x > 0) / length(x))
+
+# sort in descending order of frequency of occurrence
+sort(fr, decreasing = TRUE)
 
 
 
+  
+  
+    
 ### Diversity indices ###
 
 ## Alpha diversity (Whittaker, 1960) - description of the diversity in one spot
