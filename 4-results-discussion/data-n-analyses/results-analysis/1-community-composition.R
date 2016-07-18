@@ -223,7 +223,16 @@ dev.off()
 # dev.off() 
 
 
-## Diversity indices
+## frequency of occurrence of the species - by station
+zoo.freq <- cbind(factors.zoo.sand$stations, num.zoo.abnd.sand)
+str(zoo.freq)
+names(zoo.freq) <- c("stations", names(num.zoo.abnd.sand))
+
+# calculate relative frequencies by station
+
+
+
+### Diversity indices ###
 
 ## Alpha diversity (Whittaker, 1960) - description of the diversity in one spot
 diversity.sand <- alpha_diversity(zoo.abnd.sand)
