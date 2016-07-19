@@ -5,7 +5,8 @@ tax_group_contribution <- function(abnd.data, tax.groups) {
   ##              taxa present in the current dataset (stations x species)
   ##            tax.data - vector of taxonomic group labels of the same length 
   ##              as the number of non-0 (i.e., present) species in the current
-  ##              dataset.
+  ##              dataset
+  ##            sp2exclude - char vector of species names to omit from calculations.
   ## Returns a data frame of proportions of each taxonomic group in each station.
   ## For each station, the sum of all taxonomic groups' proportions (= rows) 
   ## should be 1.

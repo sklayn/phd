@@ -152,7 +152,8 @@ current.taxa.sand$group <- with(current.taxa.sand,
                                 ifelse(class == "Bivalvia" | 
                                        class == "Gastropoda" | 
                                        class == "Polyplacophora", "Mollusca", 
-                                ifelse(class == "Malacostraca", "Crustacea", "Varia"))))
+                                ifelse(subclass == "Eumalacostraca" | 
+                                       subclass == "Thecostraca", "Crustacea", "Varia"))))
 
 table(current.taxa.sand$group)
 
@@ -162,7 +163,8 @@ table(current.taxa.sand$group)
 #                                    ifelse(class == "Bivalvia" | 
 #                                           class == "Gastropoda" | 
 #                                           class == "Polyplacophora", "Mollusca", 
-#                                    ifelse(class == "Malacostraca", "Crustacea", "Varia"))))
+#                                    ifelse(subclass == "Eumalacostraca" |
+#                                           subclass == "Thecostraca", "Crustacea", "Varia"))))
 # 
 # table(current.taxa.zostera$group)
 
@@ -182,14 +184,34 @@ dev.off()
 #          col = "lightgreen")
 # dev.off()
 
+## REAL number of taxa (without the species identified to genus/family level 
+## because of bad preservation, the larvae,..)
+sp2exclude <- c("Abra sp.", "Eteone sp.", "Glycera sp.", "Hydrobia sp.", "Iphinoe sp.", 
+                "Micrpodeutopus sp.", "Microphthalmus sp.", "Phyllodoce sp.", 
+                "Gammaridae", "Amphipoda", "Cardiidae", "Decapoda larvae", "Protodrilus sp.", 
+                "Maldanidae", "Nepthtyidae", "Nereididae", "Pisces larvae", 
+                "Polychaeta larvae", "Spionidae")
 
+sort(table(current.taxa.sand[-which(row.names(current.taxa.sand) %in% sp2exclude), ]$group))
+
+# save this plot
+pdf(file = file.path(figs.dir, "nb-taxa_sand_actual.pdf"), useDingbats = FALSE)
+barchart(sort(table(current.taxa.sand[-which(row.names(current.taxa.sand) %in% sp2exclude), ]$group)), 
+         main = "Number of taxa",
+         xlab = "", 
+         col = "royalblue")
+dev.off()
+
+##### FIX THIS WITH EXCLUSION OF UNWANTED TAXA ##########
 ## calculate the contribution of each taxonomic group to the numeric community 
 ## composition by station and by year
 # first calculate proportions by taxonomic group in each station/replicate
-tax.group.props.sand <- tax_group_contribution(num.zoo.abnd.sand, current.taxa.sand$group)
-# tax.group.props.sand <- cbind(factors.zoo.sand, tax.group.props.sand)
+tax.group.props.sand <- tax_group_contribution(num.zoo.abnd.sand, 
+                                               current.taxa.sand)
+tax.group.props.sand <- cbind(factors.zoo.sand, tax.group.props.sand)
 
-tax.group.props.zostera <- tax_group_contribution(num.zoo.abnd.zostera, current.taxa.zostera$group)
+# tax.group.props.zostera <- tax_group_contribution(num.zoo.abnd.zostera, 
+#                                                   current.taxa.zostera)  
 # tax.group.props.zostera <- cbind(factors.zoo.zostera, tax.group.props.zostera)
 
 # save to file (in case) 
@@ -204,6 +226,12 @@ write.csv(tax.group.props.sand,
 
 
 # plot the contribution of taxonomic groups: 
+# add factors station and year (expected by plotting function)
+tax.group.props.sand <- cbind(factors.zoo.sand$stations, 
+                              factors.zoo.sand$years, 
+                              tax.group.props.sand)
+names(tax.group.props.sand)[1:2] <- c("stations", "years")
+
 # by station
 pdf(file = file.path(figs.dir, "tax-gr-contrib_stations_sand.pdf"), useDingbats = FALSE)
 plot_tax_group_contribution(tax.group.props.sand)
@@ -222,30 +250,74 @@ dev.off()
 # plot_tax_group_contribution(tax.group.props.zostera, by.years = TRUE)
 # dev.off() 
 
+## number of families/genera/sp per taxonomic group - fugly!
+## Mollusca
+# nb families
+unique(subset(current.taxa.sand, group == "Mollusca")$family)
+# number of species of class Bivalvia & Gastropoda
+length(row.names(subset(current.taxa.sand, group == "Mollusca" & class == "Bivalvia")))
+length(row.names(subset(current.taxa.sand, group == "Mollusca" & class == "Gastropoda")))
+# which species, to check & remove invalid ones (unfortunately, manually)
+row.names(subset(current.taxa.sand, group == "Mollusca" & class == "Bivalvia"))
+row.names(subset(current.taxa.sand, group == "Mollusca" & class == "Gastropoda"))
 
-## number of families/genera/sp per taxonomic group
-# families
-poly <- ddply(current.taxa.sand, .(group), function(x) table(x$family))[3, ]
-sum(poly > 0) # total number of families
 # number of species in each family (descending order)
-sort(poly, decreasing = T)
+## NB still has to be fixed - for ex. remove sp considered invalid beforehand.. Or check 
+## manually post factum
+sort(table(subset(current.taxa.sand, group == "Mollusca" & class == "Bivalvia")$family), 
+     decreasing = T)
 
-moll <- ddply(current.taxa.sand, .(group), function(x) table(x$family))[2, ]
-sum(moll > 0) # total number of families
+## Polychaeta
+# nb families
+unique(subset(current.taxa.sand, group == "Polychaeta")$family)
+
+# which species, to check & remove invalid ones (unfortunately, manually)
+row.names(subset(current.taxa.sand, group == "Polychaeta"))
+
 # number of species in each family (descending order)
-sort(moll, decreasing = T)
+## NB still has to be fixed - for ex. remove sp considered invalid beforehand.. Or check 
+## manually post factum
+sort(table(subset(current.taxa.sand, group == "Polychaeta")$family), 
+     decreasing = T)
+row.names(subset(current.taxa.sand, group == "Polychaeta" & family == "Nereididae"))
+row.names(subset(current.taxa.sand, group == "Polychaeta" & family == "Phyllodocidae")) #etc...
 
-cr <-  ddply(current.taxa.sand, .(group), function(x) table(x$family))[1, ]
-sum(cr > 0) # total number of families
+## Crustacea
+# nb families
+unique(subset(current.taxa.sand, group == "Crustacea")$family)
+
+# which species, to check & remove invalid ones (unfortunately, manually)
+row.names(subset(current.taxa.sand, group == "Crustacea"))
+
+# number of sp in each order
+sort(table(subset(current.taxa.sand, group == "Crustacea")$order), decreasing = TRUE)
+row.names(subset(current.taxa.sand, group == "Crustacea" & order == "Amphipoda"))
+row.names(subset(current.taxa.sand, group == "Crustacea" & order == "Decapoda"))
+row.names(subset(current.taxa.sand, group == "Crustacea" & order == "Cumacea"))
+row.names(subset(current.taxa.sand, group == "Crustacea" & order == "Isopoda"))
+
 # number of species in each family (descending order)
-sort(cr, decreasing = T)
+## NB still has to be fixed - for ex. remove sp considered invalid beforehand.. Or check 
+## manually post factum
+sort(table(subset(current.taxa.sand, group == "Crustacea")$family), 
+     decreasing = T)
+row.names(subset(current.taxa.sand, group == "Crustacea" & family == "Bodotriidae"))
+row.names(subset(current.taxa.sand, group == "Crustacea" & family == "Corophiidae")) #etc...
 
-v <- ddply(current.taxa.sand, .(group), function(x) table(x$class))[4, ]
-sum(v > 0) # total number of families
-# number of species in each family (descending order)
-sort(v, decreasing = T)
 
-rm(cr, moll, poly, v)
+## Varia
+# nb families
+unique(subset(current.taxa.sand, group == "Varia")$class)
+
+# which species, to check & remove invalid ones (unfortunately, manually)
+row.names(subset(current.taxa.sand, group == "Varia"))
+
+# number of sp in each order
+sort(table(subset(current.taxa.sand, group == "Varia")$class), decreasing = TRUE)
+
+
+rm(sp2exclude)
+
 
 ## frequency of occurrence of the species - all sites combined
 zoo.freq <- cbind(num.zoo.abnd.sand, factors.zoo.sand$stations)
@@ -254,22 +326,33 @@ str(zoo.freq)
 
 # aggregate by station
 zoo.freq <- ddply(zoo.freq, .(station), colwise(mean, .cols = is.numeric))
-# transpose & add tax.group
-# zoo.freq.t <- as.data.frame(t(zoo.freq[, 2:ncol(zoo.freq)]))
-# colnames(zoo.freq.t) <- zoo.freq[1, ]
-
 
 # calculate frequency of occurrence of each species
-fr <- apply(zoo.freq.t, 1, function(x) sum(x > 0) / length(x))
+fr <- apply(zoo.freq[sapply(zoo.freq, is.numeric)], 2, function(x) sum(x > 0) / length(x))
 
 # sort in descending order of frequency of occurrence
 sort(fr, decreasing = TRUE)
 
+rm(fr)
 
+## get species most abundant at each station
+most.ab.sp <- ddply(zoo.abnd.sand, .(stations), colwise(mean, .cols = is.numeric))
+most.ab.sp.t <- as.data.frame(t(most.ab.sp[-1]))
+names(most.ab.sp.t) <- stations.sand
+
+lapply(names(most.ab.sp.t), function(x) {
+  y <- subset(most.ab.sp.t, select = x)
+  y <- cbind(sp = row.names(most.ab.sp.t), y)
+  names(y) <- c("sp", "x")
+  y <- arrange(y, desc(x))
+  return(y)
+})
 
   
-  
-    
+
+ord <- do.call(order, c(most.ab.sp.t[3:nrow(most.ab.sp.t), ], decreasing = TRUE))
+most.ab.sp.t[ord, ]
+
 ### Diversity indices ###
 
 ## Alpha diversity (Whittaker, 1960) - description of the diversity in one spot
