@@ -336,19 +336,19 @@ sort(fr, decreasing = TRUE)
 rm(fr)
 
 ## get species most abundant at each station
-most.ab.sp <- ddply(zoo.abnd.sand, .(stations), colwise(mean, .cols = is.numeric))
-most.ab.sp.t <- as.data.frame(t(most.ab.sp[-1]))
-names(most.ab.sp.t) <- stations.sand
-
-lapply(names(most.ab.sp.t), function(x) {
-  y <- subset(most.ab.sp.t, select = x)
-  y <- cbind(sp = row.names(most.ab.sp.t), y)
-  names(y) <- c("sp", "x")
-  y <- arrange(y, desc(x))
-  return(y)
-})
-
-  
+# most.ab.sp <- ddply(zoo.abnd.sand, .(stations), colwise(mean, .cols = is.numeric))
+# most.ab.sp.t <- as.data.frame(t(most.ab.sp[-1]))
+# names(most.ab.sp.t) <- stations.sand
+# 
+# lapply(names(most.ab.sp.t), function(x) {
+#   y <- subset(most.ab.sp.t, select = x)
+#   y <- cbind(sp = row.names(most.ab.sp.t), y)
+#   names(y) <- c("sp", "x")
+#   y <- arrange(y, desc(x))
+#   return(y)
+# })
+# 
+#   
 
 ord <- do.call(order, c(most.ab.sp.t[3:nrow(most.ab.sp.t), ], decreasing = TRUE))
 most.ab.sp.t[ord, ]

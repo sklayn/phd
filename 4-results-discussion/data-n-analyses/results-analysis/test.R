@@ -14,6 +14,10 @@ gr.dendr.sand <- as.factor(gr.dendr.sand)
 class(gr.dendr.sand)
 class(env.qualit$LUSI.3000.impact)
 
+# reorder factor levels (will pay off later)
+env.qualit$LUSI.3000.impact <- reorder.factor(env.qualit$LUSI.3000.impact,
+                                              new.order = c("high", "moderate", "low"))
+
 plot(sand.mvabund ~ gr.dendr.sand) # by clusters identified from the dendrogram
 plot(sand.mvabund ~ env.qualit$LUSI.3000.impact)  # by level of anthropogenic pressure (LUSI)
 # do it for other factors (group has to be a factor!)
@@ -222,13 +226,16 @@ plot_mvabund <- function(abnd.df, gr.factor) {
                                     shape = gr.factor)) + 
     geom_point(size = 2) + 
     # reverse the order of x axis, so highest-contributing species are on top
-    scale_x_discrete(name = "", limits = rev(levels(tst.df.melted$variable))) + 
+    scale_x_discrete(name = "", limits = rev(levels(abnd.df.melted$variable))) + 
     scale_y_continuous(name = "Abundance (log(y/min + 1))") + 
     coord_flip() + # put species on y axis - easier to read
     theme_bw()
 }
 
-## other kinds of raw data plots -> LUSI + gravel/sand - qualit. somehow? + Pb-Mn-Cu
+
+###########################################################################################################
+
+## other kinds of raw data plots -> LUSI + gravel/sand - qualit. somehow? + Pb-Mn-Cu ? 
 
 ## try another model with more environmental explanatory variables
 # env. varables painstakingly selected as most likely to influence macrobenthos (literature);
@@ -288,6 +295,8 @@ rm(tst.df)
 
 ## fit some other factor? - gravel/sand? sorting? O2 saturation? - COMBINATION OF FACTORS, MAYBE IDed FROM MDS ORDISURF? 
 
+
+#######################################################################################################################
 
 ## see which species respond differently to different environmental parameters
 ## (= fit single predictive model for all species at all sites, but w/o attempting
