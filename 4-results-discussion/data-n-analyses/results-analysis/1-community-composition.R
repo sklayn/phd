@@ -40,7 +40,7 @@ zoo.abnd.sand <- import_zoo_data(data.dir = data.dir,
 #                                     station.names = stations.zostera, 
 #                                     repl = 4)
 
-# TEST TO SEE IF WORKS WITH CURRENT IMPORT FUNCTION! (prob. not because of number at the end of station names)
+# TEST TO SEE IF WORKS WITH CURRENT IMPORT FUNCTION! (it should - splits labels on . now)
 # zoo.abnd.2012 <- import_zoo_data(data.dir = data.dir, 
 #                             zoo.data = "zoo-abnd-2012.csv", 
 #                             stations = stations.2012, 
@@ -152,7 +152,7 @@ current.taxa.sand$group <- with(current.taxa.sand,
                                 ifelse(class == "Bivalvia" | 
                                        class == "Gastropoda" | 
                                        class == "Polyplacophora", "Mollusca", 
-                                ifelse(subclass == "Eumalacostraca" | 
+                                ifelse(subclass == "Eumalacostraca" | #subclasses because otherwise Cirripedia will get stuck in Varia
                                        subclass == "Thecostraca", "Crustacea", "Varia"))))
 
 table(current.taxa.sand$group)
@@ -196,9 +196,9 @@ sort(table(current.taxa.sand[-which(row.names(current.taxa.sand) %in% sp2exclude
 
 # save this plot
 pdf(file = file.path(figs.dir, "nb-taxa_sand_actual.pdf"), useDingbats = FALSE)
-barchart(sort(table(current.taxa.sand[-which(row.names(current.taxa.sand) %in% sp2exclude), ]$group)), 
-         main = "Number of taxa",
+barchart(sort(table(current.taxa.sand[-which(row.names(current.taxa.sand) %in% sp2exclude), ]$group)),
          xlab = "", 
+         scales = list(tck = c(1,0), x = list(cex = 1.2), y = list(cex = 1.2)),
          col = "royalblue")
 dev.off()
 
@@ -227,10 +227,9 @@ write.csv(tax.group.props.sand,
 
 # plot the contribution of taxonomic groups: 
 # add factors station and year (expected by plotting function)
-tax.group.props.sand <- cbind(factors.zoo.sand$stations, 
-                              factors.zoo.sand$years, 
+tax.group.props.sand <- cbind(stations = factors.zoo.sand$stations, 
+                              years = factors.zoo.sand$years, 
                               tax.group.props.sand)
-names(tax.group.props.sand)[1:2] <- c("stations", "years")
 
 # by station
 pdf(file = file.path(figs.dir, "tax-gr-contrib_stations_sand.pdf"), useDingbats = FALSE)
@@ -249,6 +248,31 @@ dev.off()
 # pdf(file = file.path(figs.dir, "tax-gr-contrib_st-yrs_zostera.pdf"), useDingbats = FALSE)
 # plot_tax_group_contribution(tax.group.props.zostera, by.years = TRUE)
 # dev.off() 
+
+## calculate the overall proportions of the taxonomic groups (all stations/years pooled)
+tax.gr.props.overall <- apply(tax.group.props.sand[-c(1:3)], 2, mean)
+# convert to data frame fr easier plotting 
+tax.gr.props.overall <- data.frame(tax.gr = names(tax.gr.props.overall), 
+                                   prop = tax.gr.props.overall, 
+                                   row.names = 1:4)
+sum(tax.gr.props.overall$prop) # check calculation
+# rearrange in descending order; also the factor, because otherwise new order 
+# won't be recognized by ggplot 
+tax.gr.props.overall <- arrange(tax.gr.props.overall, desc(prop))
+tax.gr.props.overall$tax.gr <- factor(tax.gr.props.overall$tax.gr, 
+                                      levels = tax.gr.props.overall$tax.gr)
+
+# plot
+pdf(file.path(figs.dir, "tax-gr-contribution_overall_sand.pdf"), useDingbats = FALSE)
+ggplot(tax.gr.props.overall, aes(x = tax.gr, y = prop)) + 
+  geom_bar(stat = "identity", fill = "royal blue") + 
+  theme_bw() + 
+  labs(x = "", y = "%") +
+  theme(axis.text.x = element_text(size = rel(1.3)),
+        axis.text.y = element_text(size = rel(1.3)))
+dev.off()
+
+rm(tax.gr.props.overall)  # only temporary anyway
 
 ## number of families/genera/sp per taxonomic group - fugly!
 ## Mollusca
@@ -335,23 +359,85 @@ sort(fr, decreasing = TRUE)
 
 rm(fr)
 
-## get species most abundant at each station
-# most.ab.sp <- ddply(zoo.abnd.sand, .(stations), colwise(mean, .cols = is.numeric))
-# most.ab.sp.t <- as.data.frame(t(most.ab.sp[-1]))
-# names(most.ab.sp.t) <- stations.sand
-# 
-# lapply(names(most.ab.sp.t), function(x) {
-#   y <- subset(most.ab.sp.t, select = x)
-#   y <- cbind(sp = row.names(most.ab.sp.t), y)
-#   names(y) <- c("sp", "x")
-#   y <- arrange(y, desc(x))
-#   return(y)
-# })
-# 
-#   
+### see which species are the most abundant at each station
+## split abundance data frame into separate dfs for each station
+abnd.dfs.st <- split(zoo.abnd.sand, zoo.abnd.sand$stations)
+str(abnd.dfs.st)
+# get rid of factor columns
+abnd.dfs.st <- lapply(abnd.dfs.st, "[", -c(1:3))
 
-ord <- do.call(order, c(most.ab.sp.t[3:nrow(most.ab.sp.t), ], decreasing = TRUE))
-most.ab.sp.t[ord, ]
+## arrange each df's columns (species) in descending order of abundance
+# calculate the total abundance of each species, then sort in descending order
+tot.abnd.dfs <- lapply(abnd.dfs.st, colSums)
+
+# make sure to return column indices, not names!
+tot.abnd.sorted <- lapply(tot.abnd.dfs, sort, decreasing = TRUE, index.return = TRUE)
+
+# extract the given number of species (columns) from the abundance data frame by their index
+abnd.subs <- mapply(function(m, n) m[, n$ix[1:10]], 
+                    abnd.dfs.st, 
+                    tot.abnd.sorted, 
+                    SIMPLIFY = FALSE)
+
+
+# convert the df to long format -> easier for ggplot2 to handle  
+abnd.melted <- lapply(abnd.subs, melt)
+
+## use custom transformation for abundance values (log(y/min + 1)) - as in the 
+## mvabund package
+# calculate the minimum non-0 value in the dataset & transform y
+min.vals <- lapply(abnd.melted, function(x) min(x$value[x$value > 0]))
+abnd.fin <- mapply(function(m, n) {
+                      value.tr <- log(m$value / n + 1)
+                      m$value.tr <- value.tr
+                      return(m)
+                    }, 
+                    abnd.melted,
+                    min.vals,
+                    SIMPLIFY = FALSE)  
+
+# plot all subsets, and add the corresponding name (the reason we're using mapply)
+plots <- mapply(function(n, m) {
+                  ggplot(n, aes_string(x = "variable", y = "value.tr")) + 
+                    geom_point(size = 2.5) + 
+                    # reverse the order of x axis, so highest-contributing species are on top
+                    scale_x_discrete(name = "", limits = rev(levels(n$variable))) + 
+                    scale_y_continuous(name = "Abundance (log(y/min + 1))") + 
+                    coord_flip() + # put species on y axis - easier to read
+                    labs(title = m) + 
+                    theme_bw() + 
+                    theme(axis.text.x = element_text(size = rel(1.3)), 
+                          axis.text.y = element_text(size = rel(1.3)))
+                }, 
+                abnd.fin, 
+                names(abnd.fin), 
+                SIMPLIFY = FALSE)
+
+# arrange them all on a single plotting device (gridExtra)  
+n <- length(pl)
+nCol <- floor(sqrt(n))
+p <- do.call("grid.arrange", c(plots, ncol = nCol))
+
+# keep for exploratory purposes; otherwise not very useful (y scales not matching,
+# overlap, ..)
+ggsave(file.path(figs.dir, "explor_most-abnd-sp-stations_sand.pdf"), p, 
+       height = 15, width = 15,
+       dpi = 300)
+
+# get rid of the clutter
+rm(p, n, nCol, plots, abnd.fin, min.val, abnd.melted, abnd.subs, tot.abnd.sorted, 
+   tot.abnd.dfs, abnd.dfs.st)
+
+## more useful: plot most abundant species OVERALL; shape/colour by station
+p <- plot_most_abnd_sp(num.zoo.abnd.sand, as.factor(as.numeric(factors.zoo.sand$stations)), 
+                       nb.sp = 20)
+ggsave(file.path(figs.dir, "most-abnd-sp_stations_sand.pdf"),
+       p,
+       width = 15, height = 15, 
+       dpi = 300)
+
+rm(p)
+
 
 ### Diversity indices ###
 

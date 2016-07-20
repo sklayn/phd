@@ -29,15 +29,18 @@ plot_most_abnd_sp <- function(abnd.df, gr.factor, nb.sp = 15) {
   
   ggplot(abnd.melted, aes_string(x = "variable", 
                                  y = "value.tr", 
-                                 colour = "group", 
-                                 shape = "group")) + 
-    geom_point(size = 2.5) + 
+                                 colour = "group")) + 
+    geom_point(size = 2.5, alpha = 0.75) + 
+    # make points hollow so that points plotted on top of one another are still
+    # visible
+    scale_color_brewer(name = "Station", palette = "Set2") + 
     # reverse the order of x axis, so highest-contributing species are on top
     scale_x_discrete(name = "", limits = rev(levels(abnd.melted$variable))) + 
     scale_y_continuous(name = "Abundance (log(y/min + 1))") + 
     coord_flip() + # put species on y axis - easier to read
-    theme_bw()
+    theme_bw() + 
+    theme(axis.text.x = element_text(size = rel(1.3)), 
+          axis.text.y = element_text(size = rel(1.3)), 
+          legend.text = element_text(size = rel(1.2)), 
+          legend.title = element_text(size = rel(1.2)))
 }
-
-
-### maybe the same, but by station? just to see

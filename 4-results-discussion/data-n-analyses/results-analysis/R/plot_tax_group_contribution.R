@@ -29,7 +29,7 @@ plot_tax_group_contribution <- function(tax.gr.props, by.years = FALSE) {
   p <- ggplot(data = tax.props.melted, aes(x = stations, y = value, fill = variable)) + 
     geom_bar(stat = "identity", position = "stack") +
     scale_fill_viridis(discrete = TRUE, name = "") +
-    labs(x = "", y = "Proportion") + 
+    # labs(x = "Station", y = "%") + 
     theme_bw() + 
     # modify the size of x axis and legend labels 
     theme(axis.text.x = element_text(size = rel(1.3)),
