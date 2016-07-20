@@ -95,7 +95,9 @@ summary.abnd.sand <- ddply(zoo.abnd.sand, .(stations), colwise(mean, .cols = is.
 ## Basic taxonomic composition and structure
 # import taxonomic data (species names are rows, successively higher taxonomic
 # ranks are columns)
-zoo.taxa <- read.csv(file.path(data.dir, "zoo-taxonomy.csv"), header = T, row.names = 1)
+zoo.taxa <- read.csv(file.path(data.dir, "zoo-taxonomy.csv"), 
+                     header = TRUE, 
+                     row.names = 1)
 
 # get the present taxa only (abundance > 0 in all samples)
 current.taxa.sand <- subset(zoo.taxa, row.names(zoo.taxa) %in% names(num.zoo.abnd.sand))
@@ -207,12 +209,18 @@ dev.off()
 ## composition by station and by year
 # first calculate proportions by taxonomic group in each station/replicate
 tax.group.props.sand <- tax_group_contribution(num.zoo.abnd.sand, 
-                                               current.taxa.sand)
+                                               current.taxa.sand$group)
 tax.group.props.sand <- cbind(factors.zoo.sand, tax.group.props.sand)
 
 # tax.group.props.zostera <- tax_group_contribution(num.zoo.abnd.zostera, 
 #                                                   current.taxa.zostera)  
 # tax.group.props.zostera <- cbind(factors.zoo.zostera, tax.group.props.zostera)
+
+# idem for biomass
+tax.gr.props.biomass.sand <- tax_group_contribution(num.zoo.biomass.sand, 
+                                                    current.taxa.sand$group)
+tax.gr.props.biomass.sand <- cbind(factors.zoo.sand, tax.gr.props.biomass.sand)
+
 
 # save to file (in case) 
 write.csv(tax.group.props.sand, 
@@ -223,13 +231,13 @@ write.csv(tax.group.props.sand,
 #           file = file.path(save.dir, "tax-gr-proportions_zostera-clean.csv"), 
 #           row.names = FALSE)
 
-
+# idem biomass
+write.csv(tax.gr.props.biomass.sand, 
+          file = file.path(save.dir, "tax-gr-proportions-biomass_sand_clean.csv"), 
+          row.names = FALSE)
 
 # plot the contribution of taxonomic groups: 
-# add factors station and year (expected by plotting function)
-tax.group.props.sand <- cbind(stations = factors.zoo.sand$stations, 
-                              years = factors.zoo.sand$years, 
-                              tax.group.props.sand)
+# add factors station and year (expected by plotting function) if not already in df
 
 # by station
 pdf(file = file.path(figs.dir, "tax-gr-contrib_stations_sand.pdf"), useDingbats = FALSE)
@@ -240,6 +248,12 @@ dev.off()
 # plot_tax_group_contribution(tax.group.props.zostera)
 # dev.off()
 
+# for biomass, too
+pdf(file = file.path(figs.dir, "tax-gr-contrib-biomass_st_sand.pdf"), useDingbats = FALSE)
+plot_tax_group_contribution(tax.gr.props.biomass.sand)
+dev.off()
+
+
 # by station and year
 pdf(file = file.path(figs.dir, "tax-gr-contrib_st-yrs_sand.pdf"), useDingbats = FALSE)
 plot_tax_group_contribution(tax.group.props.sand, by.years = TRUE)
@@ -248,6 +262,11 @@ dev.off()
 # pdf(file = file.path(figs.dir, "tax-gr-contrib_st-yrs_zostera.pdf"), useDingbats = FALSE)
 # plot_tax_group_contribution(tax.group.props.zostera, by.years = TRUE)
 # dev.off() 
+
+#... and for biomass
+pdf(file = file.path(figs.dir, "tax-gr-contrib-biomass_st-yrs_sand.pdf"), useDingbats = FALSE)
+plot_tax_group_contribution(tax.gr.props.biomass.sand, by.years = TRUE)
+dev.off()
 
 ## calculate the overall proportions of the taxonomic groups (all stations/years pooled)
 tax.gr.props.overall <- apply(tax.group.props.sand[-c(1:3)], 2, mean)
@@ -273,6 +292,33 @@ ggplot(tax.gr.props.overall, aes(x = tax.gr, y = prop)) +
 dev.off()
 
 rm(tax.gr.props.overall)  # only temporary anyway
+
+##... rinse and repeat for biomass
+tax.gr.props.biomass.overall <- apply(tax.gr.props.biomass.sand[-c(1:2)], 2, mean)
+# convert to data frame fr easier plotting 
+tax.gr.props.biomass.overall <- data.frame(tax.gr = names(tax.gr.props.biomass.overall), 
+                                           prop = tax.gr.props.biomass.overall, 
+                                           row.names = 1:4)
+sum(tax.gr.props.biomass.overall$prop) # check calculation... all good!
+
+# rearrange in descending order; also the factor, because otherwise new order 
+# won't be recognized by ggplot 
+tax.gr.props.biomass.overall <- arrange(tax.gr.props.biomass.overall, desc(prop))
+tax.gr.props.biomass.overall$tax.gr <- factor(tax.gr.props.biomass.overall$tax.gr, 
+                                              levels = tax.gr.props.biomass.overall$tax.gr)
+
+# plot
+pdf(file.path(figs.dir, "tax-gr-contribution_biomass_overall_sand.pdf"), useDingbats = FALSE)
+ggplot(tax.gr.props.biomass.overall, aes(x = tax.gr, y = prop*100)) + 
+  geom_bar(stat = "identity", fill = "dark orange") + 
+  theme_bw() + 
+  labs(x = "", y = "%") +
+  theme(axis.text.x = element_text(size = rel(1.3)),
+        axis.text.y = element_text(size = rel(1.3)))
+dev.off()
+
+rm(tax.gr.props.biomass.overall)  # only temporary anyway
+
 
 ## number of families/genera/sp per taxonomic group - fugly!
 ## Mollusca
@@ -414,7 +460,7 @@ plots <- mapply(function(n, m) {
                 SIMPLIFY = FALSE)
 
 # arrange them all on a single plotting device (gridExtra)  
-n <- length(pl)
+n <- length(plots)
 nCol <- floor(sqrt(n))
 p <- do.call("grid.arrange", c(plots, ncol = nCol))
 
@@ -428,15 +474,96 @@ ggsave(file.path(figs.dir, "explor_most-abnd-sp-stations_sand.pdf"), p,
 rm(p, n, nCol, plots, abnd.fin, min.val, abnd.melted, abnd.subs, tot.abnd.sorted, 
    tot.abnd.dfs, abnd.dfs.st)
 
+### see which species contribute most to the biomass at each station
+## split biomass data frame into separate dfs for each station
+biomass.dfs.st <- split(zoo.biomass.sand, zoo.biomass.sand$stations)
+str(biomass.dfs.st)
+# get rid of factor columns
+biomass.dfs.st <- lapply(biomass.dfs.st, "[", -c(1:3))
+
+## arrange each df's columns (species) in descending order of abundance
+# calculate the total abundance of each species, then sort in descending order
+tot.biomass.dfs <- lapply(biomass.dfs.st, colSums)
+
+# make sure to return column indices, not names!
+tot.biomass.sorted <- lapply(tot.biomass.dfs, sort, decreasing = TRUE, index.return = TRUE)
+
+# extract the given number of species (columns) from the abundance data frame by their index
+biomass.subs <- mapply(function(m, n) m[, n$ix[1:10]], 
+                      biomass.dfs.st, 
+                      tot.biomass.sorted, 
+                      SIMPLIFY = FALSE)
+
+
+# convert the df to long format -> easier for ggplot2 to handle  
+biomass.melted <- lapply(biomass.subs, melt)
+
+## use custom transformation for abundance values (log(y/min + 1)) - as in the 
+## mvabund package
+# calculate the minimum non-0 value in the dataset & transform y
+min.vals <- lapply(biomass.melted, function(x) min(x$value[x$value > 0]))
+biomass.fin <- mapply(function(m, n) {
+                        value.tr <- log(m$value / n + 1)
+                        m$value.tr <- value.tr
+                        return(m)
+                      }, 
+                      biomass.melted,
+                      min.vals,
+                      SIMPLIFY = FALSE)  
+
+# plot all subsets, and add the corresponding name (the reason we're using mapply)
+plots <- mapply(function(n, m) {
+                    ggplot(n, aes_string(x = "variable", y = "value.tr")) + 
+                      geom_point(size = 2.5) + 
+                      # reverse the order of x axis, so highest-contributing species are on top
+                      scale_x_discrete(name = "", limits = rev(levels(n$variable))) + 
+                      scale_y_continuous(name = "Abundance (log(y/min + 1))") + 
+                      coord_flip() + # put species on y axis - easier to read
+                      labs(title = m) + 
+                      theme_bw() + 
+                      theme(axis.text.x = element_text(size = rel(1.3)), 
+                            axis.text.y = element_text(size = rel(1.3)))
+                  }, 
+                  biomass.fin, 
+                  names(biomass.fin), 
+                  SIMPLIFY = FALSE)
+
+# arrange them all on a single plotting device (gridExtra)  
+n <- length(plots)
+nCol <- floor(sqrt(n))
+p <- do.call("grid.arrange", c(plots, ncol = nCol))
+
+# keep for exploratory purposes; otherwise not very useful (y scales not matching,
+# overlap, ..)
+ggsave(file.path(figs.dir, "explor_most-biomass-sp-stations_sand.pdf"), p, 
+       height = 15, width = 15,
+       dpi = 300)
+
+# get rid of the clutter
+rm(p, n, nCol, plots, biomass.fin, min.vals, biomass.melted, biomass.subs, 
+   tot.biomass.sorted, tot.biomass.dfs, biomass.dfs.st)
+
+
 ## more useful: plot most abundant species OVERALL; shape/colour by station
 p <- plot_most_abnd_sp(num.zoo.abnd.sand, as.factor(as.numeric(factors.zoo.sand$stations)), 
                        nb.sp = 20)
 ggsave(file.path(figs.dir, "most-abnd-sp_stations_sand.pdf"),
        p,
-       width = 15, height = 15, 
-       dpi = 300)
+       width = 15, height = 15)
 
 rm(p)
+
+##... idem biomass: most contributing species OVERALL; shape/colour by station
+### NB have to fix labels on plot - hardcoded for abundance!!
+p <- plot_most_abnd_sp(num.zoo.biomass.sand, as.factor(as.numeric(factors.zoo.sand$stations)), 
+                       nb.sp = 20)
+ggsave(file.path(figs.dir, "most-biomass-sp_stations_sand.pdf"),
+       p,
+       width = 15, height = 15)
+
+rm(p)
+
+
 
 
 ### Diversity indices ###

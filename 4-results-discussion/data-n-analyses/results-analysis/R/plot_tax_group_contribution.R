@@ -29,15 +29,18 @@ plot_tax_group_contribution <- function(tax.gr.props, by.years = FALSE) {
   p <- ggplot(data = tax.props.melted, aes(x = stations, y = value, fill = variable)) + 
     geom_bar(stat = "identity", position = "stack") +
     scale_fill_viridis(discrete = TRUE, name = "") +
-    # labs(x = "Station", y = "%") + 
+    labs(x = "Station", y = "Proportion") + 
     theme_bw() + 
     # modify the size of x axis and legend labels 
     theme(axis.text.x = element_text(size = rel(1.3)),
+          axis.text.y = element_text(size = rel(1.3)),
+          axis.title.x = element_text(size = rel(1.2)),
           legend.text = element_text(size = rel(1.1)))
   
   # facet by year, if specified at input
   if(by.years){
-    p <- p + facet_wrap(~years, nrow = 2)
+    p <- p + facet_wrap(~years, nrow = 2) + 
+             theme(strip.text.x = element_text(size = rel(1.3)))
   }
   
   return(p)

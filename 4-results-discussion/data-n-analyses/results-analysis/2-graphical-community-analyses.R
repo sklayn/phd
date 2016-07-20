@@ -98,11 +98,17 @@ dev.off()
 # the abundance curve lies above the biomass curve throughout its length.
 
 # import the biomass data
-zoo.biomass.sand <- import_zoo_data(data.dir, "zoo-biomass-sand.csv", stations.sand, 3)
+zoo.biomass.sand <- import_zoo_data(data.dir = data.dir, 
+                                    zoo.data = "zoo-biomass-sand.csv", 
+                                    station.names = stations.sand, 
+                                    repl = 3)
 
 # quick check for import errors, etc.
 str(zoo.biomass.sand)
 names(zoo.biomass.sand)
+
+## SAVE THE CLEANED BIOMASS DATA
+write.csv(zoo.biomass.sand, file.path(save.dir, "biomass_sand_clean.csv"), row.names = FALSE)
 
 # make a subset of only the numeric biomass data for the species present in the 
 # current dataset, and another of the mean biomass per station  
