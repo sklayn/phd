@@ -79,18 +79,66 @@ write.csv(zoo.abnd.sand,
 factors.zoo.sand <- zoo.abnd.sand[sapply(zoo.abnd.sand, is.factor)]
 num.zoo.abnd.sand <- zoo.abnd.sand[sapply(zoo.abnd.sand, is.numeric)]
 
+# biomass
+num.biomass.sand <- zoo.biomass.sand[sapply(zoo.biomass.sand, is.numeric)]
+
 # leave only the species actually present in the current dataset (to simplify later
 # analyses)
 num.zoo.abnd.sand <- num.zoo.abnd.sand[colSums(num.zoo.abnd.sand) > 0] 
-
+num.biomass.sand <- num.biomass.sand[colSums(num.biomass.sand) > 0]
 
 # factors.zoo.zostera <- zoo.abnd.zostera[sapply(zoo.abnd.zostera, is.factor)]
 # num.zoo.abnd.zostera <- zoo.abnd.zostera[sapply(zoo.abnd.zostera, is.numeric)]
 # num.zoo.abnd.zostera <- num.zoo.abnd.zostera[colSums(num.zoo.abnd.zostera) > 0] 
 
+# average nb species, abundance & biomass for the whole dataset, min-max values of 
+# same + where/when they were found (CUSTOM FUNCTION)
+summary_zoo_params(num.zoo.abnd.sand, factors.zoo.sand, "abnd") # abundance
+summary_zoo_params(num.biomass.sand, factors.zoo.sand, "biomass") # biomass
+summary_zoo_params(num.zoo.abnd.sand, factors.zoo.sand, "nb.sp") # number of species
+
+
 # summary of numeric abundance data by station (mean) - for summary plots, etc.
 summary.abnd.sand <- ddply(zoo.abnd.sand, .(stations), colwise(mean, .cols = is.numeric))
 # summary.abnd.zostera <- ddply(zoo.abnd.zostera, .(stations), colwise(mean, .cols = is.numeric))
+
+## average nb species, abundance & biomass per station/year
+# NB exclude (mostly invalid) taxa - defined several rows below 
+sp.summaries <- num.zoo.abnd.sand[, -which(colnames(num.zoo.abnd.sand) %in% sp2exclude)]
+# nb species 
+aver.nb.sp <- data.frame(station = factors.zoo.sand$stations,
+                         year = factors.zoo.sand$years,
+                         nb.sp = specnumber(sp.summaries))
+
+# aver nb species by station and year
+ddply(aver.nb.sp, 
+      .(station, year), 
+      summarize, aver.nb.sp = mean(nb.sp), 
+      nb.sp.sd = sd(nb.sp))
+
+# abundance - DO NOT exclude those taxa from here, just from the number of taxa
+aver.abnd.sand <- data.frame(station = factors.zoo.sand$stations,
+                             year = factors.zoo.sand$years,
+                             tot.abnd = rowSums(zoo.abnd.sand[sapply(zoo.abnd.sand, is.numeric)]))
+
+# average abundance by station and year
+ddply(aver.abnd.sand, 
+      .(station, year), 
+      summarize, aver.abnd = mean(tot.abnd), 
+      abnd.sd = sd(tot.abnd))
+
+# same crap, different biomass
+aver.biomass.sand <- data.frame(station = factors.zoo.sand$stations,
+                             year = factors.zoo.sand$years,
+                             tot.biomass = rowSums(zoo.biomass.sand[sapply(zoo.biomass.sand, is.numeric)]))
+
+# average biomass by station and year
+ddply(aver.biomass.sand, .(station, year), 
+      summarize, 
+      aver.biomass = mean(tot.biomass), 
+      biomass.sd = sd(tot.biomass))
+
+rm(aver.biomass.sand, aver.abnd.sand, aver.nb.sp, sp.summaries) # crap cleanup
 
 ## Basic taxonomic composition and structure
 # import taxonomic data (species names are rows, successively higher taxonomic
@@ -189,10 +237,9 @@ dev.off()
 ## REAL number of taxa (without the species identified to genus/family level 
 ## because of bad preservation, the larvae,..)
 sp2exclude <- c("Abra sp.", "Eteone sp.", "Glycera sp.", "Hydrobia sp.", "Iphinoe sp.", 
-                "Micrpodeutopus sp.", "Microphthalmus sp.", "Phyllodoce sp.", 
-                "Gammaridae", "Amphipoda", "Cardiidae", "Decapoda larvae", "Protodrilus sp.", 
-                "Maldanidae", "Nepthtyidae", "Nereididae", "Pisces larvae", 
-                "Polychaeta larvae", "Spionidae")
+                "Micrpodeutopus sp.", "Microphthalmus sp.", "Gammaridae", "Amphipoda", 
+                "Cardiidae", "Decapoda larvae", "Protodrilus sp.", "Maldanidae", 
+                "Nepthtyidae", "Nereididae", "Pisces larvae", "Polychaeta larvae", "Spionidae")
 
 sort(table(current.taxa.sand[-which(row.names(current.taxa.sand) %in% sp2exclude), ]$group))
 
