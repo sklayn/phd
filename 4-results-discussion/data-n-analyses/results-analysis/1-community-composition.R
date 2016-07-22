@@ -52,6 +52,14 @@ zoo.abnd.sand <- import_zoo_data(data.dir = data.dir,
 #                                    after = match("stations", names(zoo.abnd.2012))))
 
 
+# also import the biomass data (if not already imported by then)
+zoo.biomass.sand <- import_zoo_data(data.dir = data.dir, 
+                                    zoo.data = "zoo-biomass-sand.csv", 
+                                    station.names = stations.sand, 
+                                    repl = 3)
+
+
+
 # after-import sanity checks (better safe than sorry!)
 str(zoo.abnd.sand)  # structure & variable classes: factors are factors, numeric variables
                     # are numeric, etc.
@@ -64,6 +72,11 @@ names(zoo.abnd.sand)  # variable (species) names
 # names(zoo.abnd.2012)
 
 
+# quick check for import errors, etc. for the biomass, too
+str(zoo.biomass.sand)
+names(zoo.biomass.sand)
+
+
 ## SAVE THE CLEANED AND REARRANGED DATA
 write.csv(zoo.abnd.sand, 
           file = file.path(save.dir, "zoo-sand-clean.csv"), 
@@ -72,6 +85,13 @@ write.csv(zoo.abnd.sand,
 # write.csv(zoo.abnd.zostera, 
 #           file = file.path(save.dir, "zoo-zostera-clean.csv"), 
 #           row.names = FALSE)
+
+
+## SAVE THE CLEANED BIOMASS DATA
+write.csv(zoo.biomass.sand, 
+          file.path(save.dir, "biomass_sand_clean.csv"), 
+          row.names = FALSE)
+
 
 # make subsets of the numeric columns (the species data), and the factor columns -
 # to avoid retyping the command, because these subsets will be 

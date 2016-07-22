@@ -97,7 +97,7 @@ dev.off()
 # coincident and may cross each other one or several times; under severe disturbance,
 # the abundance curve lies above the biomass curve throughout its length.
 
-# import the biomass data
+# import the biomass data (if not already imported by then)
 zoo.biomass.sand <- import_zoo_data(data.dir = data.dir, 
                                     zoo.data = "zoo-biomass-sand.csv", 
                                     station.names = stations.sand, 
