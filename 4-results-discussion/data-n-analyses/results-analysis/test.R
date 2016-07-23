@@ -1,4 +1,4 @@
-## mvabund - GLM fitting for abundance - environmental data
+## mvabund - GLM fitting for abundance - environmental data ###
 library(mvabund)
 
 ## turn abundance data into mvabund object = 2D matrix (easier for mvabund 
@@ -61,7 +61,7 @@ sand.glms <- manyglm(sand.mvabund ~ gr.dendr.sand, family = "negative.binomial")
 
 ## explore the fit
 plot(sand.glms)  # residuals vs fitted values
-plot.manyglm(sand.glms, which = 1:4)  # all traditional lm diagnostic plots
+plot.manyglm(sand.glms, which = 1:3)  # all traditional lm diagnostic plots
 
 # get specific model parameters
 coef(sand.glms)
