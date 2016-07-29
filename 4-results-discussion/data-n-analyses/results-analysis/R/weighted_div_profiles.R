@@ -73,7 +73,7 @@ weighted_div_profiles <- function(community.data, tax.data, q = 50) {
   weighted.profiles <- lapply(q.seq, function(q) weighted_div(taxa.proportions, 
                                                            taxa.ordinariness, q))
   
-  # convert output list to data frame and clean it up a bit (namely, get rid of
+  # convert output list to data frame and clean it up a bit (get rid of
   # the horrible column names and transpose so that samples are columns)
   weighted.profiles <- as.data.frame(weighted.profiles)
   names(weighted.profiles) <- q.seq
