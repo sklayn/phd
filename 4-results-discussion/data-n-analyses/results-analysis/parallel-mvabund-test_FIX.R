@@ -3,6 +3,10 @@ library(doParallel)
 
 ### run mvabund permutations in parallel - TESTING! ###
 
+## DOES NOT work as I want it -> blazing fast, but currently performs several 
+## anovas, each with a certain number of the permutations I want, in parallel, 
+## but how to combine the result? 
+
 # set up the number of iterations
 nb.boots = 250
 
@@ -27,3 +31,4 @@ print(Sys.time()-strt)
 stopCluster(clust)
 
 
+## try with manylm / anova.manylm
