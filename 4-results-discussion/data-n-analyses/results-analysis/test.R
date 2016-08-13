@@ -12,7 +12,7 @@ gr.dendr.sand <- as.factor(gr.dendr.sand)
 # community structure) --> IF USING THESE, FIX PLOTS (MOVE LEGEND & ADD LEGEND TITLE, FIX MARGINS)
 ## NB CHECK THAT YOU HAVE FACTORS AS GROUPS!
 class(gr.dendr.sand)
-class(env.qualit$LUSI.3000.impact)
+class(env.qualit$LUSI.3000.impact)  # USE LUSI FOR WATERSHEDS INSTEAD OF VANILLA! 
 
 # reorder factor levels (will pay off later)
 env.qualit$LUSI.3000.impact <- reorder.factor(env.qualit$LUSI.3000.impact,
