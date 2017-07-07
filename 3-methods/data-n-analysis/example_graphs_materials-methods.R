@@ -6,10 +6,16 @@ save.dir <- "output"
 functions.dir <- "R"
 figures.dir <- "figs"
 
-###### Data: Loch Linhe abundance & biomass (example data from PRIMER 6 manual).
-###### Since this is only for illustrative purposes, 3 partiuclar years are 
-###### chosen: 1965 (normal), 1970 (moderately polluted with organic matter from
-###### pulp mill effluent), and 1972 (very polluted). 
+###### k-dominance curves. Data: 
+
+
+
+
+
+###### ABC curves. Data: Loch Linhe abundance & biomass (example data from PRIMER 6 
+###### manual). Since this is only for illustrative purposes, 3 partiuclar years 
+###### are chosen: 1965 (normal), 1970 (moderately polluted with organic matter 
+###### from pulp mill effluent), and 1972 (very polluted). 
 linhe.abnd <- read.delim(file.path(data.dir, "dominance_curves", 
                                    "lnma.txt"), 
                          sep = "\t", header = TRUE)
@@ -30,8 +36,8 @@ linhe.biomass.sub <- linhe.biomass[, c("1965", "1970", "1972")]
 #### source ABC calculation/plotting functions (from results/discussion dir)
 source(file.path("/media/eti/My Passport/rabota/documents/phd/thesis/4-results-discussion/data-n-analyses/results-analysis", 
                  functions.dir, "k-dom_curves.R"))
-source(file.path("/media/eti/My Passport/rabota/documents/phd/thesis/4-results-discussion/data-n-analyses/results-analysis", 
-                 functions.dir, "plot_dom_curves.R"))
+# source(file.path("/media/eti/My Passport/rabota/documents/phd/thesis/4-results-discussion/data-n-analyses/results-analysis",
+#                  functions.dir, "plot_dom_curves.R"))
 
 #### THIS VARIANT OF THE ABC FUNCTION MIGHT NEED TO BE FIXED - DEMANDS BOTH ABND AND 
 #### BIOMASS FOR EACH SPECIES IN A SAMPLE, AND THE LINHE DATA DOESN'T ALWATYS HAVE THAT.
@@ -54,61 +60,39 @@ linhe.1965.abc <- abc(linhe.abnd.fin$`1965`, linhe.biomass.fin$`1965`)
 linhe.abc <- mapply(abc, linhe.abnd.fin, linhe.biomass.fin, SIMPLIFY = FALSE)
 linhe.abc.for.plot <- lapply(linhe.abc, function(x) x[[1]]) 
   
-  
-## quickly fix the stupid plotting function here, because no more time & nerves
-plot_dom_curves2 <- function(dom.curves, trasf.y = FALSE, col.curves = c("skyblue", "orange")) {
-  ## plots ABC or partial dominance curves for stations/replicates. 
-  ## Arguments: dom.curves - list of curves to be plotted (each element = 
-  ##              station/replicate).
-  ##            trasf - should the y axis should be transformed using a (modified)
-  ##              logistic transformation for a better visualization of the curves?
-  ##            col.curves - custom colours for the abundance and biomass curves,
-  ##              respectively.
-  
-  library(ggplot2)
-  library(reshape2)
-  library(scales)
-  library(plyr)
-  
-  # the input is still a list, so convert to data frame and drop the third column
-  # if there is one (as in the case of ABC)
-  curves <- dom.curves[-3]  
-  names(curves) <- c("abundance", "biomass")
-  
-  # add a variable for the species rank
-  curves$rank <- 1:nrow(curves)
-  
-  # reshape the data frame in long format
-  curves.melted <- melt(curves, id.vars = "rank")  
-  
-  # make a custom colour scale based on the colours specified at input 
-  custom.cols <- col.curves
-  names(custom.cols) <- levels(curves.melted$variable)
-  custom.col.scale <- scale_color_manual(name = "", values = custom.cols)
-  
-  if(trasf.y) {
-    # plot using the modified y scale
-    ggplot(data = curves.melted, aes(x = rank, y = value, colour = variable)) + 
-      geom_line() +
-      custom.col.scale +
-      scale_x_log10() +
-      coord_trans(y = "modif_logistic") +
-      labs(x = "Species rank", y = "Cumulative %", colour = "") +
-      theme_bw()
-    
-  } else {
-    # plot without transforming the y axis
-    ggplot(data = curves.melted, aes(x = rank, y = value, colour = variable)) + 
-      geom_line() +
-      custom.col.scale +
-      scale_x_log10() +
-      labs(x = "Species rank", y = "Cumulative %", colour = "") +
-      theme_bw()
-  }
-  
-}
-  
-abc.plots <- lapply(linhe.abc.for.plot, plot_dom_curves2)  
+# get rid of the third column, BiAi - not needed here 
+linhe.abc.for.plot <- lapply(linhe.abc.for.plot, "[", -3)
 
-library(gridExtra)
-grid.arrange(abc.plots[[1]], abc.plots[[2]], abc.plots[[3]])
+## reshape and plot the curves - have to fix/get rid of the function later; 
+## it's horrible
+library(ggplot2)
+library(reshape2)
+library(plyr)
+
+linhe.abc.for.plot <- lapply(linhe.abc.for.plot, function(x) {
+  names(x) <- c("abundance", "biomass")
+  x$rank <- 1:nrow(x)
+  return(x)
+})
+
+## convert to data frame & reshape 
+linhe.abc.df <- ldply(linhe.abc.for.plot)
+linhe.abc.df.long <- melt(linhe.abc.df, id.vars = c(".id", "rank"))
+
+## plot
+linhe.abc.plot <- ggplot(linhe.abc.df.long) + 
+    geom_line(aes(x = rank, y = value, colour = variable)) +
+    scale_color_manual(values = c("skyblue", "orange")) +
+    scale_x_log10() +
+    labs(x = "Species rank", y = "Cumulative %", colour = "") +
+    facet_wrap(~.id, ncol = 3) +
+    theme_bw()
+
+ggsave(file.path(figures.dir, "loch-linhe-abc-curves.png"), 
+       plot = linhe.abc.plot, 
+       width = 16, height = 8, units = "cm", dpi = 500)  
+
+## cleanup
+rm(linhe.abc, linhe.abc.df, linhe.abc.df.long, linhe.abc.for.plot, linhe.1965.abc, 
+   linhe.abnd, linhe.abnd.fin, linhe.abnd.sub, linhe.biomass, linhe.biomass.fin, 
+   linhe.biomass.sub)
