@@ -107,6 +107,10 @@ ggsave(file.path(figures.dir, "kdom-baltic-2002.png"), baltic.2002.plot,
        dpi = 500, width = 13, units = "cm")
 
 
+## cleanup
+rm(baltic.1990, baltic.1990.sub, baltic.1990.sub.prop, baltic.2002, baltic.2002.sub,
+   baltic.2002.sub.prop, baltic.sea.zoo, baltic.sub)
+
 ###### ABC curves. Data: Loch Linhe abundance & biomass (example data from PRIMER 6 
 ###### manual). Since this is only for illustrative purposes, 3 partiuclar years 
 ###### are chosen: 1965 (normal), 1970 (moderately polluted with organic matter 

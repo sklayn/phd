@@ -111,7 +111,8 @@ plot.windrose.test <- function(data,
     scale_fill_manual(name = "Wind Speed (m/s)", 
                       values = spd.colors,
                       drop = FALSE) +
-    theme(axis.title.x = element_blank())
+    theme(axis.title.x = element_blank()) + 
+    theme_bw()
   
   # adjust axes if required
   if (!is.na(countmax)){
