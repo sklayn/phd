@@ -6,10 +6,105 @@ save.dir <- "output"
 functions.dir <- "R"
 figures.dir <- "figs"
 
-###### k-dominance curves. Data: 
+###### k-dominance curves. Data: Zettler, 2005: Baltic Sea macrozoobenthos (OBIS).
+###### http://www.iobis.org/mapper/?dataset=254
+
+## import & clean, keeping only some of the data (only want it for illustrative purposes).
+baltic.sea.zoo <- read.csv(file.path(data.dir, "dominance_curves", "Zettler et al_2005_OBIS_Baltic_macrozoobenthos_data.csv"), 
+                           header = TRUE, stringsAsFactors = FALSE)
+
+str(baltic.sea.zoo)
+
+baltic.sub <- baltic.sea.zoo[, c("yearcollected", "monthcollected", "tname", 
+                                 "locality", "observedindividualcount")]
+str(baltic.sub)
+
+baltic.sub[baltic.sub$yearcollected == 2005,] # only 2 stations sampled - not enough..
+unique(baltic.sub[baltic.sub$yearcollected == 2002,]$locality) # 7 stations - prob. too many..
+unique(baltic.sub[baltic.sub$yearcollected == 1990,]$locality) # 5 stations - maybe ok
+
+## try plotting k-dominane curves first for 1990, then 2002, to decide which looks better.
+baltic.1990 <- baltic.sub[baltic.sub$yearcollected == 1990,]
+baltic.2002 <- baltic.sub[baltic.sub$yearcollected == 2002,]
+
+# subset again, to leave only species, stations and counts
+baltic.1990.sub <- baltic.1990[, c("tname", "locality", "observedindividualcount")] 
+baltic.2002.sub <- baltic.2002[, c("tname", "locality", "observedindividualcount")]
+
+# make localities into factors
+baltic.1990.sub$locality <- as.factor(baltic.1990.sub$locality)
+baltic.2002.sub$locality <- as.factor(baltic.2002.sub$locality)
+
+# assign ranks to species 
+library(plyr)
+baltic.1990.sub.prop <- ddply(baltic.1990.sub, .(locality), function(x) {
+  # calculate relative abundance of each species (proportion of the total abundance)
+  x$prop = x$observedindividualcount / sum(x$observedindividualcount)
+  # assign rank to species
+  x <- x[order(x$prop, decreasing = TRUE),]
+  x$rank <- 1:nrow(x)
+  
+  # calculate the cumulative proportion (easier plotting)
+  x$cumprop[1] <- x$prop[1]
+  for (i in 2:nrow(x)) {
+    x$cumprop[i] <- x$cumprop[i-1] + x$prop[i]
+  }
+   
+  return(x)
+})
 
 
+baltic.2002.sub.prop <- ddply(baltic.2002.sub, .(locality), function(x) {
+  # calculate relative abundance of each species (proportion of the total abundance)
+  x$prop = x$observedindividualcount / sum(x$observedindividualcount)
+  # assign rank to species
+  x <- x[order(x$prop, decreasing = TRUE),]
+  x$rank <- 1:nrow(x)
+  
+  # calculate the cumulative proportion (easier plotting)
+  x$cumprop[1] <- x$prop[1]
+  for (i in 2:nrow(x)) {
+    x$cumprop[i] <- x$cumprop[i-1] + x$prop[i]
+  }
+  
+  return(x)
+})
 
+
+# plot dominance curves
+library(ggplot2)
+library(viridis)
+
+baltic.1990.plot <- ggplot(baltic.1990.sub.prop, 
+                           mapping = aes(x = rank, y = cumprop * 100,
+                                         colour = locality, shape = locality)) + 
+                      geom_line() +
+                      geom_point() +
+                      scale_x_log10() +
+                      scale_color_viridis(discrete = TRUE, option = "viridis") + 
+                      ylab("Cumulative abundance (%)") +
+                      xlab("Species rank (log)") +
+                      theme_bw() + 
+                      theme(legend.position = "none")
+
+# yells about too many series for the shapes palette (max 6, here - 7), but works
+baltic.2002.plot <- ggplot(baltic.2002.sub.prop, 
+                           mapping = aes(x = rank, y = cumprop * 100,
+                                         colour = locality, shape = locality)) + 
+  geom_line() +
+  geom_point() + 
+  scale_x_log10() +
+  scale_color_viridis(discrete = TRUE, option = "viridis") + 
+  ylab("Cumulative abundance (%)") +
+  xlab("Species rank (log)") +
+  theme_bw() + 
+  theme(legend.position = "none")
+
+
+ggsave(file.path(figures.dir, "kdom-baltic-1990.png"), baltic.1990.plot, 
+       dpi = 500, width = 13, units = "cm")
+ggsave(file.path(figures.dir, "kdom-baltic-2002.png"), baltic.2002.plot, 
+       dpi = 500, width = 13, units = "cm")
 
 
 ###### ABC curves. Data: Loch Linhe abundance & biomass (example data from PRIMER 6 
