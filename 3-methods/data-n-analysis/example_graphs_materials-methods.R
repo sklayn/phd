@@ -1,4 +1,5 @@
-###### Example graphs for M&M - k-dominance and ABC curves.
+###### Example graphs for M&M - statistical analyses ######
+###########################################################
 
 ## define working subdirectories
 data.dir <- "data"
@@ -6,8 +7,16 @@ save.dir <- "output"
 functions.dir <- "R"
 figures.dir <- "figs"
 
-###### k-dominance curves. Data: Zettler, 2005: Baltic Sea macrozoobenthos (OBIS).
-###### http://www.iobis.org/mapper/?dataset=254
+## import libraries
+library(ggplot2)
+library(plyr)
+library(reshape2)
+library(tidyr)
+library(viridis)
+
+###### k-dominance curves ##### 
+#### Data: Zettler, 2005: Baltic Sea macrozoobenthos (OBIS).
+#### http://www.iobis.org/mapper/?dataset=254
 
 ## import & clean, keeping only some of the data (only want it for illustrative purposes).
 baltic.sea.zoo <- read.csv(file.path(data.dir, "dominance_curves", "Zettler et al_2005_OBIS_Baltic_macrozoobenthos_data.csv"), 
@@ -36,7 +45,6 @@ baltic.1990.sub$locality <- as.factor(baltic.1990.sub$locality)
 baltic.2002.sub$locality <- as.factor(baltic.2002.sub$locality)
 
 # assign ranks to species 
-library(plyr)
 baltic.1990.sub.prop <- ddply(baltic.1990.sub, .(locality), function(x) {
   # calculate relative abundance of each species (proportion of the total abundance)
   x$prop = x$observedindividualcount / sum(x$observedindividualcount)
@@ -72,9 +80,6 @@ baltic.2002.sub.prop <- ddply(baltic.2002.sub, .(locality), function(x) {
 
 
 # plot dominance curves
-library(ggplot2)
-library(viridis)
-
 baltic.1990.plot <- ggplot(baltic.1990.sub.prop, 
                            mapping = aes(x = rank, y = cumprop * 100,
                                          colour = locality, shape = locality)) + 
@@ -111,10 +116,11 @@ ggsave(file.path(figures.dir, "kdom-baltic-2002.png"), baltic.2002.plot,
 rm(baltic.1990, baltic.1990.sub, baltic.1990.sub.prop, baltic.2002, baltic.2002.sub,
    baltic.2002.sub.prop, baltic.sea.zoo, baltic.sub)
 
-###### ABC curves. Data: Loch Linhe abundance & biomass (example data from PRIMER 6 
-###### manual). Since this is only for illustrative purposes, 3 partiuclar years 
-###### are chosen: 1965 (normal), 1970 (moderately polluted with organic matter 
-###### from pulp mill effluent), and 1972 (very polluted). 
+###### ABC curves ######  
+#### Data: Loch Linhe abundance & biomass (example data from PRIMER 6 manual). 
+#### Since this is only for illustrative purposes, 3 partiuclar years are chosen: 
+#### 1965 (normal), 1970 (moderately polluted with organic matter from pulp mill 
+#### effluent), and 1972 (very polluted). 
 linhe.abnd <- read.delim(file.path(data.dir, "dominance_curves", 
                                    "lnma.txt"), 
                          sep = "\t", header = TRUE)
@@ -164,10 +170,6 @@ linhe.abc.for.plot <- lapply(linhe.abc.for.plot, "[", -3)
 
 ## reshape and plot the curves - have to fix/get rid of the function later; 
 ## it's horrible
-library(ggplot2)
-library(reshape2)
-library(plyr)
-
 linhe.abc.for.plot <- lapply(linhe.abc.for.plot, function(x) {
   names(x) <- c("abundance", "biomass")
   x$rank <- 1:nrow(x)
@@ -195,3 +197,53 @@ ggsave(file.path(figures.dir, "loch-linhe-abc-curves.png"),
 rm(linhe.abc, linhe.abc.df, linhe.abc.df.long, linhe.abc.for.plot, linhe.1965.abc, 
    linhe.abnd, linhe.abnd.fin, linhe.abnd.sub, linhe.biomass, linhe.biomass.fin, 
    linhe.biomass.sub)
+
+
+##### Mean-variance relationships in multivariate abundance datasets #####
+#### Data: Zettler, 2005: Baltic Sea macrozoobenthos (OBIS).
+#### http://www.iobis.org/mapper/?dataset=254
+
+## import & clean, keeping only some of the data (only want it for illustrative purposes).
+baltic.sea.zoo <- read.csv(file.path(data.dir, "dominance_curves", "Zettler et al_2005_OBIS_Baltic_macrozoobenthos_data.csv"), 
+                           header = TRUE, stringsAsFactors = FALSE)
+
+str(baltic.sea.zoo)
+
+baltic.sub <- baltic.sea.zoo[, c("yearcollected", "monthcollected", "tname", 
+                                 "locality", "observedindividualcount")]
+str(baltic.sub)
+
+baltic.sub[baltic.sub$yearcollected == 2002,] # 7 stations sampled - will do for illustraton..
+unique(baltic.sub[baltic.sub$yearcollected == 2003,]$locality) # 9 stations sampled - will do for illustraton..
+
+## get only 2003, and then only the taxon, station and count
+baltic.sub.2003 <- baltic.sub[baltic.sub$yearcollected == 2003, ]
+baltic.sub.2003.fin <- baltic.sub.2003[, c("tname", "locality", "observedindividualcount")]
+
+## fill in missing combinations (add 0-count taxa to whatever station they're missing from)
+baltic.sub.2003.fin <- complete(baltic.sub.2003.fin, 
+                                tname, locality, 
+                                fill = list(observedindividualcount = 0))
+
+
+## calculate the mean and the variance of the species 
+baltic.sub.2003.summary <- ddply(baltic.sub.2003.fin, 
+                                 .(tname), 
+                                 summarize, 
+                                 mean = mean(observedindividualcount), 
+                                 variance = var(observedindividualcount))
+
+## plot the mean-variance relationship (log scale)
+with(baltic.sub.2003.summary, plot(variance ~ mean))
+
+ggplot() + 
+  geom_point(data = baltic.sub.2003.summary, aes(x = mean, y = variance), colour = "blue") +
+  geom_point(data = baltic.sub.2002.summary, aes(x = mean, y = variance), colour = "green") +
+  scale_x_log10() +
+  scale_y_log10() +
+  theme_bw()
+
+
+## ughhh
+x <- as.data.frame(baltic.sub.2003.fin)
+spread(x, key = tname, value = observedindividualcount)
