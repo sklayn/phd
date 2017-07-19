@@ -9,8 +9,9 @@ figures.dir <- "figs"
 
 ## import libraries
 library(ggplot2)
+library(mvabund)
 library(plyr)
-library(reshape2)
+library(reshape2) # deprecated? see tidyr
 library(tidyr)
 library(viridis)
 
@@ -213,37 +214,73 @@ baltic.sub <- baltic.sea.zoo[, c("yearcollected", "monthcollected", "tname",
                                  "locality", "observedindividualcount")]
 str(baltic.sub)
 
-baltic.sub[baltic.sub$yearcollected == 2002,] # 7 stations sampled - will do for illustraton..
-unique(baltic.sub[baltic.sub$yearcollected == 2003,]$locality) # 9 stations sampled - will do for illustraton..
+unique(baltic.sub[baltic.sub$yearcollected == 2002,]$locality) # 7 stations sampled - will do for illustraton.
+unique(baltic.sub[baltic.sub$yearcollected == 2003,]$locality) # 9 stations sampled - will do for illustraton.
 
-## get only 2003, and then only the taxon, station and count
-baltic.sub.2003 <- baltic.sub[baltic.sub$yearcollected == 2003, ]
-baltic.sub.2003.fin <- baltic.sub.2003[, c("tname", "locality", "observedindividualcount")]
+## get only 2003, and only the taxon, station and count
+baltic.sub.2003 <- baltic.sub[baltic.sub$yearcollected == 2003, c("tname", "locality", "observedindividualcount")]
 
-## fill in missing combinations (add 0-count taxa to whatever station they're missing from)
-baltic.sub.2003.fin <- complete(baltic.sub.2003.fin, 
-                                tname, locality, 
-                                fill = list(observedindividualcount = 0))
+## fill in missing combinations (add 0-count taxa to whatever station they're missing from) 
+## (package tidyr)
+baltic.sub.2003 <- complete(baltic.sub.2003,
+                            tname, locality,
+                            fill = list(observedindividualcount = 0))
 
+## remove Moni-018; it's causing trouble with duplicate values that I don't have time to diagnose now
+baltic.sub.2003.fixed <- baltic.sub.2003[-which(baltic.sub.2003$locality == "Moni-018"), ]
 
-## calculate the mean and the variance of the species 
-baltic.sub.2003.summary <- ddply(baltic.sub.2003.fin, 
-                                 .(tname), 
-                                 summarize, 
-                                 mean = mean(observedindividualcount), 
-                                 variance = var(observedindividualcount))
+# calculate mean and variance for each taxon, then plot in ggplot
+baltic.sub.2003.fixed.gg <- ddply(baltic.sub.2003.fixed, 
+                                  .(tname), 
+                                  summarize, 
+                                  mean = mean(observedindividualcount), 
+                                  variance = var(observedindividualcount))
 
-## plot the mean-variance relationship (log scale)
-with(baltic.sub.2003.summary, plot(variance ~ mean))
-
-ggplot() + 
-  geom_point(data = baltic.sub.2003.summary, aes(x = mean, y = variance), colour = "blue") +
-  geom_point(data = baltic.sub.2002.summary, aes(x = mean, y = variance), colour = "green") +
-  scale_x_log10() +
-  scale_y_log10() +
+meanvar.plot.baltic.2003 <- ggplot(baltic.sub.2003.fixed.gg) + 
+  geom_point(aes(x = mean, y = variance)) + 
+  scale_x_log10(name = "Mean (log)") + 
+  scale_y_log10(name = "Variance (log)") +
   theme_bw()
 
+## try log(x + 1) transforming the taxon counts before plotting
+baltic.sub.2003.fixed.gg.log <- ddply(baltic.sub.2003.fixed, 
+                                  .(tname), 
+                                  summarize, 
+                                  mean = mean(log(observedindividualcount + 1)), 
+                                  variance = var(log(observedindividualcount + 1)))
 
-## ughhh
-x <- as.data.frame(baltic.sub.2003.fin)
-spread(x, key = tname, value = observedindividualcount)
+meanvar.plot.baltic.2003.log <- ggplot(baltic.sub.2003.fixed.gg.log) + 
+  geom_point(aes(x = mean, y = variance)) + 
+  scale_x_log10(name = "Mean (log)") + 
+  scale_y_log10(name = "Variance (log)") +
+  theme_bw()  
+
+grid.arrange(meanvar.plot.baltic.2003, 
+             meanvar.plot.baltic.2003.log, 
+             ncol = 2)
+
+
+### plot the mean-variance relationship (log scale) - using package mvabund
+# first, extract only the abundances, transpose and make into mvabund matrix
+library(reshape2) 
+baltic.sub.2003.fin <- dcast(baltic.sub.2003.fixed, 
+                             formula = locality ~ tname, 
+                             value.var = "observedindividualcount")
+# plot
+library(mvabund)
+meanvar.plot(mvabund(baltic.sub.2003.fin[, -1]),
+             xlab = "Mean (log scale)", 
+             ylab = "Variance (log scale)")
+
+# no log-transform of axes
+meanvar.plot(mvabund(baltic.sub.2003.fin[, -1]), log = "",
+             xlab = "Mean", ylab = "Variance")
+
+## transform data (log(x + 1)) & plot again
+baltic.sub.2003.fin.log <- apply(baltic.sub.2003.fin[, -1], 
+                                 2, 
+                                 function(x) log(x + 1))
+
+meanvar.plot(baltic.sub.2003.fin.log, 
+             xlab = "Mean (log scale)", 
+             ylab = "Variance (log scale)")
