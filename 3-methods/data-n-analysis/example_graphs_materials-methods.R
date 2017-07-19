@@ -236,12 +236,19 @@ baltic.sub.2003.fixed.gg <- ddply(baltic.sub.2003.fixed,
                                   variance = var(observedindividualcount))
 
 meanvar.plot.baltic.2003 <- ggplot(baltic.sub.2003.fixed.gg) + 
+<<<<<<< HEAD
   geom_point(aes(x = mean + 1, y = variance + 1)) + # 1 added to avoid log(0) = -Inf
   scale_x_continuous(trans = "log10", name = "Mean (log)") +
   scale_y_continuous(trans = "log10", name = "Variance (log)") +
   theme_bw() + 
   ggtitle("Untransformed counts") + 
   theme(plot.title = element_text(hjust = 0.5))
+=======
+  geom_point(aes(x = mean, y = variance)) + 
+  scale_x_log10(name = "Mean (log)") + 
+  scale_y_log10(name = "Variance (log)") +
+  theme_bw()
+>>>>>>> 663ec8c2e55dcdf3599ca887b9c79c20138a3bfa
 
 ## try log(x + 1) transforming the taxon counts before plotting
 baltic.sub.2003.fixed.gg.log <- ddply(baltic.sub.2003.fixed, 
@@ -251,6 +258,7 @@ baltic.sub.2003.fixed.gg.log <- ddply(baltic.sub.2003.fixed,
                                   variance = var(log(observedindividualcount + 1)))
 
 meanvar.plot.baltic.2003.log <- ggplot(baltic.sub.2003.fixed.gg.log) + 
+<<<<<<< HEAD
   geom_point(aes(x = mean + 1, y = variance + 1)) + # 1 added to avoid log(0) = -Inf
   scale_x_log10(name = "Mean (log)", limits = c(1, 1000)) + # same scale as untransformed counts plot
   scale_y_log10(name = "Variance (log)", limits = c(1, 10000000)) + # idem x axis
@@ -268,6 +276,16 @@ ggsave(file.path(figures.dir, "mean-variance-ex-plot.png"),
        meanvar.plots,
        width = 16.5, units = "cm", 
        dpi = 500)
+=======
+  geom_point(aes(x = mean, y = variance)) + 
+  scale_x_log10(name = "Mean (log)") + 
+  scale_y_log10(name = "Variance (log)") +
+  theme_bw()  
+
+grid.arrange(meanvar.plot.baltic.2003, 
+             meanvar.plot.baltic.2003.log, 
+             ncol = 2)
+>>>>>>> 663ec8c2e55dcdf3599ca887b9c79c20138a3bfa
 
 
 ### plot the mean-variance relationship (log scale) - using package mvabund
