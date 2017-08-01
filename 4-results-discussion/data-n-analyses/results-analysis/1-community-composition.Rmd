@@ -1,0 +1,92 @@
+---
+title: "1. Community structure & composition"
+author: "Stefania Klayn"
+output: html_notebook
+---
+
+These are the basic analyses of the structure and composition of the zoobenthic communities in Burgas Bay for the thesis. The experimental setup included 3 parts:   
+  * seagrass/sand preliminary experiment in Sozopol Bay (2012)   
+  * sandy bottoms in Burgas Bay (2013-2014)   
+  * seagrass meadows in Burgas Bay (2013-2014)   
+
+These are the 3 datasets on which the same sets of analyses will be run.
+
+This notebook describes the first steps of the analysis, from the import, cleaning & preparation of the data, to the basic descriptive statistics, preliminary analyses and plots.
+
+---
+
+First, define some subdirectories which will (hopefully) keep the project organized.
+```{r}
+data.dir <- "data"    # input data files
+functions.dir <- "R"  # functions & scripts
+save.dir <- "output"  # clean data?, output from models & more complex calculations
+figures.dir <- "figs" # plots & figures 
+```
+Next, import the custom functions we'll use in the analyses. They're organized in several files, by type of analysis, but we'll import them in bulk? from the functions subdirectory.
+```{r}
+R.utils::sourceDirectory(path = file.path(functions.dir))
+```
+
+### Macrozoobenthic communities in the sandy sediments of Burgas Bay (2013-2014)
+Import the zoobenthic abundance & biomass data. 
+The abundances are counts of organisms in each sample; the biomasses - wet weights of organisms in g. NOT expressed as individuals.m^-2^ or g.m^-2^ - it doesn't matter for the calculations; will multiply by the corresponding values whenever needed for more presentable output - tables or plots.
+```{r}
+## import & check the abundance data
+zoo.abnd.sand <- import_zoo_data(data.dir = data.dir, 
+                                 zoo.data = "zoo-abnd-sand.csv", 
+                                 meta.labels = c("station", "month", "year", "habitat", "replicate"))
+
+dim(zoo.abnd.sand)  # should be 54 x 205 (5 metadata + 200 species columns)
+str(zoo.abnd.sand)  # character columns will be converted to factors as/if needed later
+```
+
+```{r}
+## import & check the biomass data. Same remarks as above apply here.
+zoo.biomass.sand <- import_zoo_data(data.dir = data.dir,
+                                    zoo.data = "zoo-abnd-sand.csv",
+                                    meta.labels = c("station", "month", "year", "habitat", "replicate"))
+
+dim(zoo.biomass.sand)
+str(zoo.biomass.sand)
+```
+
+Looks fine! To be on the safe side, save the cleaned abundance & biomass data frames.
+```{r}
+write.csv(zoo.abnd.sand, 
+          file = file.path(save.dir, "abnd-sand-clean.csv"), 
+          row.names = FALSE)
+write.csv(zoo.biomass.sand, 
+          file = file.path(save.dir, "biomass-sand-clean.csv"), 
+          row.names = FALSE)
+```
+
+Now, make 2 subsets of the data frames - one numeric, containing all the species data, and one character/factor - for the metadata such as station names, dates, etc. This is to avoid subsetting at every turn - they will be used a lot subsequently.
+```{r}
+# for now, the metadata are of class character; will probably need to be converted to factor later.  
+meta.sand <- zoo.abnd.sand[!sapply(zoo.abnd.sand, is.numeric)]
+
+num.abnd.sand <- zoo.abnd.sand[sapply(zoo.abnd.sand, is.numeric)]
+num.biomass.sand <- zoo.biomass.sand[sapply(zoo.biomass.sand, is.numeric)]
+
+# leave only the species actually present in the current dataset (to simplify later analyses)
+num.abnd.sand <- num.abnd.sand[colSums(num.zoo.abnd.sand) > 0] 
+num.biomass.sand <- num.biomass.sand[colSums(num.biomass.sand) > 0]
+```
+Ready to proceed with the analyses themselves! 
+
+1. Summary statistics for the community structure & composition
+  + average number of species, abundance & biomass for the whole dataset, min-max values & where/when they were found
+```{r}
+summary_zoo_params(num.data = num.abnd.sand, metadata = meta.sand, parameter = "abnd")
+summary_zoo_params(num.data = num.biomass.sand, metadata = meta.sand, parameter = "biomass")
+summary_zoo_params(num.data = num.zoo.abnd.sand, metadata = meta.sand, parameter = "nb.sp")
+```
+
+  + summary of abundance & biomass by species & stations - for summary plots, etc.
+```{r}
+# mean abundance of each species per station
+summary.abnd.sand <- ddply(zoo.abnd.sand, .(station), colwise(mean, .cols = is.numeric))
+
+# mean biomass of each species per station
+summary.biomass.sand <- ddply(zoo.biomass.sand, .(station), colwise(mean, .cols = is.numeric))
+```

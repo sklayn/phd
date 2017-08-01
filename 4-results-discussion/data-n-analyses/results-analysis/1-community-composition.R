@@ -1,10 +1,10 @@
-### Community composition & structure analysis 
+##### Community composition & structure analysis #####
 
 # define the working subdirectories
 data.dir <- "data"
 functions.dir <- "R"
 save.dir <- "output"
-figs.dir <- "figs"
+figures.dir <- "figs"
 
 # import libraries
 library(gdata)
