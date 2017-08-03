@@ -1,13 +1,16 @@
 ---
 title: "Biodiversity of macrozoobenthic communities"
-output: html_notebook
+output: 
+  html_notebook:
+    theme: default
+  # prettydoc::html_pretty
 ---
 
 ## Community structure & composition
 These are the basic analyses of the structure and composition of the zoobenthic communities in Burgas Bay for the thesis. The experimental setup included 3 parts:  
- * seagrass/sand preliminary experiment in Sozopol Bay (2012)   
- * sandy bottoms in Burgas Bay (2013-2014)  
- * seagrass meadows in Burgas Bay (2013-2014)     
+- seagrass/sand preliminary experiment in Sozopol Bay (2012)   
+- sandy bottoms in Burgas Bay (2013-2014)  
+- seagrass meadows in Burgas Bay (2013-2014)     
 
 These are the 3 datasets on which the same sets of analyses will be run.
 
@@ -16,17 +19,20 @@ This notebook describes the first steps of the analysis, from the import, cleani
 ---
 
 First, set some basic options to control code chunks, evaluation behaviour, etc. (code won't appear in the final report, as it's just setup).
-```{r global_chunk_options, include = FALSE}
+```{r setup, include = FALSE}
 library(knitr)
+
+knit_hooks$set(small.mar = function(before, options, envir) {
+    if (before) par(mar = c(2, 2, .1, 2))  # smaller margin on top
+})
 
 # set knitr options for knitting code into the report.
 opts_chunk$set(cache = TRUE, # save results so that code blocks aren't re-run unless code changes
                autodep = TRUE, # ..or unless a relevant earlier code block changed
                cache.comments = FALSE, # don't re-run if the only thing that changed was the comments
-               highlight = TRUE)
-
+               highlight = TRUE, 
+               small.mar = TRUE)
 ```
-
 Now, define some subdirectories which will (hopefully) keep the project organized.
 ```{r workspace_setup}
 data.dir <- "data"    # input data files
@@ -43,31 +49,32 @@ R.utils::sourceDirectory(path = file.path(functions.dir))
 Import the zoobenthic abundance & biomass data. 
 The abundances are counts of organisms in each sample; the biomasses - wet weights of organisms in g. NOT expressed as individuals.m^-2^ or g.m^-2^ - it doesn't matter for the calculations; will multiply by the corresponding values whenever needed for more presentable output - tables or plots.
 ```{r abundance_data_import}
-## import & check the abundance data
+## import the abundance data
 zoo.abnd.sand <- import_zoo_data(data.dir = data.dir, 
                                  zoo.data = "zoo-abnd-sand.csv", 
                                  meta.labels = c("station", "month", "year", "habitat", "replicate"))
-
+```
+```{r abundance_sanity_check_1}
 dim(zoo.abnd.sand)  # should be 54 x 205 (5 metadata + 200 species columns)
 ```
-
-```{r abundance_data_checks}
-str(zoo.abnd.sand)  # character columns will be converted to factors as/if needed later
+Also check the structure, just in case (results not printed).
+```{r abundance_sanity_check_2, results = FALSE}
+str(zoo.abnd.sand)
 ```
 
 ```{r biomass_data_import}
-## import & check the biomass data. Same remarks as above apply here.
+## import the biomass data. Same remarks as above apply here.
 zoo.biomass.sand <- import_zoo_data(data.dir = data.dir,
                                     zoo.data = "zoo-biomass-sand.csv",
                                     meta.labels = c("station", "month", "year", "habitat", "replicate"))
-
+```
+Same sanity checks as the abundance:  
+```{r biomass_sanity_check_1} 
 dim(zoo.biomass.sand)
 ```
-
-```{r biomass_data_checks}
+```{r biomass_sanity_check_2, results = FALSE}
 str(zoo.biomass.sand)
 ```
-
 Looks fine! To be on the safe side, save the cleaned abundance & biomass data frames.
 ```{r save_clean_data}
 write.csv(zoo.abnd.sand, 
@@ -80,8 +87,10 @@ write.csv(zoo.biomass.sand,
 
 Now, make 2 subsets of the data frames - one numeric, containing all the species data, and one character/factor - for the metadata such as station names, dates, etc. This is to avoid subsetting at every turn - they will be used a lot subsequently.
 ```{r prepare_data}
-# for now, the metadata are of class character; will probably need to be converted to factor later.  
 meta.sand <- zoo.abnd.sand[!sapply(zoo.abnd.sand, is.numeric)]
+
+# convert the station to factor, and arrange in the order we want (geographic, in this case)
+
 
 num.abnd.sand <- zoo.abnd.sand[sapply(zoo.abnd.sand, is.numeric)]
 num.biomass.sand <- zoo.biomass.sand[sapply(zoo.biomass.sand, is.numeric)]
