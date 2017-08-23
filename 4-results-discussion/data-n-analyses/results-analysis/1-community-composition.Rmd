@@ -1,9 +1,9 @@
 ---
 title: "Biodiversity of macrozoobenthic communities"
-output: 
+output:
+  html_document: default
   html_notebook:
     theme: default
-  # prettydoc::html_pretty
 ---
 
 ## Community structure & composition
@@ -61,7 +61,22 @@ Also check the structure, just in case (results not printed).
 ```{r abundance_sanity_check_2, results = FALSE}
 str(zoo.abnd.sand)
 ```
+Let's arrange the data frame by station (first converting to factor), then year and month. This will be the convention used for all subsequent data frames.
+```{r clean_abundance_data_1}
+stations.sand <- c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva")
 
+zoo.abnd.sand$station <- as.factor(zoo.abnd.sand$station)
+zoo.abnd.sand$station <- gdata::reorder.factor(zoo.abnd.sand$station, 
+                                               new.order = stations.sand)
+
+library(plyr)
+zoo.abnd.sand <- arrange(zoo.abnd.sand, station, year, month)
+```
+
+```{r clean_abundance_data_2, results = FALSE}
+head(zoo.abnd.sand) # seems ok for now..
+```
+Now on to the biomass! 
 ```{r biomass_data_import}
 ## import the biomass data. Same remarks as above apply here.
 zoo.biomass.sand <- import_zoo_data(data.dir = data.dir,
@@ -74,6 +89,17 @@ dim(zoo.biomass.sand)
 ```
 ```{r biomass_sanity_check_2, results = FALSE}
 str(zoo.biomass.sand)
+```
+```{r clean_biomass_data_1}
+zoo.biomass.sand$station <- as.factor(zoo.biomass.sand$station)
+zoo.biomass.sand$station <- gdata::reorder.factor(zoo.biomass.sand$station, 
+                                                  new.order = stations.sand)
+
+zoo.biomass.sand <- arrange(zoo.biomass.sand, station, year, month)
+```
+Check it out: 
+```{r clean_biomass_data_2, results = FALSE}
+head(zoo.biomass.sand) # looks ok..
 ```
 Looks fine! To be on the safe side, save the cleaned abundance & biomass data frames.
 ```{r save_clean_data}
