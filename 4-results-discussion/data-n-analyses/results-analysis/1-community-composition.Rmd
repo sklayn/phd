@@ -139,7 +139,10 @@ library(plyr)
   + the **minimum biomass** is `r min(rowSums(num.biomass.sand))` g.m^-2^, in sample `r paste(meta.sand[which.min(rowSums(num.biomass.sand)), ]$station, meta.sand[which.min(rowSums(num.biomass.sand)), ]$replicate, sep = "-")` from `r paste(meta.sand[which.min(rowSums(num.biomass.sand)), ]$month, meta.sand[which.min(rowSums(num.biomass.sand)), ]$year, sep = "-")`.
   + the **maximum biomass** is `r max(rowSums(num.biomass.sand))` g.m^-2^, in sample `r paste(meta.sand[which.max(rowSums(num.biomass.sand)), ]$station, meta.sand[which.max(rowSums(num.biomass.sand)), ]$replicate, sep = "-")` from `r paste(meta.sand[which.max(rowSums(num.biomass.sand)), ]$month, meta.sand[which.max(rowSums(num.biomass.sand)), ]$year, sep = "-")`.
   
-  + there are `r ` taxa, of which `r` are identified to species level.
+  + there are `r ncol(num.abnd.sand)` taxa overall. Let's check them out to see which are identifed to species level.
+```{r count_number_taxa}
+names(num.abnd.sand) # unfortunately, determined by counting the ones that are not actually species.
+```
   + the **average number of taxa** for the dataset is `r round(mean(specnumber(num.abnd.sand)), 0)`, with standard deviation `r round(sd(specnumber(num.abnd.sand)), 0)`.
   + the **minimum number of taxa** is `r min(specnumber(num.abnd.sand))`, in sample `r paste(meta.sand[which.min(specnumber(num.abnd.sand)), ]$station, meta.sand[which.min(specnumber(num.abnd.sand)), ]$replicate, sep = "-")` from `r paste(meta.sand[which.min(specnumber(num.abnd.sand)), ]$month, meta.sand[which.min(specnumber(num.abnd.sand)), ]$year, sep = "-")`. 
   + the **maximum number of taxa** is `r max(specnumber(num.abnd.sand))`, in sample `r paste(meta.sand[which.max(specnumber(num.abnd.sand)), ]$station, meta.sand[which.max(specnumber(num.abnd.sand)), ]$replicate, sep = "-")` from `r paste(meta.sand[which.max(specnumber(num.abnd.sand)), ]$month, meta.sand[which.max(specnumber(num.abnd.sand)), ]$year, sep = "-")`.
