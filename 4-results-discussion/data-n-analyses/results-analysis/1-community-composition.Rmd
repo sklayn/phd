@@ -1,9 +1,9 @@
 ---
 title: "Biodiversity of macrozoobenthic communities"
 output:
-  html_document: default
   html_notebook:
     theme: default
+  html_document: default
 ---
 
 ## Community structure & composition
@@ -115,9 +115,6 @@ Now, make 2 subsets of the data frames - one numeric, containing all the species
 ```{r prepare_data}
 meta.sand <- zoo.abnd.sand[!sapply(zoo.abnd.sand, is.numeric)]
 
-# convert the station to factor, and arrange in the order we want (geographic, in this case)
-
-
 num.abnd.sand <- zoo.abnd.sand[sapply(zoo.abnd.sand, is.numeric)]
 num.biomass.sand <- zoo.biomass.sand[sapply(zoo.biomass.sand, is.numeric)]
 
@@ -142,15 +139,12 @@ library(plyr)
   + the **minimum biomass** is `r min(rowSums(num.biomass.sand))` g.m^-2^, in sample `r paste(meta.sand[which.min(rowSums(num.biomass.sand)), ]$station, meta.sand[which.min(rowSums(num.biomass.sand)), ]$replicate, sep = "-")` from `r paste(meta.sand[which.min(rowSums(num.biomass.sand)), ]$month, meta.sand[which.min(rowSums(num.biomass.sand)), ]$year, sep = "-")`.
   + the **maximum biomass** is `r max(rowSums(num.biomass.sand))` g.m^-2^, in sample `r paste(meta.sand[which.max(rowSums(num.biomass.sand)), ]$station, meta.sand[which.max(rowSums(num.biomass.sand)), ]$replicate, sep = "-")` from `r paste(meta.sand[which.max(rowSums(num.biomass.sand)), ]$month, meta.sand[which.max(rowSums(num.biomass.sand)), ]$year, sep = "-")`.
   
-  + the **average number of species** for the dataset is `r round(mean(specnumber(num.abnd.sand)), 0)`, with standard deviation `r round(sd(specnumber(num.abnd.sand)), 0)`.
-  + the **minimum number of species** is `r min(specnumber(num.abnd.sand))`, in sample `r paste(meta.sand[which.min(specnumber(num.abnd.sand)), ]$station, meta.sand[which.min(specnumber(num.abnd.sand)), ]$replicate, sep = "-")` from `r paste(meta.sand[which.min(specnumber(num.abnd.sand)), ]$month, meta.sand[which.min(specnumber(num.abnd.sand)), ]$year, sep = "-")`. 
-  + the **maximum number of species** is `r max(specnumber(num.abnd.sand))`, in sample `r paste(meta.sand[which.max(specnumber(num.abnd.sand)), ]$station, meta.sand[which.max(specnumber(num.abnd.sand)), ]$replicate, sep = "-")` from `r paste(meta.sand[which.max(specnumber(num.abnd.sand)), ]$month, meta.sand[which.max(specnumber(num.abnd.sand)), ]$year, sep = "-")`.
+  + there are `r ` taxa, of which `r` are identified to species level.
+  + the **average number of taxa** for the dataset is `r round(mean(specnumber(num.abnd.sand)), 0)`, with standard deviation `r round(sd(specnumber(num.abnd.sand)), 0)`.
+  + the **minimum number of taxa** is `r min(specnumber(num.abnd.sand))`, in sample `r paste(meta.sand[which.min(specnumber(num.abnd.sand)), ]$station, meta.sand[which.min(specnumber(num.abnd.sand)), ]$replicate, sep = "-")` from `r paste(meta.sand[which.min(specnumber(num.abnd.sand)), ]$month, meta.sand[which.min(specnumber(num.abnd.sand)), ]$year, sep = "-")`. 
+  + the **maximum number of taxa** is `r max(specnumber(num.abnd.sand))`, in sample `r paste(meta.sand[which.max(specnumber(num.abnd.sand)), ]$station, meta.sand[which.max(specnumber(num.abnd.sand)), ]$replicate, sep = "-")` from `r paste(meta.sand[which.max(specnumber(num.abnd.sand)), ]$month, meta.sand[which.max(specnumber(num.abnd.sand)), ]$year, sep = "-")`.
 
-  + summary of abundance & biomass by species & stations - for summary plots, etc.
-```{r summarize_abundance_biomass}
-# mean abundance of each species per station
-summary.abnd.sand <- ddply(zoo.abnd.sand, .(station), colwise(mean, .cols = is.numeric))
+  + summary of abundance & biomass 
+```{r summarize_}
 
-# mean biomass of each species per station
-summary.biomass.sand <- ddply(zoo.biomass.sand, .(station), colwise(mean, .cols = is.numeric))
 ```
