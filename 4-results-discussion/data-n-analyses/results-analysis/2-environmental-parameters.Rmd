@@ -20,11 +20,16 @@ opts_chunk$set(cache = TRUE, # save results so that code blocks aren't re-run un
                highlight = TRUE, 
                small.mar = TRUE)
 ```
+
 ```{r workspace_setup}
 data.dir <- "data"    # input data files
 functions.dir <- "R"  # functions & scripts
 save.dir <- "output"  # clean data, output from models & more complex calculations
 figures.dir <- "figs" # plots & figures 
+```
+
+```{r import_packages, results = FALSE}
+library(tidyverse)
 ```
 
 ## Environmental data analysis
@@ -43,4 +48,12 @@ str(envir.params)
 head(envir.params)
 ```
 
-All is well and good.
+Looks fine. 
+
+Let's clean it up a bit..
+Some stations, which are close to my stations in Burgas Bay (and Sozopol Bay), will have their data added to them: Atia -> Akin; Maslen nos -> Paraskeva. 
+```{r data_cleaning_1}
+
+
+```
+
