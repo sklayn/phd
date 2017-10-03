@@ -41,11 +41,10 @@ Environmental parameters were measured in parallel with the zoobenthic sampling 
 Since (most) stations were selected because there were previous monitoring stations at the same/nearby locations, there is fairly long-term data on nutrient concentrations, chl-a, suspended matter, water clarity at least. This is a good thing, because opportunistic samplings of these parameters, which vary strongly even daily, and very much so seasonally, cannot reveal the real patterns (e.g. higher eutrophication levels at some stations, such as those hypothesized here for the inner Burgas Bay stations).   
 Therefore, the long-term data will be used in the analyses wherever possible (and available), to try to determine the effects of this pressure on the macrobenthic communities.
 ```{r import_environmental_data}
-envir.params <- read.csv(file.path(data.dir, "water column-LT_all.csv"), header = TRUE, stringsAsFactors = FALSE)
+envir.params <- as_tibble(read.csv(file.path(data.dir, "water column-LT_all.csv"), header = TRUE, stringsAsFactors = FALSE))
 
 # quick sanity check
-str(envir.params)
-head(envir.params)
+envir.params
 ```
 
 Looks fine. 
@@ -53,7 +52,24 @@ Looks fine.
 Let's clean it up a bit..
 Some stations, which are close to my stations in Burgas Bay (and Sozopol Bay), will have their data added to them: Atia -> Akin; Maslen nos -> Paraskeva. 
 ```{r data_cleaning_1}
+envir.params <- envir.params %>% 
+  mutate(station = replace(station, station == "Atia", "Akin"), 
+         station = replace(station, station == "Maslen nos", "Paraskeva"))
+## fugly... repeated code - find a better way to formulate this!
 
+```
+```{r data_cleaning_2}
+## look for NAs
+
+```
+
+Now aggregate by depth, month and year (= mean).
+```{r data_aggregation}
+## IS THIS THE CORRECT WAY? - summary by station, year and month (-> over the different depths)
+envir.params %>%
+  group_by(station, year, month) %>%
+  select(-(year:depth)) %>%
+  summarise_all(mean, na.rm = TRUE)
 
 ```
 
