@@ -1,0 +1,46 @@
+---
+title: "Environmental parameters"
+output: 
+  html_notebook:
+    theme: default
+  html_document: default
+---
+Setup!
+```{r setup, include = FALSE}
+library(knitr)
+
+knit_hooks$set(small.mar = function(before, options, envir) {
+    if (before) par(mar = c(2, 2, .1, 2))  # smaller margin on top
+})
+
+# set knitr options for knitting code into the report.
+opts_chunk$set(cache = TRUE, # save results so that code blocks aren't re-run unless code changes
+               autodep = TRUE, # ..or unless a relevant earlier code block changed
+               cache.comments = FALSE, # don't re-run if the only thing that changed was the comments
+               highlight = TRUE, 
+               small.mar = TRUE)
+```
+```{r workspace_setup}
+data.dir <- "data"    # input data files
+functions.dir <- "R"  # functions & scripts
+save.dir <- "output"  # clean data, output from models & more complex calculations
+figures.dir <- "figs" # plots & figures 
+```
+
+## Environmental data analysis
+Environmental parameters were measured in parallel with the zoobenthic sampling during the study:
+  * water column nutrients, chl-a, suspended matter    
+  * water clarity (Secchi depth)   
+  * O2 concentrations (profiles every 1 m to the bottom - but only occasionally)  
+  * sediment parameters - grain size & distribution, total organic matter content, heavy metals (again only occasionally).    
+Since (most) stations were selected because there were previous monitoring stations at the same/nearby locations, there is fairly long-term data on nutrient concentrations, chl-a, suspended matter, water clarity at least. This is a good thing, because opportunistic samplings of these parameters, which vary strongly even daily, and very much so seasonally, cannot reveal the real patterns (e.g. higher eutrophication levels at some stations, such as those hypothesized here for the inner Burgas Bay stations).   
+Therefore, the long-term data will be used in the analyses wherever possible (and available), to try to determine the effects of this pressure on the macrobenthic communities.
+```{r import_environmental_data}
+envir.params <- read.csv(file.path(data.dir, "water column-LT_all.csv"), header = TRUE, stringsAsFactors = FALSE)
+
+# quick sanity check
+str(envir.params)
+head(envir.params)
+```
+
+All is well and good.
