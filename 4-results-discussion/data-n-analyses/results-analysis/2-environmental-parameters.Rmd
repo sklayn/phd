@@ -57,27 +57,61 @@ envir.params <- envir.params %>%
   mutate(station = replace(station, station == "Atia", "Akin"), 
          station = replace(station, station == "Maslen nos", "Paraskeva"))
 ## fugly... repeated code - find a better way to formulate this!
-
 ```
+
+Explore the pattern of the missing data (with package mice).
 ```{r data_cleaning_2}
-## look for NAs
+library(mice)
+## look for the NAs
 
 ```
 
-Now aggregate by depth, month and year (= mean).
-```{r data_aggregation}
+Now aggregate by station, month and year (= mean).
+```{r data_aggregation_station-year-month}
 ## summary by station, year and month (-> over the different depths)
 envir.params.summary <- envir.params %>%
   group_by(station, year, month) %>%
   select(-(year:depth)) %>%
   summarise_all(funs(mean, sd, min, max), na.rm = TRUE)
+```
 
+Another level of aggregation: long-term averages (such as they are), by station.
+```{r data_aggregation_station}
 ## then once again, for the whole period (-> over the different stations)
-envir.params.summary %>% 
+envir.params.summary.by.st <- envir.params.summary %>% 
   group_by(station) %>%
   select(ends_with("mean")) %>%
   summarise_all(funs(mean, sd, min, max), na.rm = TRUE) %>%
-  filter(station %in% c("Konski", "Ribka", "Gradina"))
-  
+  # round all numbers to the 2nd decimal place
+  mutate_if(is.numeric, round, 2) %>%
+  # rename all columns, dropping the "_mean"
+  rename_all(funs(stringr::str_replace_all(., "_mean", ""))) %>%
+  # reorder columns (clumsily)
+  select(station, 
+         Ntotal, Ntotal_sd, Ntotal_min, Ntotal_max,
+         Ninorg, Ninorg_sd, Ninorg_min, Ninorg_max,
+         NH4, NH4_sd, NH4_min, NH4_max,
+         NO3, NO3_sd, NO3_min, NO3_max,
+         PO4, PO4_sd, PO4_min, PO4_max,
+         chl.a, chl.a_sd, chl.a_min, chl.a_max,
+         seston, seston_sd, seston_min, seston_max,
+         secchi, secchi_sd, secchi_min, secchi_max)
+
+## reorder by station - custom order (sand, seagrass, 2012)
+# make a vector to use for ordering (don't want to convert station to factor)
+new.order <- c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva", 
+               "Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo",
+               "Konski", "Ribka")
+envir.params.summary.by.st <- envir.params.summary.by.st %>%
+    slice(match(new.order, station))
+
+## print the table prettily using package sjPlot
+sjt.df(envir.params.summary.by.st, 
+       describe = FALSE, 
+       altr.row.col = TRUE, 
+       file = file.path(save.dir, "envir-params-summary.odt"))
+
+### KEEP TRYING! NEARER THE DESIRED RESULT!  
+
 ```
 

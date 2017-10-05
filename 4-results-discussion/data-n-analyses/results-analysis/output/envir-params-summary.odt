@@ -1,0 +1,1481 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+	<title></title>
+	<meta name="generator" content="LibreOffice 5.3.2.2 (Linux)"/>
+	<meta name="created" content="00:00:00"/>
+	<meta name="changed" content="2017-10-05T17:18:15.763552237"/>
+	<style type="text/css">
+		@page { size: landscape }
+	</style>
+</head>
+<body lang="en-US" dir="ltr">
+<table cellpadding="2" cellspacing="2" style="page-break-before: always">
+	<tbody>
+		<tr>
+			<th style="border-top: 1px double #000000; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding: 0.2cm 0cm">
+				<p align="center" style="font-weight: normal"><i>Variable</i></p>
+			</th>
+			<th style="border-top: 1px double #000000; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding: 0.2cm 0cm">
+				<p align="center" style="font-weight: normal"><i>station</i></p>
+			</th>
+			<th style="border-top: 1px double #000000; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding: 0.2cm 0cm">
+				<p align="center" style="font-weight: normal"><i>Ntotal</i></p>
+			</th>
+			<th style="border-top: 1px double #000000; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding: 0.2cm 0cm">
+				<p align="center" style="font-weight: normal"><i>Ntotal_sd</i></p>
+			</th>
+			<th style="border-top: 1px double #000000; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding: 0.2cm 0cm">
+				<p align="center" style="font-weight: normal"><i>Ntotal_min</i></p>
+			</th>
+			<th style="border-top: 1px double #000000; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding: 0.2cm 0cm">
+				<p align="center" style="font-weight: normal"><i>Ntotal_max</i></p>
+			</th>
+			<th style="border-top: 1px double #000000; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding: 0.2cm 0cm">
+				<p align="center" style="font-weight: normal"><i>Ninorg</i></p>
+			</th>
+			<th style="border-top: 1px double #000000; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding: 0.2cm 0cm">
+				<p align="center" style="font-weight: normal"><i>Ninorg_sd</i></p>
+			</th>
+			<th style="border-top: 1px double #000000; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding: 0.2cm 0cm">
+				<p align="center" style="font-weight: normal"><i>Ninorg_min</i></p>
+			</th>
+			<th style="border-top: 1px double #000000; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding: 0.2cm 0cm">
+				<p align="center" style="font-weight: normal"><i>Ninorg_max</i></p>
+			</th>
+			<th style="border-top: 1px double #000000; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding: 0.2cm 0cm">
+				<p align="center" style="font-weight: normal"><i>NH4</i></p>
+			</th>
+			<th style="border-top: 1px double #000000; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding: 0.2cm 0cm">
+				<p align="center" style="font-weight: normal"><i>NH4_sd</i></p>
+			</th>
+			<th style="border-top: 1px double #000000; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding: 0.2cm 0cm">
+				<p align="center" style="font-weight: normal"><i>NH4_min</i></p>
+			</th>
+			<th style="border-top: 1px double #000000; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding: 0.2cm 0cm">
+				<p align="center" style="font-weight: normal"><i>NH4_max</i></p>
+			</th>
+			<th style="border-top: 1px double #000000; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding: 0.2cm 0cm">
+				<p align="center" style="font-weight: normal"><i>NO3</i></p>
+			</th>
+			<th style="border-top: 1px double #000000; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding: 0.2cm 0cm">
+				<p align="center" style="font-weight: normal"><i>NO3_sd</i></p>
+			</th>
+			<th style="border-top: 1px double #000000; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding: 0.2cm 0cm">
+				<p align="center" style="font-weight: normal"><i>NO3_min</i></p>
+			</th>
+			<th style="border-top: 1px double #000000; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding: 0.2cm 0cm">
+				<p align="center" style="font-weight: normal"><i>NO3_max</i></p>
+			</th>
+			<th style="border-top: 1px double #000000; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding: 0.2cm 0cm">
+				<p align="center" style="font-weight: normal"><i>PO4</i></p>
+			</th>
+			<th style="border-top: 1px double #000000; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding: 0.2cm 0cm">
+				<p align="center" style="font-weight: normal"><i>PO4_sd</i></p>
+			</th>
+			<th style="border-top: 1px double #000000; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding: 0.2cm 0cm">
+				<p align="center" style="font-weight: normal"><i>PO4_min</i></p>
+			</th>
+			<th style="border-top: 1px double #000000; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding: 0.2cm 0cm">
+				<p align="center" style="font-weight: normal"><i>PO4_max</i></p>
+			</th>
+			<th style="border-top: 1px double #000000; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding: 0.2cm 0cm">
+				<p align="center" style="font-weight: normal"><i>chl.a</i></p>
+			</th>
+			<th style="border-top: 1px double #000000; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding: 0.2cm 0cm">
+				<p align="center" style="font-weight: normal"><i>chl.a_sd</i></p>
+			</th>
+			<th style="border-top: 1px double #000000; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding: 0.2cm 0cm">
+				<p align="center" style="font-weight: normal"><i>chl.a_min</i></p>
+			</th>
+			<th style="border-top: 1px double #000000; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding: 0.2cm 0cm">
+				<p align="center" style="font-weight: normal"><i>chl.a_max</i></p>
+			</th>
+			<th style="border-top: 1px double #000000; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding: 0.2cm 0cm">
+				<p align="center" style="font-weight: normal"><i>seston</i></p>
+			</th>
+			<th style="border-top: 1px double #000000; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding: 0.2cm 0cm">
+				<p align="center" style="font-weight: normal"><i>seston_sd</i></p>
+			</th>
+			<th style="border-top: 1px double #000000; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding: 0.2cm 0cm">
+				<p align="center" style="font-weight: normal"><i>seston_min</i></p>
+			</th>
+			<th style="border-top: 1px double #000000; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding: 0.2cm 0cm">
+				<p align="center" style="font-weight: normal"><i>seston_max</i></p>
+			</th>
+			<th style="border-top: 1px double #000000; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding: 0.2cm 0cm">
+				<p align="center" style="font-weight: normal"><i>secchi</i></p>
+			</th>
+			<th style="border-top: 1px double #000000; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding: 0.2cm 0cm">
+				<p align="center" style="font-weight: normal"><i>secchi_sd</i></p>
+			</th>
+			<th style="border-top: 1px double #000000; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding: 0.2cm 0cm">
+				<p align="center" style="font-weight: normal"><i>secchi_min</i></p>
+			</th>
+			<th style="border-top: 1px double #000000; border-bottom: 1px solid #000000; border-left: none; border-right: none; padding: 0.2cm 0cm">
+				<p align="center" style="font-weight: normal"><i>secchi_max</i></p>
+			</th>
+		</tr>
+	</tbody>
+	<tbody>
+		<tr>
+			<td style="border: none; padding: 0cm">
+				<p align="left">1</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">Kraimorie</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">19.61</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">12.39</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">3.07</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">67.14</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">4.3</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">4.75</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.94</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">19.27</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">1.09</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">1.16</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.15</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">4.67</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">2.63</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">3.37</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.23</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">14.54</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.34</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.67</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">3.26</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">3.22</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">1.85</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.72</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">7.37</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">2.29</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">1.52</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.85</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">5.99</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">3.27</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">1.48</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.5</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">6</p>
+			</td>
+		</tr>
+		<tr>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="left">2</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">Chukalya</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">19.21</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">12.98</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">5.69</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">74.43</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">4.01</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">4.98</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.85</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">21.27</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.96</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.98</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.32</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">5.27</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">2.35</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">3.1</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.2</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">15.13</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.32</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.76</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">3.89</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">3.09</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">1.95</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.61</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">7.38</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">2.42</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">1.79</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">1.28</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">10.27</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">4.39</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">2.01</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.5</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">7</p>
+			</td>
+		</tr>
+		<tr>
+			<td style="border: none; padding: 0cm">
+				<p align="left">3</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">Akin</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">17.19</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">12.31</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">4.61</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">70.89</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">3.53</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">4.75</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.97</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">21.49</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.84</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.89</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.32</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">4.8</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">2.07</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">3.09</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.21</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">15.83</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.27</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.64</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">3.3</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">3.06</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">2.08</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.43</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">8.2</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">2.17</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">1.54</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">1.04</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">8.64</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">5.19</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">1.84</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.5</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">7.5</p>
+			</td>
+		</tr>
+		<tr>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="left">4</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">Sozopol</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">17.56</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">8.64</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">42.98</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">3.42</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">4.08</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">18.7</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.66</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.43</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">2.07</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">2.57</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">3.66</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">16.5</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.17</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.25</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">1.32</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">2.72</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">2</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">8.07</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">1.48</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.75</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">3.58</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">6.35</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">1.55</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">2</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">8.5</p>
+			</td>
+		</tr>
+		<tr>
+			<td style="border: none; padding: 0cm">
+				<p align="left">5</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">Agalina</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">17.52</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">8.47</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">40.95</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">3.43</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">3.88</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">17.57</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.72</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.65</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">2.68</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">2.53</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">3.25</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">14.92</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.15</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.26</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">1.33</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">2.52</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">1.84</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">7.17</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">1.28</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.61</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">3.27</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">6.99</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">1.6</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">3</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">10</p>
+			</td>
+		</tr>
+		<tr>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="left">6</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">Paraskeva</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">15.66</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">6.88</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">27.14</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">3.2</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">3.13</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">12.57</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.65</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.52</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">2.35</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">2.17</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">2.53</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">9.53</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.12</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.11</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.44</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">2.24</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">1.5</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">5.62</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">1.19</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.49</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">1.97</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">7.35</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">1.55</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">3</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">10</p>
+			</td>
+		</tr>
+		<tr>
+			<td style="border: none; padding: 0cm">
+				<p align="left">7</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">Poda</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">22.46</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">5.61</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">13.89</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">29.75</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">2.74</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">1.32</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">1.6</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">4.44</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.91</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.44</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.48</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">1.5</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">1.75</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.85</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.92</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">2.83</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.7</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.99</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.02</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">2.67</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">4.47</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">2.13</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">1.97</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">6.6</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">2.55</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">1.09</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">1.43</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">4.54</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">3</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.71</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">2.5</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">4</p>
+			</td>
+		</tr>
+		<tr>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="left">8</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">Otmanli</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">20.08</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">6.64</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">13.56</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">30.22</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">2.08</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.82</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">1.34</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">3.4</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.64</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.33</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.3</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">1</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">1.37</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.57</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.88</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">2.25</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.23</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.21</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.03</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.57</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">3.67</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">1.71</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">2.74</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">6.7</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">1.86</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.34</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">1.33</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">2.21</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">4.25</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">1.42</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">3</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">6</p>
+			</td>
+		</tr>
+		<tr>
+			<td style="border: none; padding: 0cm">
+				<p align="left">9</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">Vromos</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">16.7</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">5.35</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">10.56</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">20.37</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">1.84</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.37</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">1.51</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">2.25</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.71</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.15</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.57</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.88</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">1.08</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.2</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.9</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">1.29</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.24</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.11</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.12</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.31</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">3.49</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">1.96</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">1.87</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">5.67</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">1.95</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.98</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">1.32</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">3.08</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">NaN</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">NaN</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">Inf</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">-Inf</p>
+			</td>
+		</tr>
+		<tr>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="left">10</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">Gradina</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">18.26</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">6.19</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">10.03</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">32.86</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">2.22</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">1.27</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">1.23</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">5.53</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.6</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.41</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.2</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">1.77</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">1.57</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">1.16</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.82</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">4.91</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.14</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.07</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.03</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.28</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">3.02</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.9</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">1.42</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">4.8</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">1.44</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.36</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.9</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">1.97</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">5.5</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">2.82</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">3</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">12.5</p>
+			</td>
+		</tr>
+		<tr>
+			<td style="border: none; padding: 0cm">
+				<p align="left">11</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">Ropotamo</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">23.78</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">6.02</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">15.98</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">31.93</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">5.34</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">7.27</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">1.41</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">18.32</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.87</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.57</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.4</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">1.82</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">4.38</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">6.62</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">1</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">16.2</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.43</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.29</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.04</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.82</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">4.73</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">2.12</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">2.59</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">7.68</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">2.33</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">1.76</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.77</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">5.36</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">6.38</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">4.59</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">2.5</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">13</p>
+			</td>
+		</tr>
+		<tr>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="left">12</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">Konski</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">18.68</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">8.65</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">8.73</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">54.33</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">3.76</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">4.51</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.91</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">23.86</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.91</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.69</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.18</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">3.55</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">2.45</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">3.8</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.3</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">19.32</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.2</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.32</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">1.74</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">3.73</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">2.88</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">1.09</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">13.22</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">1.85</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">0.76</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">1.01</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">4.35</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">5.13</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">1.75</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">1.5</p>
+			</td>
+			<td bgcolor="#eaeaea" style="background: #eaeaea" style="border: none; padding: 0cm">
+				<p align="center">9</p>
+			</td>
+		</tr>
+		<tr>
+			<td style="border: none; padding: 0cm">
+				<p align="left">13</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">Ribka</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">18.85</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">8.89</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">6.94</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">47.14</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">4.11</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">4.51</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">1.06</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">21.18</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">1.14</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">1.21</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.2</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">4.9</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">2.52</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">3.7</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.25</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">17.83</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.25</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.41</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">1.86</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">3.47</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">2.43</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.68</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">10.71</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">2.49</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">3.77</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.55</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">19.66</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">5.04</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">2.04</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">0.5</p>
+			</td>
+			<td style="border: none; padding: 0cm">
+				<p align="center">9</p>
+			</td>
+		</tr>
+	</tbody>
+</table>
+<p><br/>
+<br/>
+
+</p>
+</body>
+</html>
