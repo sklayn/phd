@@ -2,9 +2,9 @@
 title: "Environmental parameters"
 output: 
   html_notebook:
-    theme: default
-  html_document: default
+    theme: paper
 ---
+  
 Setup!
 ```{r setup, include = FALSE}
 library(knitr)
@@ -29,44 +29,69 @@ figures.dir <- "figs" # plots & figures
 ```
 
 ```{r import_packages, results = FALSE}
-library(tidyverse)
-library(reshape2)
+library(tidyverse) # data manipulation, cleaning, aggregation
+library(sjPlot) # exporting publication-quality tables to .doc files, etc.
+library(mice) # explore missing values 
 ```
 
-## Environmental data analysis
-Environmental parameters were measured in parallel with the zoobenthic sampling during the study:
-  * water column nutrients, chl-a, suspended matter    
-  * water clarity (Secchi depth)   
-  * O2 concentrations (profiles every 1 m to the bottom - but only occasionally)  
-  * sediment parameters - grain size & distribution, total organic matter content, heavy metals (again only occasionally).    
+
+Environmental parameters were measured in parallel with the zoobenthic sampling during the study:  
+* water column nutrients, chl-a, suspended matter  
+* water clarity (Secchi depth)  
+* O2 concentrations (profiles every 1 m to the bottom - but only occasionally)  
+* sediment parameters - grain size & distribution, total organic matter content, heavy metals (again only occasionally).  
 Since (most) stations were selected because there were previous monitoring stations at the same/nearby locations, there is fairly long-term data on nutrient concentrations, chl-a, suspended matter, water clarity at least. This is a good thing, because opportunistic samplings of these parameters, which vary strongly even daily, and very much so seasonally, cannot reveal the real patterns (e.g. higher eutrophication levels at some stations, such as those hypothesized here for the inner Burgas Bay stations).   
 Therefore, the long-term data will be used in the analyses wherever possible (and available), to try to determine the effects of this pressure on the macrobenthic communities.
 ```{r import_environmental_data}
-envir.params <- as_tibble(read.csv(file.path(data.dir, "water column-LT_all.csv"), header = TRUE, stringsAsFactors = FALSE, na.strings = ""))
+envir.params <- as_tibble(read.csv(file.path(data.dir, "water_column_LT_all.csv"), header = TRUE, stringsAsFactors = FALSE, na.strings = ""))
 
-# quick sanity check
+# quick sanity check (variable types, import errors, etc.)
 envir.params
 ```
-
+  
 Looks fine. 
-
+  
 Let's clean it up a bit..
-Some stations, which are close to my stations in Burgas Bay (and Sozopol Bay), will have their data added to them: Atia -> Akin; Maslen nos -> Paraskeva. 
+Some stations, which are close to my stations in Burgas Bay (and Sozopol Bay), will have their data added to them: Atia -> Akin; Maslen nos -> Paraskeva.
 ```{r data_cleaning_1}
 envir.params <- envir.params %>% 
   mutate(station = replace(station, station == "Atia", "Akin"), 
          station = replace(station, station == "Maslen nos", "Paraskeva"))
 ## fugly... repeated code - find a better way to formulate this!
 ```
+<br>
+<br>
 
-Explore the pattern of the missing data (with package mice).
-```{r data_cleaning_2}
-library(mice)
-## look for the NAs
+#### Explore the pattern(s) of the missing data     
+##### Missing data in the water column parameters    
+```{r missing_values_1}
+### check the distribution of NAs in the water column parameters
+## first, for the whole dataset (long-term, as it may be)
+as_tibble(md.pattern(envir.params))
+```
+```{r missing_values_2, results = FALSE, fig.show = "asis"}
+## a more visual way of displaying the same NAs (package VIM)
+VIM::aggr(envir.params, 
+          col = c("blue", "red"),
+          numbers = TRUE,
+          sortVars = TRUE,
+          labels = names(envir.params),
+          cex.axis = 0.7, gap = 3)
 
 ```
+There are some; mostly for the Secchi depth, which wasn't systematically measured.   
 
-Now aggregate by station, month and year (= mean).
+We'll do the same for the missing values only during the study period (2012-2014).
+
+
+
+##### Missing data in the sediment parameters 
+  
+<br>  
+
+#### Summarise the environmental data     
+##### Water column parameters (long-term)
+Aggregate the long-term data by station, month and year (= mean).
 ```{r data_aggregation_station-year-month}
 ## summary by station, year and month (-> over the different depths)
 envir.params.summary <- envir.params %>%
