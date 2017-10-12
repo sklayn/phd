@@ -2,8 +2,7 @@
 title: "Biodiversity of macrozoobenthic communities"
 output:
   html_notebook:
-    theme: default
-  html_document: default
+    theme: paper
 ---
 
 ## Community structure & composition
@@ -44,11 +43,13 @@ Next, import the custom functions we'll use in the analyses. They're organized i
 ```{r functions_import}
 R.utils::sourceDirectory(path = file.path(functions.dir))
 ```
+
 Import some necessary libraries.
 ```{r import_packages, message = FALSE}
 library(vegan)
 library(tidyverse)
 ```
+<br>  
 
 #### Macrozoobenthic communities in the sandy sediments of Burgas Bay (2013-2014)
 Import the zoobenthic abundance & biomass data. 

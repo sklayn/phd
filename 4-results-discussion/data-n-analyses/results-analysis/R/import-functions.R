@@ -12,19 +12,19 @@ import_zoo_data <- function(data.dir = NULL, zoo.data, meta.labels) {
   ##            meta.labels - vector of labels for the metadata contained in the 
   ##             column names.
   ## NB Function depends on column names of the type 
-  ##  "Station.month.year.habitat.replicate" - contain the necessary metadata for 
+  ##  "station.month.year.habitat.replicate" - contain the necessary metadata for 
   ##  each sampling.
   ## Output: data frame in the form stations x species (format for community 
   ##  analyses used by vegan and similar functions and packages). No row names! 
   ##  First 5 columns contain the metadata: station names, month and year of sampling, 
   ##  type of habitat, replicate code. The rest of the columns should be numeric, 
-  ##  and should contain the abundances (counts?) of each species.
-  ## Dependencies: plyr - to put the metadata into a tidy data frame. 
+  ##  and should contain the numeric data on each species.
+  ## Dependencies: 
   
-  library(plyr)
+  #library(tidyverse)
   
-  # construct the file path. if there is a dedicated data subdirectory, look for the
-  # dataset there; otherwise look in the working directory.
+  # construct the file path. if a dedicated data subdirectory is specified, 
+  # look for the dataset there; otherwise look in the working directory.
   if (is.null(data.dir)) {
     zoo.data.file <- zoo.data
   } else {
