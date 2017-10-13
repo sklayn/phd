@@ -19,9 +19,9 @@ import_zoo_data <- function(data.dir = NULL, zoo.data, meta.labels) {
   ##  First 5 columns contain the metadata: station names, month and year of sampling, 
   ##  type of habitat, replicate code. The rest of the columns should be numeric, 
   ##  and should contain the numeric data on each species.
-  ## Dependencies: 
+  ## Dependencies: tidyverse packages
   
-  #library(tidyverse)
+  library(tidyverse)
   
   # construct the file path. if a dedicated data subdirectory is specified, 
   # look for the dataset there; otherwise look in the working directory.
@@ -32,28 +32,23 @@ import_zoo_data <- function(data.dir = NULL, zoo.data, meta.labels) {
   }
   
   # read the input raw data from the specified .csv file
-  zoo.abnd.raw <- read.csv(file = zoo.data.file, header = TRUE, row.names = 1) 
+  zoo.abnd.raw <- read_csv(file = zoo.data.file) 
   
-  # transpose the data (stations x species matrix needed for vegan and vegan-dependent 
-  # functions)
-  zoo.abnd.transposed <- as.data.frame(t(zoo.abnd.raw))
-  
-  # get the horrible row names (labels that contain the station name, month, year,
-  # habitat type and replicate number) and extract all relevant info from them
-  station.metadata <- row.names(zoo.abnd.transposed)
-  
-  # split the strings on the . and get the relevant data. 
-  station.metadata.split <- strsplit(station.metadata, "\\.")
-  metadata.final <- ldply(station.metadata.split) 
-  names(metadata.final) <- meta.labels
-    
-  # get rid of the row names - in my experience, only cause trouble & confusion
-  row.names(zoo.abnd.transposed) <- seq(len = nrow(zoo.abnd.transposed))
+  # transpose the data (stations x species matrix needed for vegan and 
+  # vegan-dependent functions). Done by gathering all columns except the first 
+  # one (the species names) into a long data frame, then transposing back into 
+  # a wide data frame.
+  zoo.abnd.final <- zoo.abnd.raw %>% 
+    gather(key = labels, value = values, 2:ncol(zoo.abnd.raw)) %>% 
+    spread_(names(zoo.abnd.raw)[1], "values")
 
-  # construct the final data table containing everything we need 
-  zoo.abnd.final <- as.data.frame(cbind(metadata.final,
-                                        zoo.abnd.transposed))  
-  
+  # the labels that contain the station name, month, year, habitat type and 
+  # replicate number are now in the variable (1st) column. Extract all relevant 
+  # info from them. NB this leaves the numeric columns as character, but if needed,
+  # can be converted later.
+  zoo.abnd.final <- zoo.abnd.final %>% 
+    separate(col = labels, into = meta.labels)
+
   # check for missing values. There shouldn't be any! If any are found, print the 
   # offending column names.
   if (sum(apply(zoo.abnd.final, 2, function(x) sum(is.na(x)))) != 0) {

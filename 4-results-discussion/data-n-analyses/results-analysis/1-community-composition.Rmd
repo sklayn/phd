@@ -54,100 +54,131 @@ library(tidyverse)
 #### Macrozoobenthic communities in the sandy sediments of Burgas Bay (2013-2014)
 Import the zoobenthic abundance & biomass data. 
 The abundances are counts of organisms in each sample; the biomasses - wet weights of organisms in g. NOT expressed as individuals.m^-2^ or g.m^-2^ - it doesn't matter for the calculations; will multiply by the corresponding values whenever needed for more presentable output - tables or plots.
-```{r abundance_data_import}
-## import the abundance data
-zoo.abnd.sand <- import_zoo_data(data.dir = data.dir, 
+```{r abundance_data_sand_import, message = FALSE}
+## import & check the abundance data. Dimensions should be 54 x 205 (5 metadata + 200 species columns); all species columns should be numeric.
+(zoo.abnd.sand <- import_zoo_data(data.dir = data.dir, 
                                  zoo.data = "zoo_abnd_sand_orig.csv", 
-                                 meta.labels = c("station", "month", "year", "habitat", "replicate"))
+                                 meta.labels = c("station", "month", "year", "habitat", "replicate")))
 ```
-```{r abundance_sanity_check_1}
-dim(zoo.abnd.sand)  # should be 54 x 205 (5 metadata + 200 species columns)
+  
+Convert the month and year back to numeric (they remained as character during import); then arrange the data frame - by station (first converting to factor), then year and month. This will be the convention used for all subsequent data frames.
+```{r clean_abundance_data_sand}
+(zoo.abnd.sand <- zoo.abnd.sand %>% 
+  
+  mutate(year = as.numeric(year), 
+         month = as.numeric(month), 
+         station = factor(station, levels = c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva"))) %>%
+  
+  arrange(station, year, month))
 ```
-Also check the structure, just in case (results not printed).
-```{r abundance_sanity_check_2, results = FALSE}
-str(zoo.abnd.sand)
-```
-Let's arrange the data frame by station (first converting to factor), then year and month. This will be the convention used for all subsequent data frames.
-```{r clean_abundance_data_1}
-stations.sand <- c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva")
-
-zoo.abnd.sand$station <- as.factor(zoo.abnd.sand$station)
-zoo.abnd.sand$station <- gdata::reorder.factor(zoo.abnd.sand$station, 
-                                               new.order = stations.sand)
-
-library(plyr)
-zoo.abnd.sand <- arrange(zoo.abnd.sand, station, year, month)
-```
-
-```{r clean_abundance_data_2, results = FALSE}
-head(zoo.abnd.sand) # seems ok for now..
-```
+  
 Now on to the biomass! 
-```{r biomass_data_import}
-## import the biomass data. Same remarks as above apply here.
-zoo.biomass.sand <- import_zoo_data(data.dir = data.dir,
+```{r biomass_data_sand_import, message = FALSE}
+## import & check out the biomass data. 
+(zoo.biomass.sand <- import_zoo_data(data.dir = data.dir,
                                     zoo.data = "zoo_biomass_sand_orig.csv",
-                                    meta.labels = c("station", "month", "year", "habitat", "replicate"))
-```
-Same sanity checks as the abundance:  
-```{r biomass_sanity_check_1} 
-dim(zoo.biomass.sand)
-```
-```{r biomass_sanity_check_2, results = FALSE}
-str(zoo.biomass.sand)
-```
-```{r clean_biomass_data_1}
-zoo.biomass.sand$station <- as.factor(zoo.biomass.sand$station)
-zoo.biomass.sand$station <- gdata::reorder.factor(zoo.biomass.sand$station, 
-                                                  new.order = stations.sand)
-
-zoo.biomass.sand <- arrange(zoo.biomass.sand, station, year, month)
-```
-Check it out: 
-```{r clean_biomass_data_2, results = FALSE}
-head(zoo.biomass.sand) # looks ok..
-```
-Looks fine! To be on the safe side, save the cleaned abundance & biomass data frames.
-```{r save_clean_data}
-write.csv(zoo.abnd.sand, 
-          file = file.path(save.dir, "abnd_sand_orig_clean.csv"), 
-          row.names = FALSE)
-write.csv(zoo.biomass.sand, 
-          file = file.path(save.dir, "biomass_sand_orig_clean.csv"), 
-          row.names = FALSE)
+                                    meta.labels = c("station", "month", "year", "habitat", "replicate")))
+# same expected structure as the abundance 
 ```
 
-Now, make 2 subsets of the data frames - one numeric, containing all the species data, and one character/factor - for the metadata such as station names, dates, etc. This is to avoid subsetting at every turn - they will be used a lot subsequently.
-```{r prepare_data}
-meta.sand <- zoo.abnd.sand[!sapply(zoo.abnd.sand, is.numeric)]
-
-num.abnd.sand <- zoo.abnd.sand[sapply(zoo.abnd.sand, is.numeric)]
-num.biomass.sand <- zoo.biomass.sand[sapply(zoo.biomass.sand, is.numeric)]
-
-# leave only the species actually present in the current dataset (to simplify later analyses)
-num.abnd.sand <- num.abnd.sand[colSums(num.abnd.sand) > 0] 
-num.biomass.sand <- num.biomass.sand[colSums(num.biomass.sand) > 0]
+```{r clean_biomass_data_sand}
+(zoo.biomass.sand <- zoo.biomass.sand %>% 
+  
+  mutate(year = as.numeric(year), 
+         month = as.numeric(month), 
+         station = factor(station, levels = c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva"))) %>%
+  
+  arrange(station, year, month))
 ```
+  
+Everything looks fine! To be on the safe side, save the cleaned abundance & biomass data frames.
+```{r save_clean_data_sand}
+write_csv(zoo.abnd.sand, 
+          path = file.path(save.dir, "abnd_sand_orig_clean.csv"))
+write_csv(zoo.biomass.sand, 
+          path = file.path(save.dir, "biomass_sand_orig_clean.csv"))
+```
+
+Now, on with the cleaning.  
+First we'll remove the all-0 columns (= species from the master species list which are not present in the current dataset - don't appear at these particular stations & samplings, etc.). This will simplify later analyses, especially the more complex ones that require a lot of time. 
+```{r clean_data_sand_2}
+# long data is immensely easier to manipulate within the tidyverse, so we'll do some back-and-forth conversions
+zoo.abnd.sand <- zoo.abnd.sand %>% 
+  gather(key = species, value = sp.count, -c(station:replicate)) %>% 
+  group_by(species) %>% 
+  filter(sp.count > 0) %>%
+  spread(species, sp.count, fill = 0)
+
+zoo.biomass.sand <- zoo.biomass.sand %>% 
+  gather(key = species, value = sp.count, -c(station:replicate)) %>% 
+  group_by(species) %>% 
+  filter(sp.count > 0) %>%
+  spread(species, sp.count, fill = 0)
+```
+  
 Ready to proceed with the analyses themselves! 
   
 1. Summary statistics for the community structure & composition
-  + the **average abundance** for the whole dataset is `r round(mean(rowSums(num.abnd.sand)) * 20, 0)` ind.m^-2^, with standard deviation `r round(sd(rowSums(num.abnd.sand)) * 20, 0)`.
-  + the **minimum abundance** is `r min(rowSums(num.abnd.sand)) * 20` ind.m^-2^, in sample `r paste(meta.sand[which.min(rowSums(num.abnd.sand)), ]$station, meta.sand[which.min(rowSums(num.abnd.sand)), ]$replicate, sep = "-")` from `r paste(meta.sand[which.min(rowSums(num.abnd.sand)), ]$month, meta.sand[which.min(rowSums(num.abnd.sand)), ]$year, sep = "-")`.
-  + the **maximum abundance** is `r format(max(rowSums(num.abnd.sand)) * 20, scientific = FALSE)` ind.m^-2^, in sample `r paste(meta.sand[which.max(rowSums(num.abnd.sand)), ]$station, meta.sand[which.max(rowSums(num.abnd.sand)), ]$replicate, sep = "-")` from `r paste(meta.sand[which.max(rowSums(num.abnd.sand)), ]$month, meta.sand[which.max(rowSums(num.abnd.sand)), ]$year, sep = "-")`.
+  + the **average abundance** for the whole dataset is `r round(mean(select(zoo.abnd.sand, -c(station:replicate)) %>% rowSums) * 20, 0)` ind.m^-2^, with standard deviation `r round(sd(select(zoo.abnd.sand, -c(station:replicate)) %>% rowSums) * 20, 0)`.
+  + the **minimum abundance** is `r min(select(zoo.abnd.sand, -c(station:replicate)) %>% rowSums) * 20` ind.m^-2^, in sample `r paste(unite(zoo.abnd.sand %>% filter(row_number() == which.min(select(zoo.abnd.sand, -c(station:replicate)) %>% rowSums)), "new", c(station, replicate)) %>% select(new))` from `r paste(unite(zoo.abnd.sand %>% filter(row_number() == which.min(select(zoo.abnd.sand, -c(station:replicate)) %>% rowSums)), "new", c(month, year)) %>% select(new))`.
+  + the **maximum abundance** is `r format(max(select(zoo.abnd.sand, -c(station:replicate)) %>% rowSums) * 20, scientific = FALSE)` ind.m^-2^, in sample `r paste(unite(zoo.abnd.sand %>% filter(row_number() == which.max(select(zoo.abnd.sand, -c(station:replicate)) %>% rowSums)), "new", c(station, replicate)) %>% select(new))` from `r paste(unite(zoo.abnd.sand %>% filter(row_number() == which.max(select(zoo.abnd.sand, -c(station:replicate)) %>% rowSums)), "new", c(month, year)) %>% select(new))`.
   
-  + the **average biomass** for the whole dataset is `r round(mean(rowSums(num.biomass.sand)) * 20, 2)` g.m^-2^, with standard deviation `r round(sd(rowSums(num.biomass.sand)) * 20, 2)`.
-  + the **minimum biomass** is `r min(rowSums(num.biomass.sand)) * 20` g.m^-2^, in sample `r paste(meta.sand[which.min(rowSums(num.biomass.sand)), ]$station, meta.sand[which.min(rowSums(num.biomass.sand)), ]$replicate, sep = "-")` from `r paste(meta.sand[which.min(rowSums(num.biomass.sand)), ]$month, meta.sand[which.min(rowSums(num.biomass.sand)), ]$year, sep = "-")`.
-  + the **maximum biomass** is `r max(rowSums(num.biomass.sand)) * 20` g.m^-2^, in sample `r paste(meta.sand[which.max(rowSums(num.biomass.sand)), ]$station, meta.sand[which.max(rowSums(num.biomass.sand)), ]$replicate, sep = "-")` from `r paste(meta.sand[which.max(rowSums(num.biomass.sand)), ]$month, meta.sand[which.max(rowSums(num.biomass.sand)), ]$year, sep = "-")`.
+  + the **average biomass** for the whole dataset is `r round(mean(select(zoo.biomass.sand, -c(station:replicate)) %>% rowSums) * 20, 2)` g.m^-2^, with standard deviation `r round(sd(select(zoo.biomass.sand, -c(station:replicate)) %>% rowSums) * 20, 2)`.
+  + the **minimum biomass** is `r min(select(zoo.biomass.sand, -c(station:replicate)) %>% rowSums) * 20` g.m^-2^, in sample `r paste(unite(zoo.biomass.sand %>% filter(row_number() == which.min(select(zoo.biomass.sand, -c(station:replicate)) %>% rowSums)), "new", c(station, replicate)) %>% select(new))` from `r paste(unite(zoo.biomass.sand %>% filter(row_number() == which.min(select(zoo.biomass.sand, -c(station:replicate)) %>% rowSums)), "new", c(month, year)) %>% select(new))`.
+  + the **maximum biomass** is `r max(select(zoo.biomass.sand, -c(station:replicate)) %>% rowSums) * 20` g.m^-2^, in sample `r paste(unite(zoo.biomass.sand %>% filter(row_number() == which.max(select(zoo.biomass.sand, -c(station:replicate)) %>% rowSums)), "new", c(station, replicate)) %>% select(new))` from `r paste(unite(zoo.biomass.sand %>% filter(row_number() == which.max(select(zoo.biomass.sand, -c(station:replicate)) %>% rowSums)), "new", c(month, year)) %>% select(new))`.
   
-  + there are `r ncol(num.abnd.sand)` taxa overall. Let's check them out to see which are identifed to species level.
-```{r count_number_taxa}
-names(num.abnd.sand) # unfortunately, determined by counting the ones that are not actually species.
+  + there are `r ncol(select(zoo.abnd.sand, -c(station:replicate)))` taxa overall. Let's check them out to see which are identifed to species level.
+```{r count_number_taxa_sand}
+names(select(zoo.abnd.sand, -c(station:replicate))) # unfortunately, determined by counting manually the ones that are not actually species.
 ```
-  + the **average number of taxa** for the dataset is `r round(mean(specnumber(num.abnd.sand)), 0)`, with standard deviation `r round(sd(specnumber(num.abnd.sand)), 0)`.
-  + the **minimum number of taxa** is `r min(specnumber(num.abnd.sand))`, in sample `r paste(meta.sand[which.min(specnumber(num.abnd.sand)), ]$station, meta.sand[which.min(specnumber(num.abnd.sand)), ]$replicate, sep = "-")` from `r paste(meta.sand[which.min(specnumber(num.abnd.sand)), ]$month, meta.sand[which.min(specnumber(num.abnd.sand)), ]$year, sep = "-")`. 
-  + the **maximum number of taxa** is `r max(specnumber(num.abnd.sand))`, in sample `r paste(meta.sand[which.max(specnumber(num.abnd.sand)), ]$station, meta.sand[which.max(specnumber(num.abnd.sand)), ]$replicate, sep = "-")` from `r paste(meta.sand[which.max(specnumber(num.abnd.sand)), ]$month, meta.sand[which.max(specnumber(num.abnd.sand)), ]$year, sep = "-")`.
-
-  + summary of abundance & biomass 
-```{r summarize_}
-
+  + the **average number of taxa** for the dataset is `r round(mean(specnumber(select(zoo.abnd.sand, -c(station:replicate)))), 0)`, with standard deviation `r round(sd(specnumber(select(zoo.abnd.sand, -c(station:replicate)))), 0)`.
+  + the **minimum number of taxa** is `r min(specnumber(select(zoo.abnd.sand, - c(station:replicate))))`, in sample `r paste(unite(zoo.abnd.sand %>% filter(row_number() == which.min(select(zoo.abnd.sand, -c(station:replicate)) %>% specnumber)), "new", c(station, replicate)) %>% select(new))` from `r paste(unite(zoo.abnd.sand %>% filter(row_number() == which.min(select(zoo.abnd.sand, -c(station:replicate)) %>% specnumber)), "new", c(month, year)) %>% select(new))`. 
+  + the **maximum number of taxa** is `r max(specnumber(select(zoo.abnd.sand, - c(station:replicate))))`, in sample `r paste(unite(zoo.abnd.sand %>% filter(row_number() == which.max(select(zoo.abnd.sand, -c(station:replicate)) %>% specnumber)), "new", c(station, replicate)) %>% select(new))` from `r paste(unite(zoo.abnd.sand %>% filter(row_number() == which.max(select(zoo.abnd.sand, -c(station:replicate)) %>% specnumber)), "new", c(month, year)) %>% select(new))`.
+   
+  The **total number of taxa per station** for the whole study period is:
+```{r summarize_nb_taxa_sand_by_station}
+specnumber(select(zoo.abnd.sand, -c(station:replicate)), groups = zoo.abnd.sand$station)
 ```
+    
+  The ***summarized number of taxa*** by station and year is: 
+```{r summarize_nb_taxa_sand_by_station_year}
+zoo.abnd.sand %>%
+  gather(species, sp.counts, -c(station:replicate)) %>%
+  group_by(station, year, month, replicate) %>%
+  transmute(total_nb_taxa = specnumber(sp.counts)) %>%
+  distinct(station, year, total_nb_taxa) %>%
+  group_by(station, year) %>% 
+  # rounded to the nearest integer, because there is no such thing as half a species 
+  summarise(mean_nb_taxa = round(mean(total_nb_taxa)), 
+            sd_nb_taxa = round(sd(total_nb_taxa)), 
+            nb_replicates = n())
+```
+
+  The ***summarized abundance*** by station and year is: 
+```{r summarize_abundance_sand_by_station_year}
+zoo.abnd.sand %>%
+  gather(species, sp.counts, -c(station:replicate)) %>%
+  group_by(station, year, month, replicate) %>%
+  transmute(total_abnd = sum(sp.counts) * 20) %>%
+  distinct(station, year, total_abnd) %>%
+  group_by(station, year) %>% 
+  # again rounded, because impossible to have half-individuals and such.
+  summarise(mean_abnd = round(mean(total_abnd)), 
+            sd_abnd = round(sd(total_abnd)), 
+            nb_replicates = n())
+```
+  
+  The ***summarized biomass*** by station and year is: 
+```{r summarize_biomass_sand_by_station_year}
+zoo.biomass.sand %>%
+  gather(species, sp.counts, -c(station:replicate)) %>%
+  group_by(station, year, month, replicate) %>%
+  transmute(total_biomass = sum(sp.counts) * 20) %>%
+  distinct(station, year, total_biomass) %>%
+  group_by(station, year) %>% 
+  summarise(mean_biomass = round(mean(total_biomass), 2), 
+            sd_biomass = round(sd(total_biomass), 2), 
+            nb_replicates = n())
+```
+<br>    
+2. Taxonomic composition and structure
