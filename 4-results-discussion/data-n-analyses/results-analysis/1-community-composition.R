@@ -271,7 +271,6 @@ barchart(sort(table(current.taxa.sand[-which(row.names(current.taxa.sand) %in% s
          col = "royalblue")
 dev.off()
 
-##### FIX THIS WITH EXCLUSION OF UNWANTED TAXA ##########
 ## calculate the contribution of each taxonomic group to the numeric community 
 ## composition by station and by year
 # first calculate proportions by taxonomic group in each station/replicate

@@ -47,6 +47,7 @@ R.utils::sourceDirectory(path = file.path(functions.dir))
 Import some necessary libraries.
 ```{r import_packages, message = FALSE}
 library(vegan)
+library(viridis)
 library(tidyverse)
 ```
 <br>  
@@ -131,19 +132,22 @@ Ready to proceed with the analyses themselves!
 ```{r count_number_taxa_sand}
 names(select(zoo.abnd.sand, -c(station:replicate))) # unfortunately, determined by counting manually the ones that are not actually species.
 ```
-  + the **average number of taxa** for the dataset is `r round(mean(specnumber(select(zoo.abnd.sand, -c(station:replicate)))), 0)`, with standard deviation `r round(sd(specnumber(select(zoo.abnd.sand, -c(station:replicate)))), 0)`.
-  + the **minimum number of taxa** is `r min(specnumber(select(zoo.abnd.sand, - c(station:replicate))))`, in sample `r paste(unite(zoo.abnd.sand %>% filter(row_number() == which.min(select(zoo.abnd.sand, -c(station:replicate)) %>% specnumber)), "new", c(station, replicate)) %>% select(new))` from `r paste(unite(zoo.abnd.sand %>% filter(row_number() == which.min(select(zoo.abnd.sand, -c(station:replicate)) %>% specnumber)), "new", c(month, year)) %>% select(new))`. 
-  + the **maximum number of taxa** is `r max(specnumber(select(zoo.abnd.sand, - c(station:replicate))))`, in sample `r paste(unite(zoo.abnd.sand %>% filter(row_number() == which.max(select(zoo.abnd.sand, -c(station:replicate)) %>% specnumber)), "new", c(station, replicate)) %>% select(new))` from `r paste(unite(zoo.abnd.sand %>% filter(row_number() == which.max(select(zoo.abnd.sand, -c(station:replicate)) %>% specnumber)), "new", c(month, year)) %>% select(new))`.
+  This list includes some larvae, which are not technically separate taxa or groups (presumably, they belong to one of the other taxa on the list): Decapoda and Polychaeta larvae. There are also Pisces larvae, but since no other fish were found, I think it is better to leave them in, because they represent a new taxonomic group. It probably won't end up influencing any analysis but these summaries here. For the more complicated analyses, such singletons will be filtered out, because they don't bring much information.  
+  So, the actual number of taxa (both species and upper-level taxa) is `r ncol(select(zoo.abnd.sand, -c(station:replicate), -starts_with("Decapoda"), -starts_with("Polychaeta")))`.  
+  
+  + the **average number of taxa** for the dataset is `r round(mean(specnumber(select(zoo.abnd.sand, -c(station:replicate), -starts_with("Decapoda"), -starts_with("Polychaeta")))), 0)`, with standard deviation `r round(sd(specnumber(select(zoo.abnd.sand, -c(station:replicate),  -starts_with("Decapoda"), -starts_with("Polychaeta")))), 0)`.
+  + the **minimum number of taxa** is `r min(specnumber(select(zoo.abnd.sand, -c(station:replicate), -starts_with("Decapoda"), -starts_with("Polychaeta"))))`, in sample `r paste(unite(zoo.abnd.sand %>% filter(row_number() == which.min(select(zoo.abnd.sand, -c(station:replicate), -starts_with("Decapoda"), -starts_with("Polychaeta")) %>% specnumber)), "new", c(station, replicate)) %>% select(new))` from `r paste(unite(zoo.abnd.sand %>% filter(row_number() == which.min(select(zoo.abnd.sand, -c(station:replicate), -starts_with("Decapoda"), -starts_with("Polychaeta")) %>% specnumber)), "new", c(month, year)) %>% select(new))`. 
+  + the **maximum number of taxa** is `r max(specnumber(select(zoo.abnd.sand, -c(station:replicate), -starts_with("Decapoda"), -starts_with("Polychaeta"))))`, in sample `r paste(unite(zoo.abnd.sand %>% filter(row_number() == which.max(select(zoo.abnd.sand, -c(station:replicate), -starts_with("Decapoda"), -starts_with("Polychaeta")) %>% specnumber)), "new", c(station, replicate)) %>% select(new))` from `r paste(unite(zoo.abnd.sand %>% filter(row_number() == which.max(select(zoo.abnd.sand, -c(station:replicate), -starts_with("Decapoda"), -starts_with("Polychaeta")) %>% specnumber)), "new", c(month, year)) %>% select(new))`.
    
   The **total number of taxa per station** for the whole study period is:
 ```{r summarize_nb_taxa_sand_by_station}
-specnumber(select(zoo.abnd.sand, -c(station:replicate)), groups = zoo.abnd.sand$station)
+specnumber(select(zoo.abnd.sand, -c(station:replicate), -starts_with("Decapoda"), -starts_with("Polychaeta")), groups = zoo.abnd.sand$station)
 ```
     
   The ***summarized number of taxa*** by station and year is: 
 ```{r summarize_nb_taxa_sand_by_station_year}
 zoo.abnd.sand %>%
-  gather(species, sp.counts, -c(station:replicate)) %>%
+  gather(species, sp.counts, -c(station:replicate), -starts_with("Decapoda"), -starts_with("Polychaeta")) %>%
   group_by(station, year, month, replicate) %>%
   transmute(total_nb_taxa = specnumber(sp.counts)) %>%
   distinct(station, year, total_nb_taxa) %>%
@@ -181,4 +185,69 @@ zoo.biomass.sand %>%
             nb_replicates = n())
 ```
 <br>    
-2. Taxonomic composition and structure
+2. Taxonomic composition and structure  
+  Import the taxonomic data. This includes all species on my current species list, so it applies to all analyses.
+```{r import_taxonomic_data}
+# print afterwards, as a way to quickly check the structure and make sure there are no weird import errors. Same goes for every import; don't care about space taken up by printing tables. 
+(zoo.taxonomy <- read_csv(file.path(data.dir, "zoo_taxonomy.csv")))
+```
+  
+  Leave only the taxa which were present in the sand samples (abundance > 0 in at least one sample). Here it's done by matching the species names against the column names of the (filtered) abundance dataset, again excluding the polychaete & decapod larvae from the count.
+```{r subset_taxonomic_data_sand}
+current.taxa.sand <- zoo.taxonomy %>%
+  filter(species %in% names(select(zoo.abnd.sand, -starts_with("Decapoda"), -starts_with("Polychaeta"))))
+```
+
+First, let's explore the taxonomic composition of the community: number of taxa per phylum/class, etc. No need to save these plots: they'll remain in the notebook, and only the final versions, to be incorporated in the text, will be exported as files.
+```{r explore_taxonomic_structure_sand}
+## number of taxa per class
+# here, the NAs get sorted to the end (the axis order is reversed, that's why they appear on top). But it's better to have them (barchart from base R, which I used previously, silently drops them) - they are not a mistake and should be present: some taxa have no class at all, others are only identified to an upper taxonomic level.
+current.taxa.sand %>% 
+  count(class) %>%
+  ggplot(mapping = aes(x = reorder(class, n), y = n)) + 
+    geom_bar(stat = "identity", fill = "skyblue") + 
+    coord_flip() + 
+    labs(title = "Per class", x = "", y = "Number of taxa") +
+    theme_bw()
+
+## number of taxa per phylum
+current.taxa.sand %>% 
+  count(phylum) %>%
+  ggplot(mapping = aes(x = reorder(phylum, n), y = n)) + 
+    geom_bar(stat = "identity", fill = "skyblue") + 
+    coord_flip() + 
+    labs(title = "Per phylum", x = "", y = "Number of taxa") +
+    theme_bw()
+
+```
+  
+The most commonly used larger taxonomic groups from the literature are not class & phylum, but Polychaeta, Mollusca, Crustacea, and Varia (= all the rest). Adding them requires some data transformation.
+```{r assign_taxonomic_groups}
+# the conditions have to be based on fields that do not contain NAs - or at least be formulated in a way that DOESN'T return NA as a result of the evaluation. Otherwise the reclassification will result in those groups remaining as NA. This is a behaviour specific to dplyr, mutate and chained conditions; works as I expected in base R, so I didn't notice it before.
+current.taxa.sand <- current.taxa.sand %>%
+  mutate(group = if_else(phylum == "Mollusca", "Mollusca",
+                         if_else(phylum == "Annelida" & class == "Polychaeta", "Polychaeta", 
+                                 if_else(phylum == "Arthropoda" & subclass %in% c("Eumalacostraca", "Thecostraca"), "Crustacea", 
+                                         "Varia"))))
+
+current.taxa.sand %>%
+  count(group)
+```
+Good. Now let's plot the number of taxa per (common) taxonomic group, and save as a graph (and file).
+```{r plot_number_taxa_by_taxonomic_groups}
+plot.nb.taxa.by.group <- current.taxa.sand %>% 
+  count(group) %>%
+  ggplot(mapping = aes(x = reorder(group, n), y = n)) + 
+    geom_bar(stat = "identity", fill = "skyblue") + 
+    coord_flip() + 
+    labs(x = "", y = "Number of taxa") +
+    theme(axis.text.x = element_text(size = rel(1.3)), 
+          axis.text.y = element_text(size = rel(1.3))) +
+    theme_bw()
+
+ggsave(file.path(figures.dir, "nb_taxa_by_tax_group.png"), 
+       plot.nb.taxa.by.group, 
+       dpi = 300)
+```
+  
+  Let's calculate the contribution of each taxonomic group to the numeric community composition by station and by year.
