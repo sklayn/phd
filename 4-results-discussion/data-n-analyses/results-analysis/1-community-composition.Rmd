@@ -203,7 +203,7 @@ First, let's explore the taxonomic composition of the community: number of taxa 
 ## number of taxa per class
 # here, the NAs get sorted to the end (the axis order is reversed, that's why they appear on top). But it's better to have them (barchart from base R, which I used previously, silently drops them) - they are not a mistake and should be present: some taxa have no class at all, others are only identified to an upper taxonomic level.
 current.taxa.sand %>% 
-  count(class) %>%
+  count(class, sort = TRUE) %>%
   ggplot(mapping = aes(x = reorder(class, n), y = n)) + 
     geom_bar(stat = "identity", fill = "skyblue") + 
     coord_flip() + 
@@ -212,7 +212,7 @@ current.taxa.sand %>%
 
 ## number of taxa per phylum
 current.taxa.sand %>% 
-  count(phylum) %>%
+  count(phylum, sort = TRUE) %>%
   ggplot(mapping = aes(x = reorder(phylum, n), y = n)) + 
     geom_bar(stat = "identity", fill = "skyblue") + 
     coord_flip() + 
@@ -221,9 +221,9 @@ current.taxa.sand %>%
 
 ```
   
-The most commonly used larger taxonomic groups from the literature are not class & phylum, but Polychaeta, Mollusca, Crustacea, and Varia (= all the rest). Adding them requires some data transformation.
-```{r assign_taxonomic_groups}
-# the conditions have to be based on fields that do not contain NAs - or at least be formulated in a way that DOESN'T return NA as a result of the evaluation. Otherwise the reclassification will result in those groups remaining as NA. This is a behaviour specific to dplyr, mutate and chained conditions; works as I expected in base R, so I didn't notice it before.
+The most commonly used larger taxonomic groups in the literature are not class & phylum, but Polychaeta, Mollusca, Crustacea, and Varia (= all the rest). Adding them requires some data transformation.
+```{r assign_taxonomic_groups_sand}
+# the conditions have to be based on fields that do not contain NAs - or, more precisely, they have to be formulated in a way that DOESN'T return NA as a result of the evaluation. Otherwise the reclassification will result in those groups remaining as NA. This behaviour is caused by the way dplyr and mutate treat NAs; works as I expected in base R, so I didn't notice it before.
 current.taxa.sand <- current.taxa.sand %>%
   mutate(group = if_else(phylum == "Mollusca", "Mollusca",
                          if_else(phylum == "Annelida" & class == "Polychaeta", "Polychaeta", 
@@ -233,8 +233,8 @@ current.taxa.sand <- current.taxa.sand %>%
 current.taxa.sand %>%
   count(group)
 ```
-Good. Now let's plot the number of taxa per (common) taxonomic group, and save as a graph (and file).
-```{r plot_number_taxa_by_taxonomic_groups}
+  Good. Now let's plot the number of taxa per (common) taxonomic group, and save as a graph (and file).
+```{r plot_number_taxa_by_taxonomic_groups_sand}
 plot.nb.taxa.by.group <- current.taxa.sand %>% 
   count(group) %>%
   ggplot(mapping = aes(x = reorder(group, n), y = n)) + 
@@ -245,9 +245,225 @@ plot.nb.taxa.by.group <- current.taxa.sand %>%
           axis.text.y = element_text(size = rel(1.3))) +
     theme_bw()
 
-ggsave(file.path(figures.dir, "nb_taxa_by_tax_group.png"), 
+ggsave(file.path(figures.dir, "nb_taxa_by_tax_group_sand.png"), 
        plot.nb.taxa.by.group, 
        dpi = 300)
 ```
   
-  Let's calculate the contribution of each taxonomic group to the numeric community composition by station and by year.
+  ***Crustacea*** are represented by `r nrow(current.taxa.sand %>% group_by(group) %>% count(family) %>% filter(group == "Crustacea"))` families.  
+  ***Polychaeta*** are represented by `r nrow(current.taxa.sand %>% group_by(group) %>% count(family) %>% filter(group == "Polychaeta"))` families.   
+  ***Mollusca*** are represented by `r nrow(current.taxa.sand %>% group_by(group) %>% count(family) %>% filter(group == "Mollusca"))` families.  
+  
+  The families with the highest number of species are:
+```{r breakdown_nb_taxa_families_sand}
+lapply(unique(current.taxa.sand$group), 
+       function(x) {
+         current.taxa.sand %>%
+  group_by(group) %>%
+  count(family) %>%
+  filter(group == x) %>%
+  arrange(desc(n))
+         
+       })
+```
+  
+  Now let's calculate the contribution of each taxonomic group to the ***overall community composition by abundance***.
+```{r tax_group_abnd_contribution_overall_sand}
+zoo.abnd.sand %>% 
+  # exclude these poor larvae again
+  select(-starts_with("Decapoda"), -starts_with("Polychaeta")) %>%
+  gather(key = species, value = sp.count, -c(station:replicate)) %>%
+  left_join(current.taxa.sand, by = "species") %>%
+  group_by(group) %>%
+  summarise(total_count = sum(sp.count)) %>%
+  mutate(proportion = total_count / sum(total_count)) %>%
+  arrange(desc(proportion))
+```
+  
+  Now calculate and plot the ***contribution of the taxonomic groups to the abundance by station and year***. 
+```{r tax_group_abnd_contrib_st_yr_sand}
+tax.props.st.yr.sand <- zoo.abnd.sand %>% 
+  # exclude these poor larvae again
+  select(-starts_with("Decapoda"), -starts_with("Polychaeta")) %>%
+  gather(key = species, value = sp.count, -c(station:replicate)) %>%
+  # join the taxonomic data, to use for grouping
+  left_join(current.taxa.sand, by = "species") %>%
+  group_by(station, year, group) %>%
+  summarise(total_count = sum(sp.count)) %>%
+  mutate(proportion = total_count / sum(total_count)) %>%
+  arrange(station, year)
+
+# plot this
+plot.tax.props.st.yr.sand <- ggplot(tax.props.st.yr.sand, 
+       # convert station to numeric, because otherwise the labels overlap
+       mapping = aes(x = as.numeric(station), y = proportion * 100, fill = group)) +
+  geom_bar(stat = "identity", position = "stack") +
+  scale_x_continuous(breaks = c(1:6)) +
+  scale_fill_viridis(discrete = TRUE, name = "") + 
+  labs(x = "Station", y = "%") + 
+  facet_wrap(~year, nrow = 2) + 
+  theme_bw() +
+  # modify the size of x axis and legend labels
+  theme(axis.text.x = element_text(size = rel(1.2)),
+        axis.text.y = element_text(size = rel(1.2)),
+        axis.title.x = element_text(size = rel(1.2)),
+        legend.text = element_text(size = rel(1.1)),
+        strip.text.x = element_text(size = rel(1.2))
+        )
+
+plot.tax.props.st.yr.sand
+
+## save as file
+ggsave(file.path(figures.dir, "tax_gr_props_st_yr_sand.png"), 
+       plot.tax.props.st.yr.sand, 
+       dpi = 300)
+```
+    
+  Check and plot the species which contribute the most to the abundance at each station.
+```{r sp_highest_contrib_abnd_sand}
+## calculate the total counts by species, then select the top 20 most abundant
+top20.counts.sand <- zoo.abnd.sand %>% 
+  gather(key = species, value = sp.count, -c(station:replicate)) %>%
+  group_by(species) %>%
+  summarise(total_count = sum(sp.count)) %>%
+  arrange(desc(total_count)) %>%
+  top_n(20)
+
+## now that we know which species these are, we'll subset them from the overall abundance data frame
+top20.counts.sand.st <- zoo.abnd.sand %>%
+  select(station, top20.counts.sand$species) %>%
+  gather(key = species, value = sp_count, -station)
+
+## we'll use a custom transformation for abundance values (log(y/min + 1)) - as in the mvabund package
+
+# plot
+plot.most.abnd.sp.sand <- ggplot(top20.counts.sand.st, 
+       aes(x = species, 
+           y = log(sp_count / min(top20.counts.sand.st %>% filter(sp_count > 0) %>% select(sp_count)) + 1),
+           colour = station)) +
+  
+  # make points somewhat transparent so that points plotted on top of one another are still visible
+  geom_point(size = 2.5, alpha = 0.75) +
+  scale_color_brewer(name = "Station", palette = "Set2",
+                     labels = as.numeric(unique(top20.counts.sand.st$station))) + 
+  
+  # reverse the order of x axis, so highest-contributing species are on top
+  scale_x_discrete(name = "", limits = rev(top20.counts.sand$species)) + 
+  
+  scale_y_continuous(name = "Abundance (log(y/min + 1))") + 
+  coord_flip() + # put species on y axis - easier to read
+  theme_bw() + 
+  theme(axis.text.x = element_text(size = rel(1.3)), 
+        axis.text.y = element_text(size = rel(1.3)), 
+        legend.text = element_text(size = rel(1.2)), 
+        legend.title = element_text(size = rel(1.2))
+        )
+
+plot.most.abnd.sp.sand
+
+## save as file
+ggsave(file.path(figures.dir, "most_abnd_sp_st_sand.png"), 
+       plot.most.abnd.sp.sand, 
+       dpi = 300)
+```
+  
+  Now let's calculate the same way the ***overall community composition by biomass***.
+```{r tax_group_biomass_contrib_overall_sand}
+zoo.biomass.sand %>% 
+  # exclude these poor larvae again
+  select(-starts_with("Decapoda"), -starts_with("Polychaeta")) %>%
+  gather(key = species, value = sp.count, -c(station:replicate)) %>%
+  left_join(current.taxa.sand, by = "species") %>%
+  group_by(group) %>%
+  summarise(total_biomass = sum(sp.count)) %>%
+  mutate(proportion = total_biomass / sum(total_biomass)) %>%
+  arrange(desc(proportion))
+```
+  
+  Then calculate and plot the  ***contribution of the taxonomic groups to the biomass by station and year***. 
+```{r tax_group_biomass_contribution_st_yr_sand}
+tax.props.biomass.st.yr.sand <- zoo.biomass.sand %>% 
+  # exclude these poor larvae again
+  select(-starts_with("Decapoda"), -starts_with("Polychaeta")) %>%
+  gather(key = species, value = sp.count, -c(station:replicate)) %>%
+  # join the taxonomic data, to use for grouping
+  left_join(current.taxa.sand, by = "species") %>%
+  group_by(station, year, group) %>%
+  summarise(total_biomass = sum(sp.count)) %>%
+  mutate(proportion = total_biomass / sum(total_biomass)) %>%
+  arrange(station, year)
+
+# plot this
+plot.tax.props.biomass.st.yr.sand <- ggplot(tax.props.biomass.st.yr.sand, 
+       # convert station to numeric, because otherwise the labels overlap
+       mapping = aes(x = as.numeric(station), y = proportion * 100, fill = group)) +
+  geom_bar(stat = "identity", position = "stack") +
+  scale_x_continuous(breaks = c(1:6)) +
+  scale_fill_viridis(discrete = TRUE, name = "") + 
+  labs(x = "Station", y = "%") + 
+  facet_wrap(~year, nrow = 2) + 
+  theme_bw() +
+  # modify the size of x axis and legend labels
+  theme(axis.text.x = element_text(size = rel(1.2)),
+        axis.text.y = element_text(size = rel(1.2)),
+        axis.title.x = element_text(size = rel(1.2)),
+        legend.text = element_text(size = rel(1.1)),
+        strip.text.x = element_text(size = rel(1.2))
+        )
+
+plot.tax.props.biomass.st.yr.sand
+
+## save as file
+ggsave(file.path(figures.dir, "tax_gr_props_biomass_st_yr_sand.png"), 
+       plot.tax.props.biomass.st.yr.sand, 
+       dpi = 300)
+```
+  
+  Check and plot the species which contribute the most to the biomass at each station.
+```{r sp_highest_contrib_biomass_sand}
+## calculate the total counts by species, then select the 20 with the highest biomass 
+top20.biomass.sand <- zoo.biomass.sand %>% 
+  gather(key = species, value = sp.biomass, -c(station:replicate)) %>%
+  group_by(species) %>%
+  summarise(total_biomass = sum(sp.biomass)) %>%
+  arrange(desc(total_biomass)) %>%
+  top_n(20)
+
+## now that we know which species these are, subset them from the overall biomass data frame
+top20.biomass.sand.st <- zoo.biomass.sand %>%
+  select(station, top20.biomass.sand$species) %>%
+  gather(key = species, value = sp_biomass, -station)
+
+## we'll use a custom transformation for abundance values (log(y/min + 1)) - as in the mvabund package
+
+# plot
+plot.most.biomass.sp.sand <- ggplot(top20.biomass.sand.st, 
+       aes(x = species, 
+           y = log(sp_biomass / min(top20.biomass.sand.st %>% filter(sp_biomass > 0) %>% select(sp_biomass)) + 1),
+           colour = station)) +
+  
+  # make points somewhat transparent so that points plotted on top of one another are still visible
+  geom_point(size = 2.5, alpha = 0.75) +
+  scale_color_brewer(name = "Station", palette = "Set2",
+                     labels = as.numeric(unique(top20.biomass.sand.st$station))) + 
+  
+  # reverse the order of x axis, so highest-contributing species are on top
+  scale_x_discrete(name = "", limits = rev(top20.biomass.sand$species)) + 
+  
+  scale_y_continuous(name = "Biomass (log(y/min + 1))") + 
+  coord_flip() + # put species on y axis - easier to read
+  theme_bw() + 
+  theme(axis.text.x = element_text(size = rel(1.3)), 
+        axis.text.y = element_text(size = rel(1.3)), 
+        legend.text = element_text(size = rel(1.2)), 
+        legend.title = element_text(size = rel(1.2))
+        )
+
+plot.most.biomass.sp.sand
+
+## save as file
+ggsave(file.path(figures.dir, "most_biomass_sp_st_sand.png"), 
+       plot.most.biomass.sp.sand, 
+       dpi = 300)
+```
+  

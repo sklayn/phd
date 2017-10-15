@@ -547,14 +547,14 @@ str(biomass.dfs.st)
 # get rid of factor columns
 biomass.dfs.st <- lapply(biomass.dfs.st, "[", -c(1:3))
 
-## arrange each df's columns (species) in descending order of abundance
-# calculate the total abundance of each species, then sort in descending order
+## arrange each df's columns (species) in descending order of biomass
+# calculate the total biomass of each species, then sort in descending order
 tot.biomass.dfs <- lapply(biomass.dfs.st, colSums)
 
 # make sure to return column indices, not names!
 tot.biomass.sorted <- lapply(tot.biomass.dfs, sort, decreasing = TRUE, index.return = TRUE)
 
-# extract the given number of species (columns) from the abundance data frame by their index
+# extract the given number of species (columns) from the biomass data frame by their index
 biomass.subs <- mapply(function(m, n) m[, n$ix[1:10]], 
                       biomass.dfs.st, 
                       tot.biomass.sorted, 
@@ -632,7 +632,7 @@ rm(p)
 
 
 
-### Diversity indices ###
+##### Diversity indices #####
 
 ## Alpha diversity (Whittaker, 1960) - description of the diversity in one spot
 diversity.sand <- alpha_diversity(zoo.abnd.sand)

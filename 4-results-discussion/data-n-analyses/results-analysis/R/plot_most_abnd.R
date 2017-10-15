@@ -12,7 +12,7 @@ plot_most_abnd_sp <- function(abnd.df, gr.factor, nb.sp = 15) {
   # extract the given number of species (columns) from the abundance data frame - by their index
   abnd.sub <- abnd.df[, tot.abnd.sorted$ix[1:nb.sp]]
   
-  # add the factor column to the data frame, if it's not already there
+  # add the grouping factor column to the data frame, if it's not already there
   abnd.sub <- cbind(abnd.sub, group = gr.factor)
   
   # convert the df to long format -> easier for ggplot2 to handle  
@@ -31,8 +31,8 @@ plot_most_abnd_sp <- function(abnd.df, gr.factor, nb.sp = 15) {
                                  y = "value.tr", 
                                  colour = "group")) + 
     geom_point(size = 2.5, alpha = 0.75) + 
-    # make points hollow so that points plotted on top of one another are still
-    # visible
+    # make points somewhat transparent so that points plotted on top of one 
+    # another are still visible
     scale_color_brewer(name = "Station", palette = "Set2") + 
     # reverse the order of x axis, so highest-contributing species are on top
     scale_x_discrete(name = "", limits = rev(levels(abnd.melted$variable))) + 
