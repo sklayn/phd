@@ -32,16 +32,16 @@ opts_chunk$set(cache = TRUE, # save results so that code blocks aren't re-run un
                highlight = TRUE, 
                small.mar = TRUE)
 ```
-Now, define some subdirectories which will (hopefully) keep the project organized.
+  Now, define some subdirectories which will (hopefully) keep the project organized.
 ```{r workspace_setup}
 data.dir <- "data"    # input data files
 functions.dir <- "R"  # functions & scripts
 save.dir <- "output"  # clean data, output from models & more complex calculations
 figures.dir <- "figs" # plots & figures 
 ```
-Next, import the custom functions we'll use in the analyses. They're organized in several files, by type of analysis, but we'll import them in bulk? from the functions subdirectory.
+  Next, import the custom functions we'll use in the analyses. They're organized in a separate subdirectory, in several files by type of analysis, but we'll import them manually (for now).
 ```{r functions_import}
-R.utils::sourceDirectory(path = file.path(functions.dir))
+source(file.path(functions.dir, "import-functions.R"))
 ```
 
 Import some necessary libraries.
@@ -49,6 +49,38 @@ Import some necessary libraries.
 library(vegan)
 library(viridis)
 library(tidyverse)
+```
+
+  Organize some commonly-used ggplot2 modifications into a more convenient (and less repetitive) format.
+```{r custom_ggplot_settings_helpers}
+## ggplot settings & things that I keep reusing
+ggplot_theme <- list(
+  theme_bw(),
+  theme(element_text(family = "Times"))
+)
+
+## helper to adjust ggplot text size & avoid repetitions 
+text_size <- function(text.x = NULL,
+                      text.y = NULL,
+                      title.x = NULL,
+                      title.y = NULL,
+                      legend.text = NULL,
+                      legend.title = NULL, 
+                      strip.x = NULL) {
+  theme(axis.text.x = element_text(size = text.x),
+        axis.text.y = element_text(size = text.y),
+        axis.title.x = element_text(size = title.x),
+        axis.title.y = element_text(size = title.y),
+        legend.text = element_text(size = legend.text), 
+        legend.title = element_text(size = legend.title), 
+        strip.text.x = element_text(size = strip.x)
+        )
+  }
+
+# log y/min + 1 transform - useful for species counts/biomass data visualization
+log_y_min <- function(y) {
+  log(y / min(y[y > 0]) + 1)
+}
 ```
 <br>  
 
@@ -100,21 +132,21 @@ write_csv(zoo.biomass.sand,
           path = file.path(save.dir, "biomass_sand_orig_clean.csv"))
 ```
 
-Now, on with the cleaning.  
-First we'll remove the all-0 columns (= species from the master species list which are not present in the current dataset - don't appear at these particular stations & samplings, etc.). This will simplify later analyses, especially the more complex ones that require a lot of time. 
+  Now, on with the cleaning.  
+  First we'll remove the all-0 columns (= species from the master species list which are not present in the current dataset - don't appear at these particular stations & samplings, etc.). This will simplify later analyses, especially the more complex ones that require a lot of time. 
 ```{r clean_data_sand_2}
 # long data is immensely easier to manipulate within the tidyverse, so we'll do some back-and-forth conversions
 zoo.abnd.sand <- zoo.abnd.sand %>% 
-  gather(key = species, value = sp.count, -c(station:replicate)) %>% 
+  gather(key = species, value = sp_count, -c(station:replicate)) %>% 
   group_by(species) %>% 
-  filter(sp.count > 0) %>%
-  spread(species, sp.count, fill = 0)
+  filter(sp_count > 0) %>%
+  spread(species, sp_count, fill = 0)
 
 zoo.biomass.sand <- zoo.biomass.sand %>% 
-  gather(key = species, value = sp.count, -c(station:replicate)) %>% 
+  gather(key = species, value = sp_biomass, -c(station:replicate)) %>% 
   group_by(species) %>% 
-  filter(sp.count > 0) %>%
-  spread(species, sp.count, fill = 0)
+  filter(sp_biomass > 0) %>%
+  spread(species, sp_biomass, fill = 0)
 ```
   
 Ready to proceed with the analyses themselves! 
@@ -128,9 +160,9 @@ Ready to proceed with the analyses themselves!
   + the **minimum biomass** is `r min(select(zoo.biomass.sand, -c(station:replicate)) %>% rowSums) * 20` g.m^-2^, in sample `r paste(unite(zoo.biomass.sand %>% filter(row_number() == which.min(select(zoo.biomass.sand, -c(station:replicate)) %>% rowSums)), "new", c(station, replicate)) %>% select(new))` from `r paste(unite(zoo.biomass.sand %>% filter(row_number() == which.min(select(zoo.biomass.sand, -c(station:replicate)) %>% rowSums)), "new", c(month, year)) %>% select(new))`.
   + the **maximum biomass** is `r max(select(zoo.biomass.sand, -c(station:replicate)) %>% rowSums) * 20` g.m^-2^, in sample `r paste(unite(zoo.biomass.sand %>% filter(row_number() == which.max(select(zoo.biomass.sand, -c(station:replicate)) %>% rowSums)), "new", c(station, replicate)) %>% select(new))` from `r paste(unite(zoo.biomass.sand %>% filter(row_number() == which.max(select(zoo.biomass.sand, -c(station:replicate)) %>% rowSums)), "new", c(month, year)) %>% select(new))`.
   
-  + there are `r ncol(select(zoo.abnd.sand, -c(station:replicate)))` taxa overall. Let's check them out to see which are identifed to species level.
+  + there are `r ncol(select(zoo.abnd.sand, -c(station:replicate)))` taxa overall. Let's check them out to see which are identifed to species level. Unfortunately, this has to be done by counting manually the ones that are not actually species.
 ```{r count_number_taxa_sand}
-names(select(zoo.abnd.sand, -c(station:replicate))) # unfortunately, determined by counting manually the ones that are not actually species.
+names(select(zoo.abnd.sand, -c(station:replicate)))
 ```
   This list includes some larvae, which are not technically separate taxa or groups (presumably, they belong to one of the other taxa on the list): Decapoda and Polychaeta larvae. There are also Pisces larvae, but since no other fish were found, I think it is better to leave them in, because they represent a new taxonomic group. It probably won't end up influencing any analysis but these summaries here. For the more complicated analyses, such singletons will be filtered out, because they don't bring much information.  
   So, the actual number of taxa (both species and upper-level taxa) is `r ncol(select(zoo.abnd.sand, -c(station:replicate), -starts_with("Decapoda"), -starts_with("Polychaeta")))`.  
@@ -144,12 +176,22 @@ names(select(zoo.abnd.sand, -c(station:replicate))) # unfortunately, determined 
 specnumber(select(zoo.abnd.sand, -c(station:replicate), -starts_with("Decapoda"), -starts_with("Polychaeta")), groups = zoo.abnd.sand$station)
 ```
     
+  We're going to transform the two data frames (abundance and biomass) to long format, because it multiple summaries will be done and I don't want to repeat the code every single time - not to mention that it takes time to compute; it's fine when it's a smallish dataset like mine, but if it were larger, it would cause problems.   
+```{r transform_data_frames_sand_long}
+zoo.abnd.sand.long <- zoo.abnd.sand %>%
+  gather(key = species, value = sp_count, -c(station:replicate))
+
+zoo.biomass.sand.long <- zoo.biomass.sand %>%
+  gather(key = species, value = sp_biomass, -c(station:replicate))
+```
+
   The ***summarized number of taxa*** by station and year is: 
 ```{r summarize_nb_taxa_sand_by_station_year}
-zoo.abnd.sand %>%
-  gather(species, sp.counts, -c(station:replicate), -starts_with("Decapoda"), -starts_with("Polychaeta")) %>%
+zoo.abnd.sand.long %>%
+  # remove taxa that shouldn't really be counted separately towards the total/mean number of taxa 
+  filter(!(species == "Decapoda larvae" | species == "Polychaeta larvae")) %>%
   group_by(station, year, month, replicate) %>%
-  transmute(total_nb_taxa = specnumber(sp.counts)) %>%
+  transmute(total_nb_taxa = specnumber(sp_count)) %>%
   distinct(station, year, total_nb_taxa) %>%
   group_by(station, year) %>% 
   # rounded to the nearest integer, because there is no such thing as half a species 
@@ -160,29 +202,33 @@ zoo.abnd.sand %>%
 
   The ***summarized abundance*** by station and year is: 
 ```{r summarize_abundance_sand_by_station_year}
-zoo.abnd.sand %>%
-  gather(species, sp.counts, -c(station:replicate)) %>%
-  group_by(station, year, month, replicate) %>%
-  transmute(total_abnd = sum(sp.counts) * 20) %>%
-  distinct(station, year, total_abnd) %>%
-  group_by(station, year) %>% 
-  # again rounded, because impossible to have half-individuals and such.
-  summarise(mean_abnd = round(mean(total_abnd)), 
-            sd_abnd = round(sd(total_abnd)), 
-            nb_replicates = n())
+## small helper function to summarize abundance/biomass. NB hardcoded grouping variables! (ok, because it's only meant to simplify code a little, not really be portable or reusable anyplace else).
+
+summarize_zoo_data <- function(zoo.data, value.col, per.m2, round.to = 0) {
+  # zoo.data - long data frame to be summarized
+  # value.col - name of column containing the values we're summarizing
+  # per.m2 - multiplication factor, to get abundance/biomass per m2 
+  # round - should the output be rounded?  
+  value.col <- enquo(value.col)
+  mean_name <- paste0(quo_name(value.col), "_mean")
+  sd_name <- paste0(quo_name(value.col), "_sd")
+  
+  zoo.data %>%
+    group_by(station, year, month, replicate) %>%
+    transmute(total := sum(!!value.col) * per.m2) %>%
+    distinct(station, year, total) %>%
+    group_by(station, year) %>%
+    summarise(!!mean_name := round(mean(total), round.to), 
+              !!sd_name := round(sd(total), round.to), 
+              nb_replicates = n())
+}
+
+summarize_zoo_data(zoo.abnd.sand.long, value.col = sp_count, per.m2 = 20, round.to = 0)
 ```
   
   The ***summarized biomass*** by station and year is: 
 ```{r summarize_biomass_sand_by_station_year}
-zoo.biomass.sand %>%
-  gather(species, sp.counts, -c(station:replicate)) %>%
-  group_by(station, year, month, replicate) %>%
-  transmute(total_biomass = sum(sp.counts) * 20) %>%
-  distinct(station, year, total_biomass) %>%
-  group_by(station, year) %>% 
-  summarise(mean_biomass = round(mean(total_biomass), 2), 
-            sd_biomass = round(sd(total_biomass), 2), 
-            nb_replicates = n())
+summarize_zoo_data(zoo.biomass.sand.long, value.col = sp_biomass, per.m2 = 20, round.to = 2)
 ```
 <br>    
 2. Taxonomic composition and structure  
@@ -198,7 +244,7 @@ current.taxa.sand <- zoo.taxonomy %>%
   filter(species %in% names(select(zoo.abnd.sand, -starts_with("Decapoda"), -starts_with("Polychaeta"))))
 ```
 
-First, let's explore the taxonomic composition of the community: number of taxa per phylum/class, etc. No need to save these plots: they'll remain in the notebook, and only the final versions, to be incorporated in the text, will be exported as files.
+  First, let's explore the taxonomic composition of the community: number of taxa per phylum/class, etc. No need to save these plots: they'll remain in the notebook, and only the final versions, to be incorporated in the text, will be exported as files.
 ```{r explore_taxonomic_structure_sand}
 ## number of taxa per class
 # here, the NAs get sorted to the end (the axis order is reversed, that's why they appear on top). But it's better to have them (barchart from base R, which I used previously, silently drops them) - they are not a mistake and should be present: some taxa have no class at all, others are only identified to an upper taxonomic level.
@@ -221,7 +267,7 @@ current.taxa.sand %>%
 
 ```
   
-The most commonly used larger taxonomic groups in the literature are not class & phylum, but Polychaeta, Mollusca, Crustacea, and Varia (= all the rest). Adding them requires some data transformation.
+  The most commonly used larger taxonomic groups in the literature are not class & phylum, but Polychaeta, Mollusca, Crustacea, and Varia (= all the rest). Adding them requires some data transformation.
 ```{r assign_taxonomic_groups_sand}
 # the conditions have to be based on fields that do not contain NAs - or, more precisely, they have to be formulated in a way that DOESN'T return NA as a result of the evaluation. Otherwise the reclassification will result in those groups remaining as NA. This behaviour is caused by the way dplyr and mutate treat NAs; works as I expected in base R, so I didn't notice it before.
 current.taxa.sand <- current.taxa.sand %>%
@@ -233,7 +279,7 @@ current.taxa.sand <- current.taxa.sand %>%
 current.taxa.sand %>%
   count(group)
 ```
-  Good. Now let's plot the number of taxa per (common) taxonomic group, and save as a graph (and file).
+  Good. Now let's plot the number of taxa per (common) taxonomic group, and save as file.
 ```{r plot_number_taxa_by_taxonomic_groups_sand}
 plot.nb.taxa.by.group <- current.taxa.sand %>% 
   count(group) %>%
@@ -259,59 +305,68 @@ ggsave(file.path(figures.dir, "nb_taxa_by_tax_group_sand.png"),
 lapply(unique(current.taxa.sand$group), 
        function(x) {
          current.taxa.sand %>%
-  group_by(group) %>%
-  count(family) %>%
-  filter(group == x) %>%
-  arrange(desc(n))
-         
+           group_by(group) %>%
+           count(family) %>%
+           filter(group == x) %>%
+           arrange(desc(n))
        })
 ```
-  
+  NB this is a count of the frequency of occurrence of each family; it would be a real count of the number of species if all taxa were identified to species level. As it is, there are some identified to genus or family level - so this count is only indicative. It really should be checked manually and corrected, if needed.     
   Now let's calculate the contribution of each taxonomic group to the ***overall community composition by abundance***.
 ```{r tax_group_abnd_contribution_overall_sand}
-zoo.abnd.sand %>% 
-  # exclude these poor larvae again
-  select(-starts_with("Decapoda"), -starts_with("Polychaeta")) %>%
-  gather(key = species, value = sp.count, -c(station:replicate)) %>%
-  left_join(current.taxa.sand, by = "species") %>%
-  group_by(group) %>%
-  summarise(total_count = sum(sp.count)) %>%
-  mutate(proportion = total_count / sum(total_count)) %>%
+## helper function to summarize taxonomic group contribution to abundance and biomass
+summarize_tax_group_contr <- function(zoo.data, tax.data, key.col, value.col, ...) {
+  # zoo.data - long data frame of count/biomass data
+  # tax.data - data frame (wide) of taxonomic information on the same species
+  # key.col - name of column to be used as key for joining the two data frames
+  # value.col - name of column in zoo.data containing the values to be summarized
+  
+  value.col <- enquo(value.col)
+  group.vars <- quos(...) # allow for multiple grouping variables 
+
+  zoo.data %>%
+    left_join(tax.data, by = key.col) %>%
+    group_by(!!!group.vars) %>%
+    summarise(total := sum(!!value.col)) %>%
+    mutate(proportion = total / sum(total))
+}
+
+zoo.abnd.sand.long %>% 
+  # exclude these poor larvae again (not that they contribute much, it's < 0.1%, but only to get the same numbers as are already in the text)
+  filter(!(species == "Decapoda larvae" | species == "Polychaeta larvae")) %>%
+  summarize_tax_group_contr(current.taxa.sand, 
+                            key.col = "species", 
+                            value.col = sp_count, 
+                            group) %>%
   arrange(desc(proportion))
 ```
   
   Now calculate and plot the ***contribution of the taxonomic groups to the abundance by station and year***. 
 ```{r tax_group_abnd_contrib_st_yr_sand}
-tax.props.st.yr.sand <- zoo.abnd.sand %>% 
-  # exclude these poor larvae again
-  select(-starts_with("Decapoda"), -starts_with("Polychaeta")) %>%
-  gather(key = species, value = sp.count, -c(station:replicate)) %>%
-  # join the taxonomic data, to use for grouping
-  left_join(current.taxa.sand, by = "species") %>%
-  group_by(station, year, group) %>%
-  summarise(total_count = sum(sp.count)) %>%
-  mutate(proportion = total_count / sum(total_count)) %>%
+tax.props.st.yr.sand <- zoo.abnd.sand.long %>% 
+  # exclude the larvae
+  filter(!(species == "Decapoda larvae" | species == "Polychaeta larvae")) %>%
+  summarize_tax_group_contr(current.taxa.sand, 
+                            key.col = "species", 
+                            value.col = sp_count, 
+                            station, year, group) %>%
   arrange(station, year)
 
 # plot this
 plot.tax.props.st.yr.sand <- ggplot(tax.props.st.yr.sand, 
        # convert station to numeric, because otherwise the labels overlap
-       mapping = aes(x = as.numeric(station), y = proportion * 100, fill = group)) +
+       mapping = aes(x = as.numeric(station), 
+                     y = proportion * 100, 
+                     fill = group)) +
   geom_bar(stat = "identity", position = "stack") +
   scale_x_continuous(breaks = c(1:6)) +
   scale_fill_viridis(discrete = TRUE, name = "") + 
   labs(x = "Station", y = "%") + 
   facet_wrap(~year, nrow = 2) + 
-  theme_bw() +
-  # modify the size of x axis and legend labels
-  theme(axis.text.x = element_text(size = rel(1.2)),
-        axis.text.y = element_text(size = rel(1.2)),
-        axis.title.x = element_text(size = rel(1.2)),
-        legend.text = element_text(size = rel(1.1)),
-        strip.text.x = element_text(size = rel(1.2))
-        )
+  theme_bw()
 
-plot.tax.props.st.yr.sand
+(plot.tax.props.st.yr.sand + text_size(text.x = rel(1.3), text.y = rel(1.3), title.x = rel(1.3), legend.text = rel(1.3), strip.x = rel(1.3))
+)
 
 ## save as file
 ggsave(file.path(figures.dir, "tax_gr_props_st_yr_sand.png"), 
@@ -321,97 +376,101 @@ ggsave(file.path(figures.dir, "tax_gr_props_st_yr_sand.png"),
     
   Check and plot the species which contribute the most to the abundance at each station.
 ```{r sp_highest_contrib_abnd_sand}
-## calculate the total counts by species, then select the top 20 most abundant
-top20.counts.sand <- zoo.abnd.sand %>% 
-  gather(key = species, value = sp.count, -c(station:replicate)) %>%
-  group_by(species) %>%
-  summarise(total_count = sum(sp.count)) %>%
-  arrange(desc(total_count)) %>%
-  top_n(20)
+## helper function to get the top n species with the highest abundance/biomass overall
+get_top_sp <- function(zoo.data, nb.sp = 20) {
+  # zoo.data - count/biomass data - wide format!
+  # nb.sp - number of top-contributing species to select
 
-## now that we know which species these are, we'll subset them from the overall abundance data frame
-top20.counts.sand.st <- zoo.abnd.sand %>%
-  select(station, top20.counts.sand$species) %>%
-  gather(key = species, value = sp_count, -station)
-
-## we'll use a custom transformation for abundance values (log(y/min + 1)) - as in the mvabund package
-
-# plot
-plot.most.abnd.sp.sand <- ggplot(top20.counts.sand.st, 
-       aes(x = species, 
-           y = log(sp_count / min(top20.counts.sand.st %>% filter(sp_count > 0) %>% select(sp_count)) + 1),
-           colour = station)) +
+  zoo.data.long <- zoo.data %>%
+    gather(key = species, value = sp_count, -c(station:replicate))
   
-  # make points somewhat transparent so that points plotted on top of one another are still visible
-  geom_point(size = 2.5, alpha = 0.75) +
-  scale_color_brewer(name = "Station", palette = "Set2",
-                     labels = as.numeric(unique(top20.counts.sand.st$station))) + 
+  # find the top n species in the dataset
+  top.n <- zoo.data.long %>%
+    group_by(species) %>%
+    summarise(total_count = sum(sp_count)) %>%
+    arrange(desc(total_count)) %>%
+    top_n(nb.sp)
   
-  # reverse the order of x axis, so highest-contributing species are on top
-  scale_x_discrete(name = "", limits = rev(top20.counts.sand$species)) + 
-  
-  scale_y_continuous(name = "Abundance (log(y/min + 1))") + 
-  coord_flip() + # put species on y axis - easier to read
-  theme_bw() + 
-  theme(axis.text.x = element_text(size = rel(1.3)), 
-        axis.text.y = element_text(size = rel(1.3)), 
-        legend.text = element_text(size = rel(1.2)), 
-        legend.title = element_text(size = rel(1.2))
-        )
+  # subset their actual abundance/biomass at each station from the original (wide) dataset (to keep the order; I'm too lazy to figure out how to best rearrange the long data itself)
+  top.n.st <- zoo.data %>%
+    select(station, top.n$species) %>%
+    gather(key = species, value = sp_count, -station) %>%
+    mutate(species = factor(species, levels = unique(species))) # convert species to factor to keep this order for plotting
 
-plot.most.abnd.sp.sand
+  return(top.n.st)
+}
+
+top20.counts.sand.st <- get_top_sp(zoo.abnd.sand, nb.sp = 20)
+
+## another helper for the plot, because I'm sick of writing all these parameters over and over
+plot_top_n <- function(top.n.sp.data, mapping, labs.legend, lab.y) {
+  # top.n.sp.data - data frame (long) of top species' counts/biomasses at the different stations
+  # mapping - mappings of the aesthetics
+  
+  ggplot(top.n.sp.data, mapping) +
+    geom_point(size = 2.5, alpha = 0.75) + # make points larger & partially transparent
+    scale_color_brewer(palette = "Set2",  labels = labs.legend) + 
+    ylab(lab.y) + 
+    coord_flip() +
+    theme_bw()
+}
+
+plot.most.abnd.sp.sand <- plot_top_n(top20.counts.sand.st, 
+                                     aes(x = species, y = log_y_min(sp_count), 
+                                         colour = station), 
+                                     labs.legend = as.numeric(unique(top20.counts.sand.st$station)), 
+                                     lab.y = "Abundance (log(y/min + 1))"
+                                     )
+
+(plot.most.abnd.sp.sand <- plot.most.abnd.sp.sand  + 
+    text_size(text.x = rel(1.3), text.y = rel(1.3), legend.text = rel(1.2), legend.title = rel(1.2)) + 
+    scale_x_discrete(name = "", limits = rev(levels(top20.counts.sand.st$species))) 
+)
 
 ## save as file
 ggsave(file.path(figures.dir, "most_abnd_sp_st_sand.png"), 
        plot.most.abnd.sp.sand, 
        dpi = 300)
 ```
-  
+    
   Now let's calculate the same way the ***overall community composition by biomass***.
 ```{r tax_group_biomass_contrib_overall_sand}
-zoo.biomass.sand %>% 
-  # exclude these poor larvae again
-  select(-starts_with("Decapoda"), -starts_with("Polychaeta")) %>%
-  gather(key = species, value = sp.count, -c(station:replicate)) %>%
-  left_join(current.taxa.sand, by = "species") %>%
-  group_by(group) %>%
-  summarise(total_biomass = sum(sp.count)) %>%
-  mutate(proportion = total_biomass / sum(total_biomass)) %>%
+zoo.biomass.sand.long %>% 
+  # exclude the larvae
+  filter(!(species == "Decapoda larvae" | species == "Polychaeta larvae")) %>%
+  summarize_tax_group_contr(current.taxa.sand, 
+                            key.col = "species", 
+                            value.col = sp_biomass, 
+                            group) %>%
   arrange(desc(proportion))
 ```
   
   Then calculate and plot the  ***contribution of the taxonomic groups to the biomass by station and year***. 
 ```{r tax_group_biomass_contribution_st_yr_sand}
-tax.props.biomass.st.yr.sand <- zoo.biomass.sand %>% 
-  # exclude these poor larvae again
-  select(-starts_with("Decapoda"), -starts_with("Polychaeta")) %>%
-  gather(key = species, value = sp.count, -c(station:replicate)) %>%
-  # join the taxonomic data, to use for grouping
-  left_join(current.taxa.sand, by = "species") %>%
-  group_by(station, year, group) %>%
-  summarise(total_biomass = sum(sp.count)) %>%
-  mutate(proportion = total_biomass / sum(total_biomass)) %>%
+tax.props.biomass.st.yr.sand <- zoo.biomass.sand.long %>% 
+  # exclude the larvae
+  filter(!(species == "Decapoda larvae" | species == "Polychaeta larvae")) %>%
+  summarize_tax_group_contr(current.taxa.sand, 
+                            key.col = "species", 
+                            value.col = sp_biomass, 
+                            station, year, group) %>%
   arrange(station, year)
 
 # plot this
 plot.tax.props.biomass.st.yr.sand <- ggplot(tax.props.biomass.st.yr.sand, 
        # convert station to numeric, because otherwise the labels overlap
-       mapping = aes(x = as.numeric(station), y = proportion * 100, fill = group)) +
+       mapping = aes(x = as.numeric(station), 
+                     y = proportion * 100, 
+                     fill = group)) +
   geom_bar(stat = "identity", position = "stack") +
   scale_x_continuous(breaks = c(1:6)) +
   scale_fill_viridis(discrete = TRUE, name = "") + 
   labs(x = "Station", y = "%") + 
   facet_wrap(~year, nrow = 2) + 
-  theme_bw() +
-  # modify the size of x axis and legend labels
-  theme(axis.text.x = element_text(size = rel(1.2)),
-        axis.text.y = element_text(size = rel(1.2)),
-        axis.title.x = element_text(size = rel(1.2)),
-        legend.text = element_text(size = rel(1.1)),
-        strip.text.x = element_text(size = rel(1.2))
-        )
+  theme_bw()
 
-plot.tax.props.biomass.st.yr.sand
+(plot.tax.props.biomass.st.yr.sand + text_size(text.x = rel(1.3), text.y = rel(1.3), title.x = rel(1.3), legend.text = rel(1.3), strip.x = rel(1.3))
+)
 
 ## save as file
 ggsave(file.path(figures.dir, "tax_gr_props_biomass_st_yr_sand.png"), 
@@ -421,49 +480,25 @@ ggsave(file.path(figures.dir, "tax_gr_props_biomass_st_yr_sand.png"),
   
   Check and plot the species which contribute the most to the biomass at each station.
 ```{r sp_highest_contrib_biomass_sand}
-## calculate the total counts by species, then select the 20 with the highest biomass 
-top20.biomass.sand <- zoo.biomass.sand %>% 
-  gather(key = species, value = sp.biomass, -c(station:replicate)) %>%
-  group_by(species) %>%
-  summarise(total_biomass = sum(sp.biomass)) %>%
-  arrange(desc(total_biomass)) %>%
-  top_n(20)
+## calculate the total biomass counts by species, then select the 20 with the highest biomass
+top20.biomass.sand.st <- get_top_sp(zoo.biomass.sand, nb.sp = 20)
 
-## now that we know which species these are, subset them from the overall biomass data frame
-top20.biomass.sand.st <- zoo.biomass.sand %>%
-  select(station, top20.biomass.sand$species) %>%
-  gather(key = species, value = sp_biomass, -station)
+## plot them
+plot.highest.biomass.sp.sand <- plot_top_n(top20.biomass.sand.st, 
+                                     aes(x = species, y = log_y_min(sp_count), 
+                                         colour = station), 
+                                     labs.legend = as.numeric(unique(top20.biomass.sand.st$station)), 
+                                     lab.y = "Biomass (log(y/min + 1))"
+                                     )
 
-## we'll use a custom transformation for abundance values (log(y/min + 1)) - as in the mvabund package
-
-# plot
-plot.most.biomass.sp.sand <- ggplot(top20.biomass.sand.st, 
-       aes(x = species, 
-           y = log(sp_biomass / min(top20.biomass.sand.st %>% filter(sp_biomass > 0) %>% select(sp_biomass)) + 1),
-           colour = station)) +
+(plot.highest.biomass.sp.sand <- plot.highest.biomass.sp.sand  + 
+    text_size(text.x = rel(1.3), text.y = rel(1.3), legend.text = rel(1.2), legend.title = rel(1.2)) + 
+    scale_x_discrete(name = "", limits = rev(levels(top20.biomass.sand.st$species))) 
+)
   
-  # make points somewhat transparent so that points plotted on top of one another are still visible
-  geom_point(size = 2.5, alpha = 0.75) +
-  scale_color_brewer(name = "Station", palette = "Set2",
-                     labels = as.numeric(unique(top20.biomass.sand.st$station))) + 
-  
-  # reverse the order of x axis, so highest-contributing species are on top
-  scale_x_discrete(name = "", limits = rev(top20.biomass.sand$species)) + 
-  
-  scale_y_continuous(name = "Biomass (log(y/min + 1))") + 
-  coord_flip() + # put species on y axis - easier to read
-  theme_bw() + 
-  theme(axis.text.x = element_text(size = rel(1.3)), 
-        axis.text.y = element_text(size = rel(1.3)), 
-        legend.text = element_text(size = rel(1.2)), 
-        legend.title = element_text(size = rel(1.2))
-        )
-
-plot.most.biomass.sp.sand
-
 ## save as file
-ggsave(file.path(figures.dir, "most_biomass_sp_st_sand.png"), 
-       plot.most.biomass.sp.sand, 
+ggsave(file.path(figures.dir, "highest_biomass_sp_st_sand.png"), 
+       plot.highest.biomass.sp.sand, 
        dpi = 300)
 ```
   
