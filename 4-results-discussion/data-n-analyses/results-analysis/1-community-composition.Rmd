@@ -1,5 +1,6 @@
 ---
 title: "Biodiversity of macrozoobenthic communities"
+date: "2017-10-17"
 output:
   html_notebook:
     theme: paper
@@ -54,10 +55,10 @@ library(tidyverse)
   Organize some commonly-used ggplot2 modifications into a more convenient (and less repetitive) format.
 ```{r custom_ggplot_settings_helpers}
 ## ggplot settings & things that I keep reusing
-ggplot_theme <- list(
-  theme_bw(),
-  theme(element_text(family = "Times"))
-)
+# ggplot_theme <- list(
+#   theme_bw(),
+#   theme(element_text(family = "Times"))
+# )
 
 ## helper to adjust ggplot text size & avoid repetitions 
 text_size <- function(text.x = NULL,
@@ -157,8 +158,8 @@ Ready to proceed with the analyses themselves!
   + the **maximum abundance** is `r format(max(select(zoo.abnd.sand, -c(station:replicate)) %>% rowSums) * 20, scientific = FALSE)` ind.m^-2^, in sample `r paste(unite(zoo.abnd.sand %>% filter(row_number() == which.max(select(zoo.abnd.sand, -c(station:replicate)) %>% rowSums)), "new", c(station, replicate)) %>% select(new))` from `r paste(unite(zoo.abnd.sand %>% filter(row_number() == which.max(select(zoo.abnd.sand, -c(station:replicate)) %>% rowSums)), "new", c(month, year)) %>% select(new))`.
   
   + the **average biomass** for the whole dataset is `r round(mean(select(zoo.biomass.sand, -c(station:replicate)) %>% rowSums) * 20, 2)` g.m^-2^, with standard deviation `r round(sd(select(zoo.biomass.sand, -c(station:replicate)) %>% rowSums) * 20, 2)`.
-  + the **minimum biomass** is `r min(select(zoo.biomass.sand, -c(station:replicate)) %>% rowSums) * 20` g.m^-2^, in sample `r paste(unite(zoo.biomass.sand %>% filter(row_number() == which.min(select(zoo.biomass.sand, -c(station:replicate)) %>% rowSums)), "new", c(station, replicate)) %>% select(new))` from `r paste(unite(zoo.biomass.sand %>% filter(row_number() == which.min(select(zoo.biomass.sand, -c(station:replicate)) %>% rowSums)), "new", c(month, year)) %>% select(new))`.
-  + the **maximum biomass** is `r max(select(zoo.biomass.sand, -c(station:replicate)) %>% rowSums) * 20` g.m^-2^, in sample `r paste(unite(zoo.biomass.sand %>% filter(row_number() == which.max(select(zoo.biomass.sand, -c(station:replicate)) %>% rowSums)), "new", c(station, replicate)) %>% select(new))` from `r paste(unite(zoo.biomass.sand %>% filter(row_number() == which.max(select(zoo.biomass.sand, -c(station:replicate)) %>% rowSums)), "new", c(month, year)) %>% select(new))`.
+  + the **minimum biomass** is `r round(min(select(zoo.biomass.sand, -c(station:replicate)) %>% rowSums) * 20, 2)` g.m^-2^, in sample `r paste(unite(zoo.biomass.sand %>% filter(row_number() == which.min(select(zoo.biomass.sand, -c(station:replicate)) %>% rowSums)), "new", c(station, replicate)) %>% select(new))` from `r paste(unite(zoo.biomass.sand %>% filter(row_number() == which.min(select(zoo.biomass.sand, -c(station:replicate)) %>% rowSums)), "new", c(month, year)) %>% select(new))`.
+  + the **maximum biomass** is `r round(max(select(zoo.biomass.sand, -c(station:replicate)) %>% rowSums) * 20, 2)` g.m^-2^, in sample `r paste(unite(zoo.biomass.sand %>% filter(row_number() == which.max(select(zoo.biomass.sand, -c(station:replicate)) %>% rowSums)), "new", c(station, replicate)) %>% select(new))` from `r paste(unite(zoo.biomass.sand %>% filter(row_number() == which.max(select(zoo.biomass.sand, -c(station:replicate)) %>% rowSums)), "new", c(month, year)) %>% select(new))`.
   
   + there are `r ncol(select(zoo.abnd.sand, -c(station:replicate)))` taxa overall. Let's check them out to see which are identifed to species level. Unfortunately, this has to be done by counting manually the ones that are not actually species.
 ```{r count_number_taxa_sand}
@@ -352,20 +353,26 @@ tax.props.st.yr.sand <- zoo.abnd.sand.long %>%
                             station, year, group) %>%
   arrange(station, year)
 
-# plot this
-plot.tax.props.st.yr.sand <- ggplot(tax.props.st.yr.sand, 
-       # convert station to numeric, because otherwise the labels overlap
-       mapping = aes(x = as.numeric(station), 
-                     y = proportion * 100, 
-                     fill = group)) +
-  geom_bar(stat = "identity", position = "stack") +
-  scale_x_continuous(breaks = c(1:6)) +
-  scale_fill_viridis(discrete = TRUE, name = "") + 
-  labs(x = "Station", y = "%") + 
-  facet_wrap(~year, nrow = 2) + 
-  theme_bw()
+## helper for plotting, because all the repetition is killing me. Don't care if everything within is hardcoded, this is only going to be used here and with this data anyway.
+plot_tax_props <- function(tax.props.data) {
+  
+  # station needs to be converted to numeric, because otherwise the labels overlap
+  nb.stations <- length(unique(tax.props.data$station))
+  
+  ggplot(tax.props.data) + 
+    geom_bar(mapping = aes(x = as.numeric(station),
+                           y = proportion * 100, 
+                           fill = group), 
+             stat = "identity", position = "stack", inherit.aes = TRUE) +
+    scale_fill_viridis(discrete = TRUE, name = "") +
+    scale_x_continuous(breaks = c(1:nb.stations)) + 
+    labs(x = "Station", y = "%") + 
+    facet_wrap(~year, nrow = 2) + 
+    theme_bw()
+}
 
-(plot.tax.props.st.yr.sand + text_size(text.x = rel(1.3), text.y = rel(1.3), title.x = rel(1.3), legend.text = rel(1.3), strip.x = rel(1.3))
+(plot.tax.props.st.yr.sand <- plot_tax_props(tax.props.st.yr.sand) +
+    text_size(text.x = rel(1.3), text.y = rel(1.3), title.x = rel(1.3), legend.text = rel(1.3), strip.x = rel(1.3))
 )
 
 ## save as file
@@ -402,14 +409,15 @@ get_top_sp <- function(zoo.data, nb.sp = 20) {
 
 top20.counts.sand.st <- get_top_sp(zoo.abnd.sand, nb.sp = 20)
 
-## another helper for the plot, because I'm sick of writing all these parameters over and over
-plot_top_n <- function(top.n.sp.data, mapping, labs.legend, lab.y) {
+## another helper for the plot, because I'm sick of writing all these parameters over and over - not that it ended up being that much more concise, but ok, teachable moment
+
+plot_top_n <- function(top.n.sp.data, mapping, labs.legend, lab.y, palette) {
   # top.n.sp.data - data frame (long) of top species' counts/biomasses at the different stations
   # mapping - mappings of the aesthetics
   
   ggplot(top.n.sp.data, mapping) +
     geom_point(size = 2.5, alpha = 0.75) + # make points larger & partially transparent
-    scale_color_brewer(palette = "Set2",  labels = labs.legend) + 
+    scale_color_brewer(palette = palette,  labels = labs.legend) + 
     ylab(lab.y) + 
     coord_flip() +
     theme_bw()
@@ -419,7 +427,8 @@ plot.most.abnd.sp.sand <- plot_top_n(top20.counts.sand.st,
                                      aes(x = species, y = log_y_min(sp_count), 
                                          colour = station), 
                                      labs.legend = as.numeric(unique(top20.counts.sand.st$station)), 
-                                     lab.y = "Abundance (log(y/min + 1))"
+                                     lab.y = "Abundance (log(y/min + 1))", 
+                                     palette = "Set2"
                                      )
 
 (plot.most.abnd.sp.sand <- plot.most.abnd.sp.sand  + 
@@ -457,19 +466,8 @@ tax.props.biomass.st.yr.sand <- zoo.biomass.sand.long %>%
   arrange(station, year)
 
 # plot this
-plot.tax.props.biomass.st.yr.sand <- ggplot(tax.props.biomass.st.yr.sand, 
-       # convert station to numeric, because otherwise the labels overlap
-       mapping = aes(x = as.numeric(station), 
-                     y = proportion * 100, 
-                     fill = group)) +
-  geom_bar(stat = "identity", position = "stack") +
-  scale_x_continuous(breaks = c(1:6)) +
-  scale_fill_viridis(discrete = TRUE, name = "") + 
-  labs(x = "Station", y = "%") + 
-  facet_wrap(~year, nrow = 2) + 
-  theme_bw()
-
-(plot.tax.props.biomass.st.yr.sand + text_size(text.x = rel(1.3), text.y = rel(1.3), title.x = rel(1.3), legend.text = rel(1.3), strip.x = rel(1.3))
+(plot.tax.props.biomass.st.yr.sand <- plot_tax_props(tax.props.biomass.st.yr.sand) + 
+   text_size(text.x = rel(1.3), text.y = rel(1.3), title.x = rel(1.3), legend.text = rel(1.3), strip.x = rel(1.3))
 )
 
 ## save as file
@@ -488,7 +486,8 @@ plot.highest.biomass.sp.sand <- plot_top_n(top20.biomass.sand.st,
                                      aes(x = species, y = log_y_min(sp_count), 
                                          colour = station), 
                                      labs.legend = as.numeric(unique(top20.biomass.sand.st$station)), 
-                                     lab.y = "Biomass (log(y/min + 1))"
+                                     lab.y = "Biomass (log(y/min + 1))",
+                                     palette = "Set2"
                                      )
 
 (plot.highest.biomass.sp.sand <- plot.highest.biomass.sp.sand  + 
@@ -501,4 +500,320 @@ ggsave(file.path(figures.dir, "highest_biomass_sp_st_sand.png"),
        plot.highest.biomass.sp.sand, 
        dpi = 300)
 ```
+  
+  
+---
+
+#### Macrozoobenthic communities in the seagrass communities of Burgas Bay (2013-2014)
+Now we'll do all of this again, for the seagrass communities.
+Import the zoobenthic abundance & biomass data. 
+```{r abundance_data_zostera_import, message = FALSE}
+## import & check the abundance data. Dimensions should be 32 x 205 (5 metadata + 200 species columns); all species columns should be numeric.
+(zoo.abnd.zostera <- import_zoo_data(data.dir = data.dir,
+                                     zoo.data = "zoo_abnd_zostera_orig.csv", 
+                                     meta.labels = c("station", "month", "year", "habitat", "replicate")))
+```
+  
+Convert the month and year back to numeric (they remained as character during import); then arrange the data frame - by station (first converting to factor), then year and month.
+```{r clean_abundance_data_zostera}
+(zoo.abnd.zostera <- zoo.abnd.zostera %>% 
+   mutate(year = as.numeric(year), 
+          month = as.numeric(month), 
+          station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo"))) %>%
+   arrange(station, year, month))
+```
+  
+Now on to the biomass! 
+```{r biomass_data_zostera_import, message = FALSE}
+## import & check out the biomass data. 
+(zoo.biomass.zostera <- import_zoo_data(data.dir = data.dir,
+                                        zoo.data = "zoo_biomass_zostera_orig.csv",
+                                        meta.labels = c("station", "month", "year", "habitat", "replicate")))
+# same expected structure as the abundance 
+```
+
+```{r clean_biomass_data_zostera}
+(zoo.biomass.zostera <- zoo.biomass.zostera %>% 
+   mutate(year = as.numeric(year),
+          month = as.numeric(month), 
+          station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo"))) %>%
+   arrange(station, year, month))
+```
+  
+Goody! To be on the safe side, save the cleaned abundance & biomass data frames.
+```{r save_clean_data_zostera}
+write_csv(zoo.abnd.zostera, 
+          path = file.path(save.dir, "abnd_zostera_orig_clean.csv"))
+write_csv(zoo.biomass.zostera, 
+          path = file.path(save.dir, "biomass_zostera_orig_clean.csv"))
+```
+
+  On with the cleaning.  
+  First we'll remove the species that are absent from the current dataset - don't appear at these particular stations & samplings, etc. This will simplify later analyses, especially the more complex ones that require a lot of time. 
+```{r clean_data_zostera_2}
+# long data is immensely easier to manipulate within the tidyverse, so we'll do some back-and-forth conversions
+zoo.abnd.zostera <- zoo.abnd.zostera %>% 
+  gather(key = species, value = sp_count, -c(station:replicate)) %>% 
+  group_by(species) %>% 
+  filter(sp_count > 0) %>%
+  spread(species, sp_count, fill = 0)
+
+zoo.biomass.zostera <- zoo.biomass.zostera %>% 
+  gather(key = species, value = sp_biomass, -c(station:replicate)) %>% 
+  group_by(species) %>% 
+  filter(sp_biomass > 0) %>%
+  spread(species, sp_biomass, fill = 0)
+```
+  
+Ready to proceed with the community structure & composition analyses! 
+  
+1. Summary statistics for the community structure & composition  
+Careful with the multilplication factor when going to ind.m^-2^ & g.m^-2^: seagrass communities were sampled with corers, and the sampling surface is different than in sand communities.  
+  + the **average abundance** for the whole dataset is `r format(round(mean(select(zoo.abnd.zostera, -c(station:replicate)) %>% rowSums) * (1/0.0078), 0), scientific = FALSE)` ind.m^-2^, with standard deviation `r format(round(sd(select(zoo.abnd.zostera, -c(station:replicate)) %>% rowSums) * (1/0.0078), 0), scientific = FALSE)`.
+  + the **minimum abundance** is `r format(round(min(select(zoo.abnd.zostera, -c(station:replicate)) %>% rowSums) * (1/0.0078), 0), scientific = FALSE)` ind.m^-2^, in sample `r paste(unite(zoo.abnd.zostera %>% filter(row_number() == which.min(select(zoo.abnd.zostera, -c(station:replicate)) %>% rowSums)), "new", c(station, replicate)) %>% select(new))` from `r paste(unite(zoo.abnd.zostera %>% filter(row_number() == which.min(select(zoo.abnd.zostera, -c(station:replicate)) %>% rowSums)), "new", c(month, year)) %>% select(new))`.
+  + the **maximum abundance** is `r format(round(max(select(zoo.abnd.zostera, -c(station:replicate)) %>% rowSums) * (1/0.0078), 0), scientific = FALSE)` ind.m^-2^, in sample `r paste(unite(zoo.abnd.zostera %>% filter(row_number() == which.max(select(zoo.abnd.zostera, -c(station:replicate)) %>% rowSums)), "new", c(station, replicate)) %>% select(new))` from `r paste(unite(zoo.abnd.zostera %>% filter(row_number() == which.max(select(zoo.abnd.zostera, -c(station:replicate)) %>% rowSums)), "new", c(month, year)) %>% select(new))`.
+  
+  + the **average biomass** for the whole dataset is `r round(mean(select(zoo.biomass.zostera, -c(station:replicate)) %>% rowSums) * (1/0.0078), 2)` g.m^-2^, with standard deviation `r round(sd(select(zoo.biomass.zostera, -c(station:replicate)) %>% rowSums) * (1/0.0078), 2)`.
+  + the **minimum biomass** is `r round(min(select(zoo.biomass.zostera, -c(station:replicate)) %>% rowSums) * (1/0.0078), 2)` g.m^-2^, in sample `r paste(unite(zoo.biomass.zostera %>% filter(row_number() == which.min(select(zoo.biomass.zostera, -c(station:replicate)) %>% rowSums)), "new", c(station, replicate)) %>% select(new))` from `r paste(unite(zoo.biomass.zostera %>% filter(row_number() == which.min(select(zoo.biomass.zostera, -c(station:replicate)) %>% rowSums)), "new", c(month, year)) %>% select(new))`.
+  + the **maximum biomass** is `r round(max(select(zoo.biomass.zostera, -c(station:replicate)) %>% rowSums) * (1/0.0078), 2)` g.m^-2^, in sample `r paste(unite(zoo.biomass.zostera %>% filter(row_number() == which.max(select(zoo.biomass.zostera, -c(station:replicate)) %>% rowSums)), "new", c(station, replicate)) %>% select(new))` from `r paste(unite(zoo.biomass.zostera %>% filter(row_number() == which.max(select(zoo.biomass.zostera, -c(station:replicate)) %>% rowSums)), "new", c(month, year)) %>% select(new))`.
+  
+  + there are `r ncol(select(zoo.abnd.zostera, -c(station:replicate)))` taxa overall. Let's check them out to see which are identifed to species level. Unfortunately, this has to be done by counting manually the ones that are not actually species.
+```{r count_number_taxa_zostera}
+names(select(zoo.abnd.zostera, -c(station:replicate)))
+```
+
+  We'll exclude the Polychaete larvae from this list (they are not technically separate taxa or groups; presumably they belong to one of the other taxa on the list). Again, it's unlikely this will influence any further analysis.  
+  So, the actual number of taxa (both species and upper-level taxa) is `r ncol(select(zoo.abnd.zostera, -c(station:replicate), -starts_with("Polychaeta")))`.  
+  
+  + the **average number of taxa** for the dataset is `r round(mean(specnumber(select(zoo.abnd.zostera, -c(station:replicate), -starts_with("Polychaeta")))), 0)`, with standard deviation `r round(sd(specnumber(select(zoo.abnd.zostera, -c(station:replicate), -starts_with("Polychaeta")))), 0)`.
+  + the **minimum number of taxa** is `r min(specnumber(select(zoo.abnd.zostera, -c(station:replicate), -starts_with("Polychaeta"))))`, in sample `r paste(unite(zoo.abnd.zostera %>% filter(row_number() == which.min(select(zoo.abnd.zostera, -c(station:replicate), -starts_with("Polychaeta")) %>% specnumber)), "new", c(station, replicate)) %>% select(new))` from `r paste(unite(zoo.abnd.zostera %>% filter(row_number() == which.min(select(zoo.abnd.zostera, -c(station:replicate), -starts_with("Polychaeta")) %>% specnumber)), "new", c(month, year)) %>% select(new))`. 
+  + the **maximum number of taxa** is `r max(specnumber(select(zoo.abnd.zostera, -c(station:replicate), -starts_with("Polychaeta"))))`, in sample `r paste(unite(zoo.abnd.zostera %>% filter(row_number() == which.max(select(zoo.abnd.zostera, -c(station:replicate), -starts_with("Polychaeta")) %>% specnumber)), "new", c(station, replicate)) %>% select(new))` from `r paste(unite(zoo.abnd.zostera %>% filter(row_number() == which.max(select(zoo.abnd.zostera, -c(station:replicate), -starts_with("Polychaeta")) %>% specnumber)), "new", c(month, year)) %>% select(new))`.
+   
+  The **total number of taxa per station** for the whole study period is:
+```{r summarize_nb_taxa_zostera_by_station}
+specnumber(select(zoo.abnd.zostera, -c(station:replicate), -starts_with("Polychaeta")), groups = zoo.abnd.zostera$station)
+```
+  Again, we're going to transform the two data frames (abundance and biomass) to long format, which is more convenient.   
+```{r transform_data_frames_zostera_long}
+zoo.abnd.zostera.long <- zoo.abnd.zostera %>%
+  gather(key = species, value = sp_count, -c(station:replicate))
+
+zoo.biomass.zostera.long <- zoo.biomass.zostera %>%
+  gather(key = species, value = sp_biomass, -c(station:replicate))
+```
+
+  The ***summarized number of taxa*** by station and year is: 
+```{r summarize_nb_taxa_zostera_by_station_year}
+zoo.abnd.zostera.long %>%
+  # remove taxa that shouldn't really be counted separately towards the total/mean number of taxa 
+  filter(species != "Polychaeta larvae") %>%
+  group_by(station, year, month, replicate) %>%
+  transmute(total_nb_taxa = specnumber(sp_count)) %>%
+  distinct(station, year, total_nb_taxa) %>%
+  group_by(station, year) %>% 
+  # rounded to the nearest integer, because there is no such thing as half a species 
+  summarise(mean_nb_taxa = round(mean(total_nb_taxa)), 
+            sd_nb_taxa = round(sd(total_nb_taxa)), 
+            nb_replicates = n())
+```
+
+  The ***summarized abundance*** by station and year is: 
+```{r summarize_abundance_zostera_by_station_year}
+summarize_zoo_data(zoo.abnd.zostera.long, value.col = sp_count, per.m2 = 1/0.0078, round.to = 0)
+```
+  
+  The ***summarized biomass*** by station and year is: 
+```{r summarize_biomass_zostera_by_station_year}
+summarize_zoo_data(zoo.biomass.zostera.long, value.col = sp_biomass, per.m2 = 1/0.0078, round.to = 2)
+```
+<br>  
+  2. Taxonomic composition and structure  
+  Leave only the taxa which were present in the zostera samples (abundance > 0 in at least one sample).
+```{r subset_taxonomic_data_zostera}
+current.taxa.zostera <- zoo.taxonomy %>%
+  filter(species %in% names(select(zoo.abnd.zostera, -starts_with("Polychaeta"))))
+```
+
+  Explore the taxonomic composition of the community: number of taxa per phylum/class, etc.
+```{r explore_taxonomic_structure_zostera}
+## number of taxa per class
+current.taxa.zostera %>% 
+  count(class, sort = TRUE) %>%
+  ggplot(mapping = aes(x = reorder(class, n), y = n)) + 
+    geom_bar(stat = "identity", fill = "light green") + 
+    coord_flip() + 
+    labs(title = "Per class", x = "", y = "Number of taxa") +
+    theme_bw()
+
+## number of taxa per phylum
+current.taxa.zostera %>% 
+  count(phylum, sort = TRUE) %>%
+  ggplot(mapping = aes(x = reorder(phylum, n), y = n)) + 
+    geom_bar(stat = "identity", fill = "light green") + 
+    coord_flip() + 
+    labs(title = "Per phylum", x = "", y = "Number of taxa") +
+    theme_bw()
+```
+  
+  Add in the more commonly used larger taxonomic groups (Polychaeta, Mollusca, Crustacea, and Varia).
+```{r assign_taxonomic_groups_zostera}
+# the conditions have to be based on fields that do not contain NAs - or, more precisely, they have to be formulated in a way that DOESN'T return NA as a result of the evaluation. Otherwise the reclassification will result in those groups remaining as NA. This behaviour is caused by the way dplyr and mutate treat NAs; works as I expected in base R, so I didn't notice it before.
+current.taxa.zostera <- current.taxa.zostera %>%
+  mutate(group = if_else(phylum == "Mollusca", "Mollusca",
+                         if_else(phylum == "Annelida" & class == "Polychaeta", "Polychaeta", 
+                                 if_else(phylum == "Arthropoda" & subclass %in% c("Eumalacostraca", "Thecostraca"), "Crustacea", 
+                                         "Varia"))))
+
+current.taxa.zostera %>%
+  count(group)
+```
+  Now plot the number of taxa per (common) taxonomic group, and save as file.
+```{r plot_number_taxa_by_taxonomic_groups_zostera}
+plot.nb.taxa.by.group <- current.taxa.zostera %>% 
+  count(group) %>%
+  ggplot(mapping = aes(x = reorder(group, n), y = n)) + 
+    geom_bar(stat = "identity", fill = "light green") + 
+    coord_flip() + 
+    labs(x = "", y = "Number of taxa") +
+    theme(axis.text.x = element_text(size = rel(1.3)), 
+          axis.text.y = element_text(size = rel(1.3))) +
+    theme_bw()
+
+ggsave(file.path(figures.dir, "nb_taxa_by_tax_group_zostera.png"), 
+       plot.nb.taxa.by.group, 
+       dpi = 300)
+```
+  
+  ***Crustacea*** are represented by `r nrow(current.taxa.zostera %>% group_by(group) %>% count(family) %>% filter(group == "Crustacea"))` families.  
+  ***Polychaeta*** are represented by `r nrow(current.taxa.zostera %>% group_by(group) %>% count(family) %>% filter(group == "Polychaeta"))` families.   
+  ***Mollusca*** are represented by `r nrow(current.taxa.zostera %>% group_by(group) %>% count(family) %>% filter(group == "Mollusca"))` families.  
+  
+  The families with the highest number of species are:
+```{r breakdown_nb_taxa_families_zostera}
+lapply(unique(current.taxa.zostera$group), 
+       function(x) {
+         current.taxa.zostera %>%
+           group_by(group) %>%
+           count(family) %>%
+           filter(group == x) %>%
+           arrange(desc(n))
+       })
+```
+  NB again, this is a count of the frequency of occurrence of each family; it would be a real count of the number of species if all taxa were identified to species level. As it is, there are some identified to genus or family level - so this count is only indicative. It really should be checked manually and corrected, if needed.  
+  Now let's calculate the contribution of each taxonomic group to the ***overall community composition by abundance***.
+```{r tax_group_abnd_contribution_overall_zostera}
+zoo.abnd.zostera.long %>% 
+  # exclude these poor larvae again (not that they contribute much, it's < 0.1%, but only to get the same numbers as are already in the text)
+  filter(!species == "Polychaeta larvae") %>%
+  summarize_tax_group_contr(current.taxa.zostera, 
+                            key.col = "species", 
+                            value.col = sp_count, 
+                            group) %>%
+  arrange(desc(proportion))
+```
+    
+  Now calculate and plot the ***contribution of the taxonomic groups to the abundance by station and year*** in the seagrass communities. 
+```{r tax_group_abnd_contrib_st_yr_zostera}
+tax.props.st.yr.zostera <- zoo.abnd.zostera.long %>% 
+  # exclude the larvae
+  filter(!species == "Polychaeta larvae") %>%
+  summarize_tax_group_contr(current.taxa.zostera, 
+                            key.col = "species", 
+                            value.col = sp_count, 
+                            station, year, group) %>%
+  arrange(station, year)
+
+(plot.tax.props.st.yr.zostera <- plot_tax_props(tax.props.st.yr.zostera) +
+    text_size(text.x = rel(1.3), text.y = rel(1.3), title.x = rel(1.3), legend.text = rel(1.3), strip.x = rel(1.3))
+)
+
+## save as file
+ggsave(file.path(figures.dir, "tax_gr_props_st_yr_zostera.png"), 
+       plot.tax.props.st.yr.zostera, 
+       dpi = 300)
+```
+    
+  Check and plot the species which contribute the most to the abundance at each station.
+```{r sp_highest_contrib_abnd_zostera}
+top20.counts.zostera.st <- get_top_sp(zoo.abnd.zostera, nb.sp = 20)
+
+plot.most.abnd.sp.zostera <- plot_top_n(top20.counts.zostera.st, 
+                                     aes(x = species, y = log_y_min(sp_count), 
+                                         colour = station), 
+                                     labs.legend = as.numeric(unique(top20.counts.zostera.st$station)), 
+                                     lab.y = "Abundance (log(y/min + 1))", 
+                                     palette = "Set2"
+                                     )
+
+(plot.most.abnd.sp.zostera <- plot.most.abnd.sp.zostera  + 
+    text_size(text.x = rel(1.3), text.y = rel(1.3), legend.text = rel(1.2), legend.title = rel(1.2)) + 
+    scale_x_discrete(name = "", limits = rev(levels(top20.counts.zostera.st$species))) 
+)
+
+## save as file
+ggsave(file.path(figures.dir, "most_abnd_sp_st_zostera.png"), 
+       plot.most.abnd.sp.zostera, 
+       dpi = 300)
+```
+  
+  Now let's calculate the same way the ***overall community composition by biomass***.
+```{r tax_group_biomass_contrib_overall_zostera}
+zoo.biomass.zostera.long %>% 
+  # exclude the larvae
+  filter(!species == "Polychaeta larvae") %>%
+  summarize_tax_group_contr(current.taxa.zostera, 
+                            key.col = "species", 
+                            value.col = sp_biomass, 
+                            group) %>%
+  arrange(desc(proportion))
+```
+  
+  Then calculate and plot the  ***contribution of the taxonomic groups to the biomass by station and year***. 
+```{r tax_group_biomass_contribution_st_yr_zostera}
+tax.props.biomass.st.yr.zostera <- zoo.biomass.zostera.long %>% 
+  # exclude the larvae
+  filter(!species == "Polychaeta larvae") %>%
+  summarize_tax_group_contr(current.taxa.zostera, 
+                            key.col = "species", 
+                            value.col = sp_biomass, 
+                            station, year, group) %>%
+  arrange(station, year)
+
+# plot this
+(plot.tax.props.biomass.st.yr.zostera <- plot_tax_props(tax.props.biomass.st.yr.zostera) + 
+   text_size(text.x = rel(1.3), text.y = rel(1.3), title.x = rel(1.3), legend.text = rel(1.3), strip.x = rel(1.3))
+)
+
+## save as file
+ggsave(file.path(figures.dir, "tax_gr_props_biomass_st_yr_zostera.png"), 
+       plot.tax.props.biomass.st.yr.zostera, 
+       dpi = 300)
+```
+  
+  Check and plot the species which contribute the most to the biomass at each station.
+```{r sp_highest_contrib_biomass_zostera}
+## calculate the total biomass counts by species, then select the 20 with the highest biomass
+top20.biomass.zostera.st <- get_top_sp(zoo.biomass.zostera, nb.sp = 20)
+
+## plot them
+plot.highest.biomass.sp.zostera <- plot_top_n(top20.biomass.zostera.st, 
+                                     aes(x = species, y = log_y_min(sp_count), 
+                                         colour = station), 
+                                     labs.legend = as.numeric(unique(top20.biomass.zostera.st$station)), 
+                                     lab.y = "Biomass (log(y/min + 1))",
+                                     palette = "Set2"
+                                     )
+
+(plot.highest.biomass.sp.zostera <- plot.highest.biomass.sp.zostera  + 
+    text_size(text.x = rel(1.3), text.y = rel(1.3), legend.text = rel(1.2), legend.title = rel(1.2)) + 
+    scale_x_discrete(name = "", limits = rev(levels(top20.biomass.zostera.st$species))) 
+)
+  
+## save as file
+ggsave(file.path(figures.dir, "highest_biomass_sp_st_zostera.png"), 
+       plot.highest.biomass.sp.zostera, 
+       dpi = 300)
+```
+  
+---
   
