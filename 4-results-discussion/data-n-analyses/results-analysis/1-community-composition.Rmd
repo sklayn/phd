@@ -1,6 +1,6 @@
 ---
 title: "Biodiversity of macrozoobenthic communities"
-date: "2017-10-18"
+date: "2017-10-20"
 output:
   html_notebook:
     theme: paper
@@ -98,12 +98,11 @@ The abundances are counts of organisms in each sample; the biomasses - wet weigh
 Convert the month and year back to numeric (they remained as character during import); then arrange the data frame - by station (first converting to factor), then year and month. This will be the convention used for all subsequent data frames.
 ```{r clean_abundance_data_sand}
 (zoo.abnd.sand <- zoo.abnd.sand %>% 
-  
-  mutate(year = as.numeric(year), 
+  mutate(year = as.numeric(year),
          month = as.numeric(month), 
          station = factor(station, levels = c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva"))) %>%
-  
-  arrange(station, year, month))
+  arrange(station, year, month)
+)
 ```
   
 Now on to the biomass! 
@@ -186,7 +185,7 @@ zoo.biomass.sand.long <- zoo.biomass.sand %>%
   gather(key = species, value = sp_biomass, -c(station:replicate))
 ```
 
-  The ***summarized number of taxa*** by station and year is: 
+  The **summarized number of taxa** by station and year is: 
 ```{r summarize_nb_taxa_sand_by_station_year}
 zoo.abnd.sand.long %>%
   # remove taxa that shouldn't really be counted separately towards the total/mean number of taxa 
@@ -201,7 +200,7 @@ zoo.abnd.sand.long %>%
             nb_replicates = n())
 ```
 
-  The ***summarized abundance*** by station and year is: 
+  The **summarized abundance** by station and year is: 
 ```{r summarize_abundance_sand_by_station_year}
 ## small helper function to summarize abundance/biomass. NB hardcoded grouping variables! (ok, because it's only meant to simplify code a little, not really be portable or reusable anyplace else).
 
@@ -227,7 +226,7 @@ summarize_zoo_data <- function(zoo.data, value.col, per.m2, round.to = 0) {
 summarize_zoo_data(zoo.abnd.sand.long, value.col = sp_count, per.m2 = 20, round.to = 0)
 ```
   
-  The ***summarized biomass*** by station and year is: 
+  The **summarized biomass** by station and year is: 
 ```{r summarize_biomass_sand_by_station_year}
 summarize_zoo_data(zoo.biomass.sand.long, value.col = sp_biomass, per.m2 = 20, round.to = 2)
 ```
@@ -297,9 +296,9 @@ ggsave(file.path(figures.dir, "nb_taxa_by_tax_group_sand.png"),
        dpi = 300)
 ```
   
-  ***Crustacea*** are represented by `r nrow(current.taxa.sand %>% group_by(group) %>% count(family) %>% filter(group == "Crustacea"))` families.  
-  ***Polychaeta*** are represented by `r nrow(current.taxa.sand %>% group_by(group) %>% count(family) %>% filter(group == "Polychaeta"))` families.   
-  ***Mollusca*** are represented by `r nrow(current.taxa.sand %>% group_by(group) %>% count(family) %>% filter(group == "Mollusca"))` families.  
+  **Crustacea** are represented by `r nrow(current.taxa.sand %>% group_by(group) %>% count(family) %>% filter(group == "Crustacea"))` families.  
+  **Polychaeta** are represented by `r nrow(current.taxa.sand %>% group_by(group) %>% count(family) %>% filter(group == "Polychaeta"))` families.   
+  **Mollusca** are represented by `r nrow(current.taxa.sand %>% group_by(group) %>% count(family) %>% filter(group == "Mollusca"))` families.  
   
   The families with the highest number of species are:
 ```{r breakdown_nb_taxa_families_sand}
@@ -313,7 +312,7 @@ lapply(unique(current.taxa.sand$group),
        })
 ```
   NB this is a count of the frequency of occurrence of each family; it would be a real count of the number of species if all taxa were identified to species level. As it is, there are some identified to genus or family level - so this count is only indicative. It really should be checked manually and corrected, if needed.     
-  Now let's calculate the contribution of each taxonomic group to the ***overall community composition by abundance***.
+  Now let's calculate the contribution of each taxonomic group to the **overall community composition by abundance**.
 ```{r tax_group_abnd_contribution_overall_sand}
 ## helper function to summarize taxonomic group contribution to abundance and biomass
 summarize_tax_group_contr <- function(zoo.data, tax.data, key.col, value.col, ...) {
@@ -342,7 +341,7 @@ zoo.abnd.sand.long %>%
   arrange(desc(proportion))
 ```
   
-  Now calculate and plot the ***contribution of the taxonomic groups to the abundance by station and year***. 
+  Now calculate and plot the **contribution of the taxonomic groups to the abundance by station and year**. 
 ```{r tax_group_abnd_contrib_st_yr_sand}
 tax.props.st.yr.sand <- zoo.abnd.sand.long %>% 
   # exclude the larvae
@@ -367,11 +366,11 @@ plot_tax_props <- function(tax.props.data) {
     scale_fill_viridis(discrete = TRUE, name = "") +
     scale_x_continuous(breaks = c(1:nb.stations)) + 
     labs(x = "Station", y = "%") + 
-    facet_wrap(~year, nrow = 2) + 
     theme_bw()
 }
 
 (plot.tax.props.st.yr.sand <- plot_tax_props(tax.props.st.yr.sand) +
+    facet_wrap(~year, nrow = 2) + 
     text_size(text.x = rel(1.3), text.y = rel(1.3), title.x = rel(1.3), legend.text = rel(1.3), strip.x = rel(1.3))
 )
 
@@ -442,7 +441,7 @@ ggsave(file.path(figures.dir, "most_abnd_sp_st_sand.png"),
        dpi = 300)
 ```
     
-  Now let's calculate the same way the ***overall community composition by biomass***.
+  Now let's calculate the same way the **overall community composition by biomass**.
 ```{r tax_group_biomass_contrib_overall_sand}
 zoo.biomass.sand.long %>% 
   # exclude the larvae
@@ -454,7 +453,7 @@ zoo.biomass.sand.long %>%
   arrange(desc(proportion))
 ```
   
-  Then calculate and plot the  ***contribution of the taxonomic groups to the biomass by station and year***. 
+  Then calculate and plot the  **contribution of the taxonomic groups to the biomass by station and year**. 
 ```{r tax_group_biomass_contribution_st_yr_sand}
 tax.props.biomass.st.yr.sand <- zoo.biomass.sand.long %>% 
   # exclude the larvae
@@ -602,7 +601,7 @@ zoo.biomass.zostera.long <- zoo.biomass.zostera %>%
   gather(key = species, value = sp_biomass, -c(station:replicate))
 ```
 
-  The ***summarized number of taxa*** by station and year is: 
+  The **summarized number of taxa** by station and year is: 
 ```{r summarize_nb_taxa_zostera_by_station_year}
 zoo.abnd.zostera.long %>%
   # remove taxa that shouldn't really be counted separately towards the total/mean number of taxa 
@@ -617,12 +616,12 @@ zoo.abnd.zostera.long %>%
             nb_replicates = n())
 ```
 
-  The ***summarized abundance*** by station and year is: 
+  The **summarized abundance** by station and year is: 
 ```{r summarize_abundance_zostera_by_station_year}
 summarize_zoo_data(zoo.abnd.zostera.long, value.col = sp_count, per.m2 = 1/0.0078, round.to = 0)
 ```
   
-  The ***summarized biomass*** by station and year is: 
+  The **summarized biomass** by station and year is: 
 ```{r summarize_biomass_zostera_by_station_year}
 summarize_zoo_data(zoo.biomass.zostera.long, value.col = sp_biomass, per.m2 = 1/0.0078, round.to = 2)
 ```
@@ -684,9 +683,9 @@ ggsave(file.path(figures.dir, "nb_taxa_by_tax_group_zostera.png"),
        dpi = 300)
 ```
   
-  ***Crustacea*** are represented by `r nrow(current.taxa.zostera %>% group_by(group) %>% count(family) %>% filter(group == "Crustacea"))` families.  
-  ***Polychaeta*** are represented by `r nrow(current.taxa.zostera %>% group_by(group) %>% count(family) %>% filter(group == "Polychaeta"))` families.   
-  ***Mollusca*** are represented by `r nrow(current.taxa.zostera %>% group_by(group) %>% count(family) %>% filter(group == "Mollusca"))` families.  
+  **Crustacea** are represented by `r nrow(current.taxa.zostera %>% group_by(group) %>% count(family) %>% filter(group == "Crustacea"))` families.  
+  **Polychaeta** are represented by `r nrow(current.taxa.zostera %>% group_by(group) %>% count(family) %>% filter(group == "Polychaeta"))` families.   
+  **Mollusca** are represented by `r nrow(current.taxa.zostera %>% group_by(group) %>% count(family) %>% filter(group == "Mollusca"))` families.  
   
   The families with the highest number of species are:
 ```{r breakdown_nb_taxa_families_zostera}
@@ -700,7 +699,7 @@ lapply(unique(current.taxa.zostera$group),
        })
 ```
   NB again, this is a count of the frequency of occurrence of each family; it would be a real count of the number of species if all taxa were identified to species level. As it is, there are some identified to genus or family level - so this count is only indicative. It really should be checked manually and corrected, if needed.  
-  Now let's calculate the contribution of each taxonomic group to the ***overall community composition by abundance***.
+  Now let's calculate the contribution of each taxonomic group to the **overall community composition by abundance**.
 ```{r tax_group_abnd_contribution_overall_zostera}
 zoo.abnd.zostera.long %>% 
   # exclude these poor larvae again (not that they contribute much, it's < 0.1%, but only to get the same numbers as are already in the text)
@@ -712,7 +711,7 @@ zoo.abnd.zostera.long %>%
   arrange(desc(proportion))
 ```
     
-  Now calculate and plot the ***contribution of the taxonomic groups to the abundance by station and year*** in the seagrass communities. 
+  Now calculate and plot the **contribution of the taxonomic groups to the abundance by station and year** in the seagrass communities. 
 ```{r tax_group_abnd_contrib_st_yr_zostera}
 tax.props.st.yr.zostera <- zoo.abnd.zostera.long %>% 
   # exclude the larvae
@@ -756,7 +755,7 @@ ggsave(file.path(figures.dir, "most_abnd_sp_st_zostera.png"),
        dpi = 300)
 ```
   
-  Now let's calculate the same way the ***overall community composition by biomass***.
+  Now let's calculate the same way the **overall community composition by biomass**.
 ```{r tax_group_biomass_contrib_overall_zostera}
 zoo.biomass.zostera.long %>% 
   # exclude the larvae
@@ -768,7 +767,7 @@ zoo.biomass.zostera.long %>%
   arrange(desc(proportion))
 ```
   
-  Then calculate and plot the  ***contribution of the taxonomic groups to the biomass by station and year***. 
+  Then calculate and plot the  **contribution of the taxonomic groups to the biomass by station and year**. 
 ```{r tax_group_biomass_contribution_st_yr_zostera}
 tax.props.biomass.st.yr.zostera <- zoo.biomass.zostera.long %>% 
   # exclude the larvae
@@ -912,7 +911,9 @@ taxa.zostera.2012 <- unique(zoo.abnd.2012 %>%
   gather(key = species, value = sp_count, -c(station:replicate)) %>% 
   group_by(species) %>% 
   filter(sp_count > 0) %>% 
-  select(species)) 
+  select(species) %>%
+  ungroup()
+  )
 
 ## all taxa found in sand
 taxa.sand.2012 <- unique(zoo.abnd.2012 %>% 
@@ -920,7 +921,9 @@ taxa.sand.2012 <- unique(zoo.abnd.2012 %>%
   gather(key = species, value = sp_count, -c(station:replicate)) %>% 
   group_by(species) %>% 
   filter(sp_count > 0) %>% 
-  select(species))
+  select(species) %>%
+  ungroup()
+)
 ```
   There are `r nrow(semi_join(taxa.sand.2012, taxa.zostera.2012))` taxa found in both sand and seagrass in 2012. Let's see them:
 ```{r common_taxa_sand_zostera_2}
@@ -928,11 +931,11 @@ semi_join(taxa.sand.2012, taxa.zostera.2012)
 ```
   The taxa found **only in sand** are:
 ```{r taxa_sand_only_2012}
-anti_join(taxa.sand.2012, taxa.zostera.2012)
+setdiff(taxa.sand.2012, taxa.zostera.2012)
 ```
   The taxa found **only in seagrass** are: 
 ```{r taxa_zostera_only_2012}
-anti_join(taxa.zostera.2012, taxa.sand.2012)
+setdiff(taxa.zostera.2012, taxa.sand.2012)
 ```
   + the **average number of taxa** in **seagrass** is `r round(mean(specnumber(filter(zoo.abnd.2012, habitat == "Z") %>% select(-c(station:replicate)))), 0)`, with standard deviation `r round(sd(specnumber(filter(zoo.abnd.2012, habitat == "Z") %>% select(-c(station:replicate)))), 0)`.
   + the **minimum number of taxa** in **seagrass** is `r min(specnumber(filter(zoo.abnd.2012, habitat == "Z") %>% select(-c(station:replicate))))`, in sample `r paste(unite(zoo.abnd.2012 %>% filter(row_number() == which.min(filter(zoo.abnd.2012, habitat == "Z") %>% select(-c(station:replicate)) %>% specnumber)), "new", c(station, replicate)) %>% select(new))`. 
@@ -998,12 +1001,24 @@ summarize_zoo_data(filter(zoo.biomass.2012.long, habitat == "S"), value.col = sp
 current.taxa.2012 <- zoo.taxonomy %>%
   filter(species %in% names(zoo.abnd.2012))
 ```
+    Add in the more commonly used larger taxonomic groups (Polychaeta, Mollusca, Crustacea, and Varia).
+```{r assign_taxonomic_groups_2012}
+current.taxa.2012 <- current.taxa.2012 %>%
+  mutate(group = if_else(phylum == "Mollusca", "Mollusca",
+                         if_else(phylum == "Annelida" & class == "Polychaeta", "Polychaeta", 
+                                 if_else(phylum == "Arthropoda" & subclass %in% c("Eumalacostraca", "Thecostraca"), "Crustacea", 
+                                         "Varia"))))
 
+```
   Explore the taxonomic composition of the community: number of taxa per phylum/class, etc.
 ```{r explore_taxonomic_structure_2012}
+## add the taxonomic classification to the 2 subsets of taxa per habitat
+taxa.zostera.2012 <- left_join(taxa.zostera.2012, current.taxa.2012)
+taxa.sand.2012 <- left_join(taxa.sand.2012, current.taxa.2012)
+
 ## number of taxa per class & habitat
 # in seagrass
-left_join(taxa.zostera.2012, current.taxa.2012) %>%
+taxa.zostera.2012 %>%
   count(class, sort = TRUE) %>%
   ggplot(mapping = aes(x = reorder(class, n), y = n)) + 
     geom_bar(stat = "identity", fill = "light green") + 
@@ -1012,7 +1027,7 @@ left_join(taxa.zostera.2012, current.taxa.2012) %>%
     theme_bw()
 
 # in sand
-left_join(taxa.sand.2012, current.taxa.2012) %>%
+taxa.sand.2012 %>%
   count(class, sort = TRUE) %>%
   ggplot(mapping = aes(x = reorder(class, n), y = n)) + 
     geom_bar(stat = "identity", fill = "light blue") + 
@@ -1022,7 +1037,7 @@ left_join(taxa.sand.2012, current.taxa.2012) %>%
 
 ## number of taxa per phylum & habitat
 # in seagrass
-left_join(taxa.zostera.2012, current.taxa.2012) %>%
+taxa.zostera.2012 %>%
   count(phylum, sort = TRUE) %>%
   ggplot(mapping = aes(x = reorder(phylum, n), y = n)) + 
     geom_bar(stat = "identity", fill = "light green") + 
@@ -1031,7 +1046,7 @@ left_join(taxa.zostera.2012, current.taxa.2012) %>%
     theme_bw()
 
 # in sand
-left_join(taxa.sand.2012, current.taxa.2012) %>%
+taxa.sand.2012 %>%
   count(phylum, sort = TRUE) %>%
   ggplot(mapping = aes(x = reorder(phylum, n), y = n)) + 
     geom_bar(stat = "identity", fill = "light blue") + 
@@ -1040,62 +1055,118 @@ left_join(taxa.sand.2012, current.taxa.2012) %>%
     theme_bw()
 ```
   
-  Add in the more commonly used larger taxonomic groups (Polychaeta, Mollusca, Crustacea, and Varia).
-```{r assign_taxonomic_groups_2012}
-current.taxa.2012 <- current.taxa.2012 %>%
-  mutate(group = if_else(phylum == "Mollusca", "Mollusca",
-                         if_else(phylum == "Annelida" & class == "Polychaeta", "Polychaeta", 
-                                 if_else(phylum == "Arthropoda" & subclass %in% c("Eumalacostraca", "Thecostraca"), "Crustacea", 
-                                         "Varia"))))
-
+  Count the number of species by taxonomic group and habitat.
+```{r number_taxa_by_tax_group_habitat_2012}
 ## in seagrass
-# in seagrass
-left_join(taxa.zostera.2012, current.taxa.2012) %>%
-  ungroup() %>%
+taxa.zostera.2012 %>%
   count(group)
 
 ## in sand
-left_join(taxa.sand.2012, current.taxa.2012) %>%
-  ungroup() %>%
+taxa.sand.2012 %>%
   count(group)
 ```
+
   Now plot the number of taxa per (common) taxonomic group, and save as file.
 ```{r plot_number_taxa_by_taxonomic_groups_2012}
-# in seagrass
-plot.nb.taxa.by.group.Z.2012 <- left_join(taxa.zostera.2012, current.taxa.2012) %>% 
-  ungroup %>%
-  count(group) %>%
-  ggplot(mapping = aes(x = reorder(group, n), y = n)) + 
-    geom_bar(stat = "identity", fill = "light green") + 
+nb.taxa.by.gr.habitat.2012 <- left_join(zoo.abnd.2012.long, current.taxa.2012) %>%
+  group_by(habitat) %>%
+  filter(sp_count > 0) %>%
+  distinct(species, group) %>%
+  count(group)
+
+(plot.nb.taxa.by.gr.hab.2012 <- ggplot(nb.taxa.by.gr.habitat.2012, mapping = aes(x = reorder(group, n), y = n, fill = habitat)) + 
+    geom_bar(stat = "identity", position = "dodge") + 
+    scale_fill_manual(values=c("tan1", "light green"), name = "", labels = c("sand", "Zostera")) + 
     coord_flip() + 
     labs(x = "", y = "Number of taxa") +
     theme(axis.text.x = element_text(size = rel(1.3)), 
           axis.text.y = element_text(size = rel(1.3))) +
     theme_bw()
+)
 
-# in sand 
-plot.nb.taxa.by.group.S.2012 <- left_join(taxa.sand.2012, current.taxa.2012) %>% 
-  ungroup %>%
-  count(group) %>%
-  ggplot(mapping = aes(x = reorder(group, n), y = n)) + 
-    geom_bar(stat = "identity", fill = "light blue") + 
-    coord_flip() + 
-    labs(x = "", y = "Number of taxa") +
-    theme(axis.text.x = element_text(size = rel(1.3)), 
-          axis.text.y = element_text(size = rel(1.3))) +
-    theme_bw()
+ggsave(file.path(figures.dir, "nb_taxa_by_tax_group_2012.png"),
+       plot.nb.taxa.by.gr.2012,
+       dpi = 300)
+```
 
-## great time to try out package cowplot & arrange these two plots on one grid, horizontally
-library(cowplot)
+  In the **seagrass** in Sozopol Bay (2012):  
+   + **Crustacea** are represented by `r nrow(taxa.zostera.2012 %>% group_by(group) %>% count(family) %>% filter(group == "Crustacea"))` families.   
+   + **Polychaeta** are represented by `r nrow(taxa.zostera.2012 %>% group_by(group) %>% count(family) %>% filter(group == "Polychaeta"))` families.   
+   + **Mollusca** are represented by `r nrow(taxa.zostera.2012 %>% group_by(group) %>% count(family) %>% filter(group == "Mollusca"))` families.  
+  
+  The families with the highest number of species are:
+```{r breakdown_nb_taxa_families_2012_zostera}
+## in seagrass
+lapply(setdiff(unique(taxa.zostera.2012$group), "Varia"), 
+       function(x) {
+         taxa.zostera.2012 %>%
+           group_by(group) %>%
+           count(family) %>%
+           filter(group == x) %>%
+           arrange(desc(n))
+       })
+```
 
-plot_grid(plot.nb.taxa.by.group.Z.2012, 
-          plot.nb.taxa.by.group.S.2012, 
-          labels = c("A", "B"), 
-          align = "h")
+   In the **sands** in Sozopol Bay (2012):  
+   + **Crustacea** are represented by `r nrow(taxa.sand.2012 %>% group_by(group) %>% count(family) %>% filter(group == "Crustacea"))` families.   
+   + **Polychaeta** are represented by `r nrow(taxa.sand.2012 %>% group_by(group) %>% count(family) %>% filter(group == "Polychaeta"))` families.   
+   + **Mollusca** are represented by `r nrow(taxa.sand.2012 %>% group_by(group) %>% count(family) %>% filter(group == "Mollusca"))` families.  
+  
+  The families with the highest number of species are:
+```{r breakdown_nb_taxa_families_2012_sand}
+## in sand
+lapply(setdiff(unique(taxa.sand.2012$group), "Varia"), 
+       function(x) {
+         taxa.sand.2012 %>%
+           group_by(group) %>%
+           count(family) %>%
+           filter(group == x) %>%
+           arrange(desc(n))
+       })
+```
+  Now let's calculate the contribution of each taxonomic group to the **overall community composition by abundance**.
+```{r tax_group_abnd_contribution_overall_2012}
+lapply(c("Z", "S"), function(x) {
+  zoo.abnd.2012.long %>% 
+  filter(habitat == x) %>%
+  summarize_tax_group_contr(current.taxa.2012, 
+                            key.col = "species", 
+                            value.col = sp_count, 
+                            group) %>%
+  arrange(desc(proportion))
+})
+```
+  Now calculate and plot the **contribution of the taxonomic groups to the abundance by station and year** in both habitats in Sozopol Bay in 2012. 
+```{r tax_group_abnd_contrib_st_yr_2012}
+### TO FIX THIS CRAP - allow faceting by habitat/selectable var?? 
+tax.props.st.yr.2012 <- lapply(c("Z", "S"), function(x) {
+  zoo.abnd.2012.long %>% 
+  filter(habitat == x) %>%
+  summarize_tax_group_contr(current.taxa.2012, 
+                            key.col = "species", 
+                            value.col = sp_count, 
+                            station, year, group) %>%
+  arrange(station, year)
+})
+  
+  
 
-# of course, if I end up doing this, both axes should have the same limits - otherwise too difficult to compare & potentially misleading. 
+(plot.tax.props.st.yr.2012 <- lapply(tax.props.st.yr.2012, 
+                                     function(x) {
+                                      p <- plot_tax_props(x) + 
+                                        text_size(text.x = rel(1.3), 
+                                                  text.y = rel(1.3), 
+                                                  title.x = rel(1.3), 
+                                                  legend.text = rel(1.3), 
+                                                  strip.x = rel(1.3)) + 
+                                        scale_x_discrete(breaks = c("K1", "K2", "R1", "R2", "G1", "G2"))
+                                      return(p)
+                                     })
+)
 
-# ggsave(file.path(figures.dir, "nb_taxa_by_tax_group_2012.png"), 
-#        plot.nb.taxa.by.group, 
+
+## save as file
+# ggsave(file.path(figures.dir, "tax_gr_props_st_yr_2012.png"), 
+#        plot.tax.props.st.yr.2012, 
 #        dpi = 300)
 ```
