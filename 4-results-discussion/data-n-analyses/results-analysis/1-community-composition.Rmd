@@ -946,23 +946,23 @@ The idea of the experiment was to compare seagrass and adjacent bare sand commun
   + the **maximum abundance** for the **seagrass communities** is `r format(round(max(filter(zoo.abnd.2012, habitat == "Z") %>% select(-c(station:replicate)) %>% rowSums) * (1/0.0078), 0), scientific = FALSE)` ind.m^-2^, in sample `r paste(unite(zoo.abnd.2012 %>% filter(row_number() == which.max(filter(zoo.abnd.2012, habitat == "Z") %>% select(-c(station:replicate)) %>% rowSums)), "new", c(station, replicate)) %>% select(new))`.
   
   + the **average biomass** for the **seagrass communities** is `r round(mean(filter(zoo.biomass.2012, habitat == "Z") %>% select(-c(station:replicate)) %>% rowSums) * (1/0.0078), 2)` g.m^-2^, with standard deviation `r round(sd(filter(zoo.biomass.2012, habitat == "Z") %>% select(-c(station:replicate)) %>% rowSums) * (1/0.0078), 2)`.
-  + the **minimum biomass** for the **seagrass communities** is `r round(min(filter(zoo.biomass.2012, habitat == "Z") %>% select(-c(station:replicate)) %>% rowSums) * (1/0.0078), 2)` g.m^-2^, in sample `r paste(unite(zoo.biomass.2012 %>% filter(row_number() == which.min(filter(zoo.biomass.2012, habitat == "Z") %>% select(-c(station:replicate)) %>% rowSums)), "new", c(station, replicate)) %>% select(new))` from `r paste(unite(zoo.biomass.2012 %>% filter(row_number() == which.min(filter(zoo.biomass.2012, habitat == "Z") %>% select(-c(station:replicate)) %>% rowSums)), "new", c(month, year)) %>% select(new))`.
-  + the **maximum biomass** for the **seagrass communities** is `r round(max(filter(zoo.biomass.2012, habitat == "Z") %>% select(-c(station:replicate)) %>% rowSums) * (1/0.0078), 2)` g.m^-2^, in sample `r paste(unite(zoo.biomass.2012 %>% filter(row_number() == which.max(filter(zoo.biomass.2012, habitat == "Z") %>% select(-c(station:replicate)) %>% rowSums)), "new", c(station, replicate)) %>% select(new))` from `r paste(unite(zoo.biomass.2012 %>% filter(row_number() == which.max(filter(zoo.biomass.2012, habitat == "Z") %>% select(-c(station:replicate)) %>% rowSums)), "new", c(month, year)) %>% select(new))`.
+  + the **minimum biomass** for the **seagrass communities** is `r round(min(filter(zoo.biomass.2012, habitat == "Z") %>% select(-c(station:replicate)) %>% rowSums) * (1/0.0078), 2)` g.m^-2^, in sample `r paste(unite(zoo.biomass.2012 %>% filter(row_number() == which.min(filter(zoo.biomass.2012, habitat == "Z") %>% select(-c(station:replicate)) %>% rowSums)), "new", c(station, replicate)) %>% select(new))`.
+  + the **maximum biomass** for the **seagrass communities** is `r round(max(filter(zoo.biomass.2012, habitat == "Z") %>% select(-c(station:replicate)) %>% rowSums) * (1/0.0078), 2)` g.m^-2^, in sample `r paste(unite(zoo.biomass.2012 %>% filter(row_number() == which.max(filter(zoo.biomass.2012, habitat == "Z") %>% select(-c(station:replicate)) %>% rowSums)), "new", c(station, replicate)) %>% select(new))`.
   
   + the **average abundance** for the **sand communities** is `r format(round(mean(filter(zoo.abnd.2012, habitat == "S") %>% select(-c(station:replicate)) %>% rowSums) * (1/0.0078), 0), scientific = FALSE)` ind.m^-2^, with standard deviation `r format(round(sd(filter(zoo.abnd.2012, habitat == "S") %>% select(-c(station:replicate)) %>% rowSums) * (1/0.0078), 0), scientific = FALSE)`.
   + the **minimum abundance** for the **sand communities** is `r format(round(min(filter(zoo.abnd.2012, habitat == "S") %>% select(-c(station:replicate)) %>% rowSums) * (1/0.0078), 0), scientific = FALSE)` ind.m^-2^, in sample `r paste(unite(zoo.abnd.2012 %>% filter(row_number() == which.min(filter(zoo.abnd.2012, habitat == "S") %>% select(-c(station:replicate)) %>% rowSums)), "new", c(station, replicate)) %>% select(new))`.
   + the **maximum abundance** for the **sand communities** is `r format(round(max(filter(zoo.abnd.2012, habitat == "S") %>% select(-c(station:replicate)) %>% rowSums) * (1/0.0078), 0), scientific = FALSE)` ind.m^-2^, in sample `r paste(unite(zoo.abnd.2012 %>% filter(row_number() == which.max(filter(zoo.abnd.2012, habitat == "S") %>% select(-c(station:replicate)) %>% rowSums)), "new", c(station, replicate)) %>% select(new))`.
   
   + the **average biomass** for the **sand communities** is `r round(mean(filter(zoo.biomass.2012, habitat == "S") %>% select(-c(station:replicate)) %>% rowSums) * (1/0.0078), 2)` g.m^-2^, with standard deviation `r round(sd(filter(zoo.biomass.2012, habitat == "S") %>% select(-c(station:replicate)) %>% rowSums) * (1/0.0078), 2)`.
-  + the **minimum biomass** for the **sand communities** is `r round(min(filter(zoo.biomass.2012, habitat == "S") %>% select(-c(station:replicate)) %>% rowSums) * (1/0.0078), 2)` g.m^-2^, in sample `r paste(unite(zoo.biomass.2012 %>% filter(row_number() == which.min(filter(zoo.biomass.2012, habitat == "S") %>% select(-c(station:replicate)) %>% rowSums)), "new", c(station, replicate)) %>% select(new))` from `r paste(unite(zoo.biomass.2012 %>% filter(row_number() == which.min(filter(zoo.biomass.2012, habitat == "S") %>% select(-c(station:replicate)) %>% rowSums)), "new", c(month, year)) %>% select(new))`.
-  + the **maximum biomass** for the **sand communities** is `r round(max(filter(zoo.biomass.2012, habitat == "S") %>% select(-c(station:replicate)) %>% rowSums) * (1/0.0078), 2)` g.m^-2^, in sample `r paste(unite(zoo.biomass.2012 %>% filter(row_number() == which.max(filter(zoo.biomass.2012, habitat == "S") %>% select(-c(station:replicate)) %>% rowSums)), "new", c(station, replicate)) %>% select(new))` from `r paste(unite(zoo.biomass.2012 %>% filter(row_number() == which.max(filter(zoo.biomass.2012, habitat == "S") %>% select(-c(station:replicate)) %>% rowSums)), "new", c(month, year)) %>% select(new))`.  
+  + the **minimum biomass** for the **sand communities** is `r round(min(filter(zoo.biomass.2012, habitat == "S") %>% select(-c(station:replicate)) %>% rowSums) * (1/0.0078), 2)` g.m^-2^, in sample `r paste(unite(zoo.biomass.2012 %>% filter(row_number() == which.min(filter(zoo.biomass.2012, habitat == "S") %>% select(-c(station:replicate)) %>% rowSums)), "new", c(station, replicate)) %>% select(new))`.
+  + the **maximum biomass** for the **sand communities** is `r round(max(filter(zoo.biomass.2012, habitat == "S") %>% select(-c(station:replicate)) %>% rowSums) * (1/0.0078), 2)` g.m^-2^, in sample `r paste(unite(zoo.biomass.2012 %>% filter(row_number() == which.max(filter(zoo.biomass.2012, habitat == "S") %>% select(-c(station:replicate)) %>% rowSums)), "new", c(station, replicate)) %>% select(new))`.  
   
   + there are `r ncol(select(zoo.abnd.2012, -c(station:replicate)))` taxa overall. Let's check them out to see which are identifed to species level. Unfortunately, this has to be done by counting manually the ones that are not actually species.
 ```{r count_number_taxa_2012}
 names(select(zoo.abnd.2012, -c(station:replicate)))
 ```
   Wow, a whole lot of them are only identified to family level.. Goes to show what I knew about macroinvertebrate taxonomy then, which is zilch. I most likely intended to go back at some point and identify them, but never got round to it, and then destroyed them while measuring the biomass.  
-  In any case, the 2012 dataset should be regarded as very preliminary, with a really low confidence level, and all conclusions based on it should only be tentative. It will not be included in the other seagrass analyses despite the similar samping strategy and methods, because due to the low species richness it biases the whole process (e.g. it might be concluded that seagrasses in Sozopol Bay were in a worse ecological state in 2012, which then improved markedly in 2013-2014, but this is not the case - the real variable that improved in that time was my skills at sorting and knowledge of taxonomy).   
+  In any case, the 2012 dataset should be regarded as very preliminary, with a really low confidence level, and all conclusions based on it should only be tentative. It will not be included in the other seagrass analyses despite the similar sampling strategy and methods, because due to the low species richness it biases the whole process (e.g. it might be concluded that seagrasses in Sozopol Bay were in a worse ecological state in 2012, which then improved markedly in 2013-2014, but this is not the case - the real variables that improved in that time were my sorting skills and knowledge of taxonomy).   
   
   In the **seagrasses** in Sozopol Bay, there were `r zoo.abnd.2012 %>% filter(habitat == "Z") %>% gather(key = species, value = sp_count, -c(station:replicate)) %>% group_by(species) %>% filter(sp_count > 0) %>% count(species) %>% nrow` taxa overall in 2012.  
   In the **sands** in Sozopol Bay, there were `r zoo.abnd.2012 %>% filter(habitat == "S") %>% gather(key = species, value = sp_count, -c(station:replicate)) %>% group_by(species) %>% filter(sp_count > 0) %>% count(species) %>% nrow` taxa overall in 2012.  
@@ -1226,14 +1226,16 @@ plot.most.abnd.sp.2012 <- plot_top_n(top20.counts.2012.st,
 
 (plot.most.abnd.sp.2012 <- plot.most.abnd.sp.2012  + 
     facet_wrap(~habitat, ncol = 2, labeller = as_labeller(c("S" = "sand", "Z" = "Zostera"))) +
-    text_size(text.x = rel(1.3), text.y = rel(1.15), legend.text = rel(1.2), legend.title = rel(1.2), strip.x = rel(1.3)) + 
+    text_size(text.x = rel(1.1), title.x = rel(1.1), strip.x = rel(1.1), text.y = rel(1), legend.text = rel(0.9), legend.title = rel(0.9)) +
+    theme(legend.position = "top", legend.box.spacing = unit(0.01, "cm"), legend.direction = "horizontal") +
+    guides(colour = guide_legend(nrow = 1)) +
     scale_x_discrete(name = "", limits = rev(levels(top20.counts.2012.st$species))) 
 )
 
 ## save as file
 ggsave(file.path(figures.dir, "most_abnd_sp_st_2012.png"), 
        plot.most.abnd.sp.2012, 
-       dpi = 300)
+       dpi = 300, width = 15, units = "cm")
 ```
   
     Now let's calculate the same way the **overall community composition by biomass** in both habitat types in Sozopol Bay (2012).
@@ -1310,14 +1312,16 @@ plot.highest.biomass.sp.2012 <- plot_top_n(top20.biomass.2012.st,
 
 (plot.highest.biomass.sp.2012 <- plot.highest.biomass.sp.2012  +
     facet_wrap(~habitat, ncol = 2, labeller = as_labeller(c("S" = "sand", "Z" = "Zostera"))) + 
-    text_size(text.x = rel(1.3), text.y = rel(1.15), legend.text = rel(1.2), legend.title = rel(1.2), strip.x = rel(1.3)) + 
+    text_size(text.x = rel(1.2), strip.x = rel(1.1), text.y = rel(1), legend.text = rel(0.9)) +
+    theme(legend.position = "top", legend.box.spacing = unit(0.01, "cm"), legend.direction = "horizontal") +
+    guides(colour = guide_legend(nrow = 1)) +
     scale_x_discrete(name = "", limits = rev(levels(top20.biomass.2012.st$species))) 
 )
   
 ## save as file
 ggsave(file.path(figures.dir, "highest_biomass_sp_st_2012.png"), 
        plot.highest.biomass.sp.2012, 
-       dpi = 300)
+       dpi = 300, width = 15, units = "cm")
 ```
   
   3. Site-level comparison of macrobenthic community composition & structure - seagrass/sand, Sozopol Bay, 2012    
