@@ -439,7 +439,7 @@ plot.most.abnd.sp.sand <- plot_top_n(top20.counts.sand.st,
                                      )
 
 (plot.most.abnd.sp.sand <- plot.most.abnd.sp.sand  + 
-    text_size(text.x = rel(1.3), text.y = rel(1.3), legend.text = rel(1.2), legend.title = rel(1.2)) + 
+    text_size(text.x = rel(1.3), text.y = rel(1.15), legend.text = rel(1.2), legend.title = rel(1.2)) + 
     scale_x_discrete(name = "", limits = rev(levels(top20.counts.sand.st$species))) 
 )
 
@@ -495,14 +495,15 @@ tax.props.sand.all <- full_join(tax.props.st.yr.sand,
   mutate(variable = case_when(variable == "proportion.x" ~ "Abundance", 
                               variable == "proportion.y" ~ "Biomass"))
 
-(plot.composite.tax.gr.props.sand <- plot_tax_props(tax.props.sand.all, x.labels = "S") + 
-  facet_grid(year ~ variable) + 
-  text_size(text.x = rel(1.3), text.y = rel(1.3), title.x = rel(1.3), legend.text = rel(1.2), strip.x = rel(1.3), strip.y = rel(1.3))
+(plot.composite.tax.gr.props.sand <- plot_tax_props(tax.props.sand.all, x.labels = "S") +
+    facet_grid(year ~ variable) +
+    theme(legend.position = "top", legend.key.size = unit(0.5, "cm")) +
+    text_size(text.x = rel(1.2), text.y = rel(1), title.x = rel(1.2), legend.text = rel(1), strip.x = rel(1.2), strip.y = rel(1.2))
 )
 
 ggsave(file.path(figures.dir, "tax_gr_props_sand_composite.png"),
        plot.composite.tax.gr.props.sand,       
-       dpi = 300)
+       dpi = 300, width = 15, units = "cm")
 ```
    
   Back to the biomass: check and plot the species which contribute the most to the biomass at each station.
@@ -520,7 +521,7 @@ plot.highest.biomass.sp.sand <- plot_top_n(top20.biomass.sand.st,
                                      )
 
 (plot.highest.biomass.sp.sand <- plot.highest.biomass.sp.sand  + 
-    text_size(text.x = rel(1.3), text.y = rel(1.3), legend.text = rel(1.2), legend.title = rel(1.2)) + 
+    text_size(text.x = rel(1.3), text.y = rel(1.15), legend.text = rel(1.2), legend.title = rel(1.2)) + 
     scale_x_discrete(name = "", limits = rev(levels(top20.biomass.sand.st$species))) 
 )
   
@@ -777,7 +778,7 @@ plot.most.abnd.sp.zostera <- plot_top_n(top20.counts.zostera.st,
                                      )
 
 (plot.most.abnd.sp.zostera <- plot.most.abnd.sp.zostera  + 
-    text_size(text.x = rel(1.3), text.y = rel(1.3), legend.text = rel(1.2), legend.title = rel(1.2)) + 
+    text_size(text.x = rel(1.3), text.y = rel(1.15), legend.text = rel(1.2), legend.title = rel(1.2)) + 
     scale_x_discrete(name = "", limits = rev(levels(top20.counts.zostera.st$species))) 
 )
 
@@ -833,14 +834,15 @@ tax.props.zostera.all <- full_join(tax.props.st.yr.zostera,
   mutate(variable = case_when(variable == "proportion.x" ~ "Abundance", 
                               variable == "proportion.y" ~ "Biomass"))
 
-(plot.composite.tax.gr.props.zostera <- plot_tax_props(tax.props.zostera.all, x.labels = "Z") + 
-  facet_grid(year ~ variable) + 
-  text_size(text.x = rel(1.3), text.y = rel(1.3), title.x = rel(1.3), legend.text = rel(1.2), strip.x = rel(1.3), strip.y = rel(1.3))
+(plot.composite.tax.gr.props.zostera <- plot_tax_props(tax.props.zostera.all, x.labels = "Z") +
+    facet_grid(year ~ variable) +
+    theme(legend.position = "top", legend.key.size = unit(0.5, "cm")) +
+    text_size(text.x = rel(1.2), text.y = rel(1), title.x = rel(1.2), legend.text = rel(1), strip.x = rel(1.2), strip.y = rel(1.2))
 )
 
 ggsave(file.path(figures.dir, "tax_gr_props_zostera_composite.png"),
        plot.composite.tax.gr.props.zostera,       
-       dpi = 300)
+       dpi = 300, width = 15, units = "cm")
 ```
 
   Check and plot the species which contribute the most to the biomass at each station.
@@ -858,7 +860,7 @@ plot.highest.biomass.sp.zostera <- plot_top_n(top20.biomass.zostera.st,
                                      )
 
 (plot.highest.biomass.sp.zostera <- plot.highest.biomass.sp.zostera  + 
-    text_size(text.x = rel(1.3), text.y = rel(1.3), legend.text = rel(1.2), legend.title = rel(1.2)) + 
+    text_size(text.x = rel(1.3), text.y = rel(1.15), legend.text = rel(1.2), legend.title = rel(1.2)) + 
     scale_x_discrete(name = "", limits = rev(levels(top20.biomass.zostera.st$species))) 
 )
   
@@ -1224,7 +1226,7 @@ plot.most.abnd.sp.2012 <- plot_top_n(top20.counts.2012.st,
 
 (plot.most.abnd.sp.2012 <- plot.most.abnd.sp.2012  + 
     facet_wrap(~habitat, ncol = 2, labeller = as_labeller(c("S" = "sand", "Z" = "Zostera"))) +
-    text_size(text.x = rel(1.3), text.y = rel(1.3), legend.text = rel(1.2), legend.title = rel(1.2), strip.x = rel(1.3)) + 
+    text_size(text.x = rel(1.3), text.y = rel(1.15), legend.text = rel(1.2), legend.title = rel(1.2), strip.x = rel(1.3)) + 
     scale_x_discrete(name = "", limits = rev(levels(top20.counts.2012.st$species))) 
 )
 
@@ -1282,13 +1284,14 @@ tax.props.2012.all <- full_join(tax.props.st.yr.2012,
 
 
 (plot.composite.tax.gr.props.2012 <- plot_tax_props(tax.props.2012.all, x.labels = c("K1", "K2", "R1", "R2", "G1", "G2")) + 
-  facet_grid(habitat ~ variable) + 
-  text_size(text.x = rel(1.3), text.y = rel(1.3), title.x = rel(1.3), legend.text = rel(1.2), strip.x = rel(1.3), strip.y = rel(1.3))
+    facet_grid(habitat ~ variable) + 
+    theme(legend.position = "top", legend.key.size = unit(0.5, "cm")) +
+    text_size(text.x = rel(1.2), text.y = rel(1), title.x = rel(1.2), legend.text = rel(1), strip.x = rel(1.2), strip.y = rel(1.2))
 )
 
 ggsave(file.path(figures.dir, "tax_gr_props_2012_composite.png"),
        plot.composite.tax.gr.props.2012,       
-       dpi = 300)
+       dpi = 300, width = 15, units = "cm")
 ```
     
   Check and plot the species which contribute the most to the biomass at each habitat & station.
@@ -1307,7 +1310,7 @@ plot.highest.biomass.sp.2012 <- plot_top_n(top20.biomass.2012.st,
 
 (plot.highest.biomass.sp.2012 <- plot.highest.biomass.sp.2012  +
     facet_wrap(~habitat, ncol = 2, labeller = as_labeller(c("S" = "sand", "Z" = "Zostera"))) + 
-    text_size(text.x = rel(1.3), text.y = rel(1.3), legend.text = rel(1.2), legend.title = rel(1.2), strip.x = rel(1.3)) + 
+    text_size(text.x = rel(1.3), text.y = rel(1.15), legend.text = rel(1.2), legend.title = rel(1.2), strip.x = rel(1.3)) + 
     scale_x_discrete(name = "", limits = rev(levels(top20.biomass.2012.st$species))) 
 )
   
