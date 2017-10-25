@@ -67,14 +67,16 @@ text_size <- function(text.x = NULL,
                       title.y = NULL,
                       legend.text = NULL,
                       legend.title = NULL, 
-                      strip.x = NULL) {
+                      strip.x = NULL, 
+                      strip.y = NULL) {
   theme(axis.text.x = element_text(size = text.x),
         axis.text.y = element_text(size = text.y),
         axis.title.x = element_text(size = title.x),
         axis.title.y = element_text(size = title.y),
         legend.text = element_text(size = legend.text), 
         legend.title = element_text(size = legend.title), 
-        strip.text.x = element_text(size = strip.x)
+        strip.text.x = element_text(size = strip.x), 
+        strip.text.y = element_text(size = strip.y)
         )
   }
 
@@ -354,7 +356,7 @@ tax.props.st.yr.sand <- zoo.abnd.sand.long %>%
   arrange(station, year)
 
 ## helper for plotting, because all the repetition is killing me. Don't care if everything within is hardcoded, this is only going to be used here and with this data anyway.
-plot_tax_props <- function(tax.props.data, x.labels = NULL) {
+plot_tax_props <- function(tax.props.data, x.labels = NULL, col.palette = "viridis") {
   
   # get/make x-axis labels (stations)  
   if(length(x.labels) > 1) {
@@ -366,15 +368,16 @@ plot_tax_props <- function(tax.props.data, x.labels = NULL) {
   ggplot(tax.props.data) + 
     geom_bar(mapping = aes(x = station,
                            y = proportion * 100, 
-                           fill = group), 
+                           fill = group),
+             color = "black", size = 0.15, 
              stat = "identity", position = "stack", inherit.aes = TRUE) +
-    scale_fill_viridis(discrete = TRUE, name = "") +
+    scale_fill_viridis(option = col.palette, discrete = TRUE, name = "") +
     scale_x_discrete(labels = x.labs) + 
     labs(x = "Station", y = "%") + 
     theme_bw()
 }
 
-(plot.tax.props.st.yr.sand <- plot_tax_props(tax.props.st.yr.sand, x.labels = "S") +
+(plot.tax.props.st.yr.sand <- plot_tax_props(tax.props.st.yr.sand, x.labels = "S",col.palette = "viridis") +
     facet_wrap(~year, nrow = 2) + 
     text_size(text.x = rel(1.3), text.y = rel(1.3), title.x = rel(1.3), legend.text = rel(1.3), strip.x = rel(1.3))
 )
@@ -470,7 +473,7 @@ tax.props.biomass.st.yr.sand <- zoo.biomass.sand.long %>%
   arrange(station, year)
 
 # plot this
-(plot.tax.props.biomass.st.yr.sand <- plot_tax_props(tax.props.biomass.st.yr.sand, x.labels = "S") + 
+(plot.tax.props.biomass.st.yr.sand <- plot_tax_props(tax.props.biomass.st.yr.sand, x.labels = "S", col.palette = "viridis") + 
     facet_wrap(~year, nrow = 2) + 
     text_size(text.x = rel(1.3), text.y = rel(1.3), title.x = rel(1.3), legend.text = rel(1.3), strip.x = rel(1.3))
 )
@@ -480,8 +483,29 @@ ggsave(file.path(figures.dir, "tax_gr_props_biomass_st_yr_sand.png"),
        plot.tax.props.biomass.st.yr.sand, 
        dpi = 300)
 ```
-  
-  Check and plot the species which contribute the most to the biomass at each station.
+
+  Now, for the text itself, combine the proportions of the abundance and the biomass in one single plot. 
+```{r composite_plot_tax_gr_props_sand}
+## first, combine the proportional abundance and biomass tibbles into a single common (long) one
+tax.props.sand.all <- full_join(tax.props.st.yr.sand, 
+                                tax.props.biomass.st.yr.sand, 
+                                by = c("station", "year", "group")) %>%
+  select(-starts_with("total")) %>% 
+  gather(key = variable, value = proportion, -station, -year, -group) %>%
+  mutate(variable = case_when(variable == "proportion.x" ~ "Abundance", 
+                              variable == "proportion.y" ~ "Biomass"))
+
+(plot.composite.tax.gr.props.sand <- plot_tax_props(tax.props.sand.all, x.labels = "S") + 
+  facet_grid(year ~ variable) + 
+  text_size(text.x = rel(1.3), text.y = rel(1.3), title.x = rel(1.3), legend.text = rel(1.2), strip.x = rel(1.3), strip.y = rel(1.3))
+)
+
+ggsave(file.path(figures.dir, "tax_gr_props_sand_composite.png"),
+       plot.composite.tax.gr.props.sand,       
+       dpi = 300)
+```
+   
+  Back to the biomass: check and plot the species which contribute the most to the biomass at each station.
 ```{r sp_highest_contrib_biomass_sand}
 ## calculate the total biomass counts by species, then select the 20 with the highest biomass
 top20.biomass.sand.st <- get_top_sp(zoo.biomass.sand, nb.sp = 20)
@@ -505,8 +529,7 @@ ggsave(file.path(figures.dir, "highest_biomass_sp_st_sand.png"),
        plot.highest.biomass.sp.sand, 
        dpi = 300)
 ```
-  
-  
+
 ---
 
 #### Macrozoobenthic communities in the seagrasses of Burgas Bay (2013-2014)
@@ -799,6 +822,27 @@ ggsave(file.path(figures.dir, "tax_gr_props_biomass_st_yr_zostera.png"),
        dpi = 300)
 ```
   
+  Combine the proportions of the abundance and the biomass in one single plot. 
+```{r composite_plot_tax_gr_props_zostera}
+## combine the proportional abundance and biomass tibbles into a single common (long) one
+tax.props.zostera.all <- full_join(tax.props.st.yr.zostera, 
+                                tax.props.biomass.st.yr.zostera, 
+                                by = c("station", "year", "group")) %>%
+  select(-starts_with("total")) %>% 
+  gather(key = variable, value = proportion, -station, -year, -group) %>%
+  mutate(variable = case_when(variable == "proportion.x" ~ "Abundance", 
+                              variable == "proportion.y" ~ "Biomass"))
+
+(plot.composite.tax.gr.props.zostera <- plot_tax_props(tax.props.zostera.all, x.labels = "Z") + 
+  facet_grid(year ~ variable) + 
+  text_size(text.x = rel(1.3), text.y = rel(1.3), title.x = rel(1.3), legend.text = rel(1.2), strip.x = rel(1.3), strip.y = rel(1.3))
+)
+
+ggsave(file.path(figures.dir, "tax_gr_props_zostera_composite.png"),
+       plot.composite.tax.gr.props.zostera,       
+       dpi = 300)
+```
+
   Check and plot the species which contribute the most to the biomass at each station.
 ```{r sp_highest_contrib_biomass_zostera}
 ## calculate the total biomass counts by species, then select the 20 with the highest biomass
@@ -1154,7 +1198,7 @@ tax.props.st.yr.2012 <- zoo.abnd.2012.long %>%
                             habitat, station, group) %>%
   arrange(habitat, station)
 
-(plot.tax.props.st.yr.2012 <- plot_tax_props(tax.props.st.yr.2012, x.labels = c("K1", "K2", "R1", "R2", "G1", "G2")) + 
+(plot.tax.props.st.yr.2012 <- plot_tax_props(tax.props.st.yr.2012, x.labels = c("K1", "K2", "R1", "R2", "G1", "G2"), col.palette = "viridis") + 
     # change the strip labels
     facet_wrap(~habitat, nrow = 2, labeller = as_labeller(c("S" = "sand", "Z" = "Zostera"))) +
     text_size(text.x = rel(1.3), text.y = rel(1.3), title.x = rel(1.3), legend.text = rel(1.3), strip.x = rel(1.3))
@@ -1221,7 +1265,33 @@ ggsave(file.path(figures.dir, "tax_gr_props_biomass_st_yr_2012.png"),
        dpi = 300)
 ```
   
-    Check and plot the species which contribute the most to the biomass at each habitat & station.
+  Combine the proportions of the abundance and the biomass in one single plot. 
+```{r composite_plot_tax_gr_props_2012}
+## combine the proportional abundance and biomass tibbles into a single common (long) one
+tax.props.2012.all <- full_join(tax.props.st.yr.2012, 
+                                tax.props.biomass.st.yr.2012, 
+                                by = c("habitat", "station", "group")) %>%
+  select(-starts_with("total")) %>% 
+  gather(key = variable, value = proportion, -habitat, -station, -group) %>%
+  ungroup() %>%
+  # fix a little the variables that will serve for faceting the plot, to avoid re-labeling later 
+  mutate(variable = case_when(variable == "proportion.x" ~ "Abundance", 
+                              variable == "proportion.y" ~ "Biomass"), 
+         habitat = case_when(habitat == "S" ~ "sand", 
+                             habitat == "Z" ~ "Zostera"))
+
+
+(plot.composite.tax.gr.props.2012 <- plot_tax_props(tax.props.2012.all, x.labels = c("K1", "K2", "R1", "R2", "G1", "G2")) + 
+  facet_grid(habitat ~ variable) + 
+  text_size(text.x = rel(1.3), text.y = rel(1.3), title.x = rel(1.3), legend.text = rel(1.2), strip.x = rel(1.3), strip.y = rel(1.3))
+)
+
+ggsave(file.path(figures.dir, "tax_gr_props_2012_composite.png"),
+       plot.composite.tax.gr.props.2012,       
+       dpi = 300)
+```
+    
+  Check and plot the species which contribute the most to the biomass at each habitat & station.
 ```{r sp_highest_contrib_biomass_2012}
 ## calculate the total biomass counts by species, then select the 20 with the highest biomass
 top20.biomass.2012.st <- get_top_sp(zoo.biomass.2012, nb.sp = 20)
