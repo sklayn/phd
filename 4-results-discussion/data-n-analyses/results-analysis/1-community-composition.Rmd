@@ -1,6 +1,6 @@
 ---
 title: "Biodiversity of macrozoobenthic communities"
-date: "2017-10-23"
+date: "2017-10-27"
 output:
   html_notebook:
     theme: paper
@@ -1328,8 +1328,10 @@ ggsave(file.path(figures.dir, "highest_biomass_sp_st_2012.png"),
 
   On second thought, for 2012, a more useful approach would be to 1) test whether there are differences in community composition between the pairs of stations at each of the 3 sites, in sand/seagrass - hopefully no; 2) find the top-contributing species to the abundance/biomass at the site level. 
   
-  Add the site to the (long) abundance & biomass datasets.  
+  Add the site to the (long & wide) abundance & biomass datasets.  
 ```{r add_site_2012}
+library(stringr)
+
 zoo.abnd.2012.long <- zoo.abnd.2012.long %>%
   # match 0+ characters at the beginning of the given string which are not digits - because the names of the stations here consist of site + station number.
   mutate(site = str_extract(station, "[^\\d]+")) %>%
@@ -1340,4 +1342,47 @@ zoo.biomass.2012.long <- zoo.biomass.2012.long %>%
   mutate(site = str_extract(station, "[^\\d]+")) %>%
   select(site, everything())
 ```
+  
+  Check if the community composition differs between sites (using package mvabund for fitting GLMs).
+```{r b/n-site_diff_community_composition_2012}
+library(mvabund)
+
+## convert the abundance tibble to matrix
+zoo.abnd.2012.mat <- mvabund(zoo.abnd.2012 %>% arrange(habitat) %>% select(-c(station:replicate)))
+
+## get the sites & habitats
+sites.2012 <- (zoo.abnd.2012 %>%
+  mutate(site = str_extract(station, "[^\\d]+")) %>%
+  arrange(habitat))$site
+
+habitats.2012 <- sort(zoo.abnd.2012$habitat)
+
+## check the mean-variance relationship in the dataset - for some reason RStudio doesn't want to plot this today - sth to do with graphical device size.
+meanvar.plot(zoo.abnd.2012.mat)
+```
+  Fit the model & check the fit.  
+```{r b/n-site_diff_2012_model}
+## fit the model: do site + habitat influence community composition? 
+comm.diff.2012.mod <- manyglm(zoo.abnd.2012.mat ~ sites.2012 * habitats.2012, family = "negative.binomial")
+
+## plot resiudals to check model fit
+plot(comm.diff.2012.mod)
+
+## check significance of results 
+comm.diff.2012.mod.summary <- anova(comm.diff.2012.mod, p.uni = "adjusted")
+comm.diff.2012.mod.summary
+```
+  OK, there is a highly significant site, habitat & site:habitat effect on community composition & structure in Sozopol Bay in 2012.  
+  Also check for differences between stations within each site; if there aren't any, then that's grounds enough to summarize the abundance, biomass,.. at the site level only.  
+```{r}
+comm.diff.2012.st <- manyglm(zoo.abnd.2012.mat ~ stations.2012 * habitats.2012, famiily = "negative.binomial")
+
+plot(comm.diff.2012.st)
+
+comm.diff.2012.st.summary <- anova(comm.diff.2012.st, p.uni = "adjusted", block = sites.2012)
+comm.diff.2012.st.summary
+```
+  There's only a significant effect of the station:habitat interaction within each site. Well good enough for now; losing too much time as it is with the throwaway-worthy data, and not enough on the really important analyses. Come back later?  
+  
+  
   
