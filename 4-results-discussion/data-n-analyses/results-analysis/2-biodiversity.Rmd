@@ -1,0 +1,138 @@
+---
+title: "Biodiversity of macrozoobenthic communities - 2"
+date: "2017-10-30"
+output: 
+  html_notebook:
+    theme: paper
+---
+
+## Biodiversity, taxonomic distinctness & graphical community analyses  
+This is a continuation of the community analyses started in part 1. Includes the selection of more sophisticated descriptive community analyses of biodiversity, again applied on the 3 separate datasets.  
+
+*** 
+  Some setup, to make this notebook stand-alone.
+```{r setup, include = FALSE}
+library(knitr)
+knit_hooks$set(small.mar = function(before, options, envir) {
+    if (before) par(mar = c(2, 2, .1, 2))  # smaller margin on top
+})
+
+# set knitr options for knitting code into the report.
+opts_chunk$set(cache = TRUE, # save results so that code blocks aren't re-run unless code changes
+               autodep = TRUE, # ..or unless a relevant earlier code block changed
+               cache.comments = FALSE, # don't re-run if the only thing that changed was the comments
+               highlight = TRUE, 
+               small.mar = TRUE)
+```
+  Define the working subdirectories.
+```{r workspace_setup}
+data.dir <- "data"    # input data files
+functions.dir <- "R"  # functions & scripts
+save.dir <- "output"  # clean data, output from models & more complex calculations
+figures.dir <- "figs" # plots & figures 
+```
+  Import functions.
+```{r import_custom_functions}
+source(file.path(functions.dir, "alpha_diversity.R"))
+```
+  
+  Import the necessary libraries.  
+```{r import_packages, message = FALSE}
+library(vegan)
+library(tidyverse)
+library(viridis)
+```
+  Organize some commonly-used ggplot2 modifications into a more convenient (and less repetitive) format.
+```{r custom_ggplot_settings_helpers}
+## ggplot settings & things that I keep reusing
+# ggplot_theme <- list(
+#   theme_bw(),
+#   theme(element_text(family = "Times"))
+# )
+
+## helper to adjust ggplot text size & avoid repetitions 
+text_size <- function(text.x = NULL,
+                      text.y = NULL,
+                      title.x = NULL,
+                      title.y = NULL,
+                      legend.text = NULL,
+                      legend.title = NULL, 
+                      strip.x = NULL, 
+                      strip.y = NULL) {
+  theme(axis.text.x = element_text(size = text.x),
+        axis.text.y = element_text(size = text.y),
+        axis.title.x = element_text(size = title.x),
+        axis.title.y = element_text(size = title.y),
+        legend.text = element_text(size = legend.text), 
+        legend.title = element_text(size = legend.title), 
+        strip.text.x = element_text(size = strip.x), 
+        strip.text.y = element_text(size = strip.y)
+        )
+  }
+```
+***
+#### Macrozoobenthic communities in the sandy sediments of Burgas Bay (2013-2014)
+Import the zoobenthic abundance & biomass data - as an exception, from the cleaned & saved datasets, to avoid (most of) the cleaning steps. 
+```{r zoo_data_sand_import, message = FALSE, results = FALSE}
+## dimensions should be 54 x 205 (5 metadata + 200 species columns); all species columns should be numeric.
+zoo.abnd.sand <- read_csv(file.path(save.dir, "abnd_sand_orig_clean.csv"))
+
+## same for biomass; same expected structure as the abundance
+zoo.biomass.sand <- read_csv(file.path(save.dir, "biomass_sand_orig_clean.csv"))
+```
+  Convert columns to the proper type, arrange the datasets by station, etc.
+```{r clean_zoo_data_sand, results = FALSE}
+zoo.abnd.sand <- zoo.abnd.sand %>% 
+  mutate(station = factor(station, levels = c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva"))) %>%
+  arrange(station, year, month)
+
+zoo.biomass.sand <- zoo.biomass.sand %>% 
+  mutate(station = factor(station, levels = c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva"))) %>%
+  arrange(station, year, month)
+```
+  Remove all species not present in the datasets (= all-0 columns). 
+```{r clean_zoo_data_sand_2, results = FALSE}
+## result should have dimensions 54 x 152 (147 species + 5 metadata columns) 
+zoo.abnd.sand <- zoo.abnd.sand %>% 
+  gather(key = species, value = sp_count, -c(station:replicate)) %>% 
+  group_by(species) %>% 
+  filter(sp_count > 0) %>%
+  spread(species, sp_count, fill = 0)
+
+zoo.biomass.sand <- zoo.biomass.sand %>% 
+  gather(key = species, value = sp_biomass, -c(station:replicate)) %>% 
+  group_by(species) %>% 
+  filter(sp_biomass > 0) %>%
+  spread(species, sp_biomass, fill = 0)
+```
+  
+1. Alpha diversity indices  
+All of the following can be calculated using package vegan. 
+  + species richness S  
+  + Shannon-Wiener biodiversity index H' (log2) - quantifies the probability that any two species drawn from the community are different - measure of entropy, NOT diversity! Therefore doesn't behave linearly. Actually measures the level of disorder in the system (more disorder = more diversity).    
+  + Pielou evenness index J' - - level of dominance in the community. Close to 1 - the abundance is more evenly distrbuted among the species; close to 0 - one or several species largely dominate in abundance over the others.    
+  + effective Shannon diversity (= corresponding Hill number) - to allow a meaningful comparison of diversity, not of entropy. Effective numbers impose a linear transformation on Shannon diversity - represent the number of equally abundant species necessary to produce the observed value of diversity. Range from 1 to S, where a value of S would indicate all species are present and in equal abundances.  
+```{r alpha_diversity_sand}
+## uses custom function for convenience - has to be imported first! 
+alpha.div.sand <- zoo.abnd.sand %>%
+  select(-c(station:replicate)) %>%
+  alpha_diversity()
+
+## add the metadata columns (row order is not changed, so possible) 
+(alpha.div.sand <- bind_cols(zoo.abnd.sand %>% select(station:replicate), 
+                            alpha.div.sand)
+)
+```
+  Summarize these diversity indices by station & year.
+```{r summarize_alpha_diversity_sand}
+## might be a good place to eventually learn how to use the functions from package sjPlot for printing pretty (and easy!) tables...   
+alpha.div.sand %>% 
+  group_by(station, year) %>%
+  summarise(h_mean = mean(shannon_h), h_sd = sd(shannon_h), 
+            j_mean = mean(evenness_j), j_sd = sd(evenness_j),
+            h_eff_mean = mean(h_effective), h_eff_sd = sd(h_effective)
+            )
+```
+  
+  
+  
