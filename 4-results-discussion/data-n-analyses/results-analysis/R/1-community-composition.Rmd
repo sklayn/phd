@@ -1,6 +1,6 @@
 ---
-title: "Biodiversity of macrozoobenthic communities"
-date: "2017-10-27"
+title: "Biodiversity of macrozoobenthic communities - 1"
+date: "2017-10-30"
 output:
   html_notebook:
     theme: paper
@@ -16,7 +16,7 @@ These are the 3 datasets on which the same sets of analyses will be run.
 
 This notebook describes the first steps of the analysis, from the import, cleaning & preparation of the data, to the basic descriptive statistics, preliminary analyses and plots.
 
----
+***
 
 First, set some basic options to control code chunks, evaluation behaviour, etc. (code won't appear in the final report, as it's just setup).
 ```{r setup, include = FALSE}
@@ -41,7 +41,7 @@ save.dir <- "output"  # clean data, output from models & more complex calculatio
 figures.dir <- "figs" # plots & figures 
 ```
   Next, import the custom functions we'll use in the analyses. They're organized in a separate subdirectory, in several files by type of analysis, but we'll import them manually (for now).
-```{r functions_import}
+```{r import_custom_functions}
 source(file.path(functions.dir, "import-functions.R"))
 ```
 
@@ -531,7 +531,7 @@ ggsave(file.path(figures.dir, "highest_biomass_sp_st_sand.png"),
        dpi = 300)
 ```
 
----
+***
 
 #### Macrozoobenthic communities in the seagrasses of Burgas Bay (2013-2014)
 Now we'll do all of this again, for the seagrass communities.
@@ -870,7 +870,7 @@ ggsave(file.path(figures.dir, "highest_biomass_sp_st_zostera.png"),
        dpi = 300)
 ```
   
----  
+***  
 #### Macrozoobenthic communities in the seagrass and sand bottoms of Sozopol Bay (2012)  
   And we'll repeat the analyses for the seagrass/sand communities in Sozopol Bay in 2012 (preliminary experiment).  
   For this experiment, 3 seagrass sites in Sozpol Bay were chosen (Konski, Ribka, Gradina), with 2 stations within each (total = 6 stations).  
@@ -1058,7 +1058,8 @@ summarize_zoo_data(zoo.biomass.2012.long, value.col = sp_biomass, per.m2 = 1/0.0
 current.taxa.2012 <- zoo.taxonomy %>%
   filter(species %in% names(zoo.abnd.2012))
 ```
-    Add in the more commonly used larger taxonomic groups (Polychaeta, Mollusca, Crustacea, and Varia).
+  
+  Add in the more commonly used larger taxonomic groups (Polychaeta, Mollusca, Crustacea, and Varia).
 ```{r assign_taxonomic_groups_2012}
 current.taxa.2012 <- current.taxa.2012 %>%
   mutate(group = case_when(
@@ -1148,9 +1149,9 @@ ggsave(file.path(figures.dir, "nb_taxa_by_tax_group_2012.png"),
 ```
 
   In the **seagrass** in Sozopol Bay (2012):  
-   + **Crustacea** are represented by `r nrow(taxa.zostera.2012 %>% group_by(group) %>% count(family) %>% filter(group == "Crustacea"))` families.   
-   + **Polychaeta** are represented by `r nrow(taxa.zostera.2012 %>% group_by(group) %>% count(family) %>% filter(group == "Polychaeta"))` families.   
-   + **Mollusca** are represented by `r nrow(taxa.zostera.2012 %>% group_by(group) %>% count(family) %>% filter(group == "Mollusca"))` families.  
+    + **Crustacea** are represented by `r nrow(taxa.zostera.2012 %>% group_by(group) %>% count(family) %>% filter(group == "Crustacea"))` families.   
+    + **Polychaeta** are represented by `r nrow(taxa.zostera.2012 %>% group_by(group) %>% count(family) %>% filter(group == "Polychaeta"))` families.   
+    + **Mollusca** are represented by `r nrow(taxa.zostera.2012 %>% group_by(group) %>% count(family) %>% filter(group == "Mollusca"))` families.  
   
   The families with the highest number of species are:
 ```{r breakdown_nb_taxa_families_2012_zostera}
@@ -1212,7 +1213,8 @@ ggsave(file.path(figures.dir, "tax_gr_props_st_yr_2012.png"),
        dpi = 300)
 ```
   
-    Check and plot the species which contribute the most to the abundance at each habitat & station.
+    
+  Check and plot the species which contribute the most to the abundance at each habitat & station.
 ```{r sp_highest_contrib_abnd_2012}
 top20.counts.2012.st <- get_top_sp(zoo.abnd.2012, nb.sp = 20)
 
@@ -1238,7 +1240,7 @@ ggsave(file.path(figures.dir, "most_abnd_sp_st_2012.png"),
        dpi = 300, width = 15, units = "cm")
 ```
   
-    Now let's calculate the same way the **overall community composition by biomass** in both habitat types in Sozopol Bay (2012).
+  Now let's calculate the same way the **overall community composition by biomass** in both habitat types in Sozopol Bay (2012).
 ```{r tax_group_biomass_contrib_overall_2012}
 zoo.biomass.2012.long %>% 
   summarize_tax_group_contr(current.taxa.2012, 
@@ -1324,7 +1326,7 @@ ggsave(file.path(figures.dir, "highest_biomass_sp_st_2012.png"),
        dpi = 300, width = 15, units = "cm")
 ```
   
-  3. Site-level comparison of macrobenthic community composition & structure - seagrass/sand, Sozopol Bay, 2012    
+3. Site-level comparison of macrobenthic community composition & structure - seagrass/sand, Sozopol Bay, 2012    
 
   On second thought, for 2012, a more useful approach would be to 1) test whether there are differences in community composition between the pairs of stations at each of the 3 sites, in sand/seagrass - hopefully no; 2) find the top-contributing species to the abundance/biomass at the site level. 
   
@@ -1382,7 +1384,20 @@ plot(comm.diff.2012.st)
 comm.diff.2012.st.summary <- anova(comm.diff.2012.st, p.uni = "adjusted", block = sites.2012)
 comm.diff.2012.st.summary
 ```
+  NB Save the models & summaries as R data objects, because they take way too much time to repeat.
+```{r save_models_2012}
+## community difference between sites & habitats
+write_rds(comm.diff.2012.mod, file.path(save.dir, "comm_diff_model_2012.RDS"))
+
+write_rds(comm.diff.2012.mod.summary, file.path(save.dir, "comm_diff_model_2012_summary.RDS"))
+
+## community difference between stations & habitats within each site
+write_rds(comm.diff.2012.st, file.path(save.dir, "comm_diff_st_model_2012.RDS"))
+
+write_rds(comm.diff.2012.st.summary, file.path(save.dir, "comm_diff_st_model_2012_summary.RDS"))
+```
+
   There's only a significant effect of the station:habitat interaction within each site. Well good enough for now; losing too much time as it is with the throwaway-worthy data, and not enough on the really important analyses. Come back later?  
   
-  
+  NB Remember to do some workspace cleanup in the end! There are too many trailing objects.
   
