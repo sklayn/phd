@@ -1,6 +1,3 @@
-##### Descriptive community statistics #####
-
-##### Contribution of taxonomic groups to the abundance/biomass #####
 tax_group_contribution <- function(abnd.data, tax.data, group.by = NULL) {
   ## Calculates the proportional contribution of each of a set of larger taxonomic
   ##  groups to the overall abundance/biomass in the stations' communities.

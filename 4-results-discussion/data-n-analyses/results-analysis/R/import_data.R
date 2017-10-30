@@ -1,5 +1,3 @@
-##### Import & cleaning functions ##### 
-
 import_zoo_data <- function(data.dir = NULL, zoo.data, meta.labels) {
   ## Imports, cleans and prepares zoobenthic raw data for community descriptive 
   ## statistics and further analyses. 
