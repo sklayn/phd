@@ -668,7 +668,7 @@ taxa.list <- read.csv(file = file.path(data.dir, "td-zoo-taxonomy.csv"),
                       header = TRUE, 
                       row.names = 1)
 
-# calcualate teh taxonomic distance for the species list, using variable step 
+# calculate the taxonomic distance for the species list, using variable step 
 taxa.dist <- taxa2dist(taxa.list, varstep = TRUE)
 
 # calculate the taxonomic distinctness indices - on the numeric columns (species)

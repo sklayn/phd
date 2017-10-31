@@ -106,7 +106,7 @@ zoo.biomass.sand <- zoo.biomass.sand %>%
   spread(species, sp_biomass, fill = 0)
 ```
   
-1. Alpha diversity indices  
+##### Alpha diversity indices  
 All of the following can be calculated using package vegan. 
   + species richness S  
   + Shannon-Wiener biodiversity index H' (log2) - quantifies the probability that any two species drawn from the community are different - measure of entropy, NOT diversity! Therefore doesn't behave linearly. Actually measures the level of disorder in the system (more disorder = more diversity).    
@@ -134,5 +134,85 @@ alpha.div.sand %>%
             )
 ```
   
+2. Species accumulation curves - see how species are added when the number of samples (sites) increases. Usually used to see if the sampling effort is adequate & captures most of the diversity in the study area.  
+```{r sp_accumulation_curves_sand}
+sac.sand <- specaccum(select(zoo.abnd.sand, -c(station:replicate)))
+
+plot(sac.sand, 
+     xlab = "Samples", ylab = "Cumulative species richness", 
+     ci.type = "polygon", ci.col = "light blue")
+```
+  About 10 samples seem to be enough to capture most of the biodiversity in the study area (in terms of species richness) - this is where the curve starts to smooth out (slope < 1). In my dataset, there are 9 samples/station - could be considered enough.  
+  NB IF this method is applied correctly, since the samples are not independent but in fact represent replicates at each station.  
   
+##### Species pool  
+The species pool is the total extrapolated number of species in the study area (various estimates used here). Used to estimate the number of **unobserved species**. The functions assume that the number of unobserved species is related to he number of rare species (= seen only once or twice).     
+```{r sp_pool_sand}
+## this function is based on incidences in sample sites - presence/absence data; gives a single estimate for a collection of sample sites
+specpool(select(zoo.abnd.sand, -c(station:replicate)), 
+         pool = zoo.abnd.sand$station, 
+         smallsample = TRUE)
+
+## this function is quantitative - based on abundances on single sample site
+estimateR(select(zoo.abnd.sand, -c(station:replicate)))
+```
+  Now let's do it for the whole dataset. 
+```{r sp_pool_total_sand}
+specpool(select(zoo.abnd.sand, -c(station:replicate)), 
+         smallsample = TRUE)
+```
+  Looks good: based on the most severe estimate (second-order jacknife), the dataset captures about 77 % of the species pool, and based on the most forgiving one (bootstrap) - about 91 %.  
+  
+##### Taxonomic distance & diversity  
+  Simple diversity measures do not distinguish between species. However, in the real world, species relationships (phylogenetic, taxonomic, functional..) matter, and could carry important ecologcial information.    
+  For these analyses, a master species list for the whole study area is needed. For the Black Sea, it was compiled using the Catalogue of Black Sea Fauna & its 2 updates, as well as other, more recent inventories (full references & details in Materials & methods).  
+```{r import_master_taxonomic_list}
+## NB imported with row names on purpose, otherwise later some vegan functions fail! 
+master.tax.list <- read.csv(file = file.path(data.dir, "td_zoo_taxonomy.csv"), header = TRUE, row.names = 1)
+```
+  Now we'll calculate the **taxonomic distance** for the dataset.
+```{r tax_distance_sand}
+### FIX THIS ###
+
+## calculate the taxonomic distance for the master species list, using variable step - scaling according to reduction in number of classes when going up in the tax. tree (if almost all genera have only 1 species, it makes no big difference if 2 individuals belong to a different species or a different genus). 
+tax.dist.sand <- taxa2dist(master.tax.list, varstep = TRUE)
+
+# calculate the taxonomic distinctness indices for the abundance dataset, and print it to examine (its built-in print method is actually better than mine, after later conversions to tibble, etc.)
+(tax.distinctness.sand <- taxondive(select(zoo.abnd.sand, -c(station:replicate)), tax.dist.sand)
+)
+
+## convert the taxonomic distinctness indices list to tibble
+tax.distinctness.sand <- as_tibble(lapply(tax.distinctness.sand, 
+                                          function(x) {vals <- x; return(vals)}))  
+
+## add in the metadata columns
+tax.distinctness.sand <- bind_cols(select(zoo.abnd.sand, station:replicate), tax.distinctness.sand)
+```
+  Summarize the taxonomic distinctness indices by station.
+```{r}
+# aggregate taxonomic distinctness indices by station and year
+tax.dist.table$stations <- reorder.factor(tax.dist.table$stations, 
+                                            new.order = stations.sand)
+tax.dist.summary <- ddply(tax.dist.table, .(stations), 
+                          colwise(mean, .cols = is.numeric))
+```
+  
+
+
+
+
+##### Graphical analyses  
+  **Diversity profiles** are a graphical representation of the shape of the community. They show how the perceived diversity changes as the emphasis shifts from common to rare species - we can judge their respective contributions in the community composition.  
+  Not sure if I'll use them in the thesis (most likely not), but I'm including the calculation and graphs here, because I think they're neat and I like them.  
+```{r diversity_profiles_sand}
+div.profiles.sand <- diversity_profiles(select(zoo.abnd.sand, -c(station:replicate)))
+
+## plot them, too
+
+```
+
+  It's possible to calculate **weighted diversity profiles** by including a measure of similarity between species - for instance, taxonomic distance between them. This approach allows for a lot more meaningful ecological and biodiversity comparisons (Leinster & Cobbold, 2012).  
+```{r weighted_diversity_profiles_sand}
+
+```
   
