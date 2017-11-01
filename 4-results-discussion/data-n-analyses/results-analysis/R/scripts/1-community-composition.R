@@ -652,7 +652,7 @@ write.csv(diversity.sand,
 
 
 
-## Taxonomic diversity
+#### Taxonomic diversity ####
 
 # NB! NEEDS UPDATED MASTER SPECIES LIST FOR BIOGEOGRAPHIC AREA
 

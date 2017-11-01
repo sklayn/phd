@@ -172,21 +172,51 @@ master.tax.list <- read.csv(file = file.path(data.dir, "td_zoo_taxonomy.csv"), h
 ```
   Now we'll calculate the **taxonomic distance** for the dataset.
 ```{r tax_distance_sand}
-### FIX THIS ###
-
 ## calculate the taxonomic distance for the master species list, using variable step - scaling according to reduction in number of classes when going up in the tax. tree (if almost all genera have only 1 species, it makes no big difference if 2 individuals belong to a different species or a different genus). 
 tax.dist.sand <- taxa2dist(master.tax.list, varstep = TRUE)
 
-# calculate the taxonomic distinctness indices for the abundance dataset, and print it to examine (its built-in print method is actually better than mine, after later conversions to tibble, etc.)
+## calculate the taxonomic distinctness indices for the abundance dataset, and print it to examine (its built-in print method is actually better than mine, after later conversions to tibble, etc.)
 (tax.distinctness.sand <- taxondive(select(zoo.abnd.sand, -c(station:replicate)), tax.dist.sand)
 )
 
-## convert the taxonomic distinctness indices list to tibble
-tax.distinctness.sand <- as_tibble(lapply(tax.distinctness.sand, 
-                                          function(x) {vals <- x; return(vals)}))  
+## get the summary - includes a significance test on Delta+
+summary(tax.distinctness.sand)
 
-## add in the metadata columns
-tax.distinctness.sand <- bind_cols(select(zoo.abnd.sand, station:replicate), tax.distinctness.sand)
+# ## convert the taxonomic distinctness indices list to tibble
+# tax.distinctness.sand <- as_tibble(lapply(tax.distinctness.sand, 
+#                                           function(x) {vals <- x; return(vals)}))  
+# 
+# ## add in the metadata columns
+# tax.distinctness.sand <- bind_cols(select(zoo.abnd.sand, station:replicate), tax.distinctness.sand)
+
+## construct the funnel plots w/ 95% confidence limits based on the master species list. On the plus side, this shit only has to be done once, then can be reused for all 3 datasets (it's the same study area hence the same master species list). 
+
+# initiate empty matrix to hold the simulation results
+sim.list.names <- seq(from = 10, to = 150, by = 5) 
+sim.tib <- matrix(NA, nrow = 999, ncol = length(sim.list.names))
+colnames(sim.tib) <- sim.list.names
+
+# generate the Dplus values for each simulated dataset 
+
+### NB better write a function for a single simulaton, then run it the requried nb times (simulate_Dplus(999, species = x))
+
+### Also do something like this: matrix(simulate_Dplus(999*29), nrow = 999, ncol = 29)
+
+  for(n in 1:ncol(sim.tib)) {
+    vec <- numeric(nrow(sim.tib))  
+    for(i in 1:length(vec)) {
+      y <- sample_n(master.tax.list, size = as.numeric(colnames(sim.tib)[n]), replace = F)
+      # needed because taxondive is grumpy 
+      y.df <- data.frame(matrix(1, nrow = 1, ncol = nrow(y)))
+      names(y.df) <- row.names(y)
+      # very much needed, because floods everything with complaints about sp lists not matching in length
+      vec[i] <- suppressMessages(taxondive(y.df, tax.dist.sand)$Dplus)
+      }
+    sim.tib[, n] <- vec
+    }
+
+
+
 ```
   Summarize the taxonomic distinctness indices by station.
 ```{r}
