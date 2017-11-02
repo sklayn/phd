@@ -42,7 +42,7 @@ figures.dir <- "figs" # plots & figures
 ```
   Next, import the custom functions we'll use in the analyses. They're organized in a separate subdirectory, in several files by type of analysis, but we'll import them manually (for now).
 ```{r import_custom_functions}
-source(file.path(functions.dir, "import-functions.R"))
+source(file.path(functions.dir, "import_data.R"))
 ```
 
 Import some necessary libraries.

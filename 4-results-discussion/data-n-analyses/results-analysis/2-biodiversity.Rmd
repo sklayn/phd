@@ -1,6 +1,6 @@
 ---
 title: "Biodiversity of macrozoobenthic communities - 2"
-date: "2017-10-30"
+date: "2017-11-02"
 output: 
   html_notebook:
     theme: paper
@@ -191,31 +191,46 @@ summary(tax.distinctness.sand)
 
 ## construct the funnel plots w/ 95% confidence limits based on the master species list. On the plus side, this shit only has to be done once, then can be reused for all 3 datasets (it's the same study area hence the same master species list). 
 
-# initiate empty matrix to hold the simulation results
+## initiate empty matrix to hold the simulation results
 sim.list.names <- seq(from = 10, to = 150, by = 5) 
 sim.tib <- matrix(NA, nrow = 999, ncol = length(sim.list.names))
 colnames(sim.tib) <- sim.list.names
 
-# generate the Dplus values for each simulated dataset 
+simulate_Dplus <- function(master.list, tax.dist.mat, species) {
+  ## helper calculating Dplus for a simulated community sampled at random from the master species list for the study area   
+  
+  ## simulate a possible community of the specified size from the master species list for the study area
+  sim.community <- dplyr::sample_n(master.list, size = species, replace = FALSE)
+  
+  ## convert to a matrix, to use in vegan function taxondive 
+  sim.community.mat <- matrix(1, nrow = 1, ncol = nrow(sim.community))
+  colnames(sim.community.mat) <- row.names(sim.community)
+  
+  ## calculate & extract Dplus for the simulated community, suppressing the messages related to dimension mismatch with the master list 
+  dplus <- suppressMessages(vegan::taxondive(sim.community.mat, tax.dist.mat)$Dplus)
+  
+  return(dplus)
+}
 
-### NB better write a function for a single simulaton, then run it the requried nb times (simulate_Dplus(999, species = x))
+## some jumping through hoops to run this in parallel
+library(parallel)
+core.clust <- makeCluster(detectCores() - 3, type = "FORK")
 
-### Also do something like this: matrix(simulate_Dplus(999*29), nrow = 999, ncol = 29)
+## generate the Dplus values for each simulated dataset - using the parallel versions of the functions
+sim.tib <- t(parApply(core.clust, sim.tib, 1, function(y) {
+  sapply(sim.list.names, function(x) simulate_Dplus(master.tax.list, tax.dist.sand, species = x))
+}))
 
-  for(n in 1:ncol(sim.tib)) {
-    vec <- numeric(nrow(sim.tib))  
-    for(i in 1:length(vec)) {
-      y <- sample_n(master.tax.list, size = as.numeric(colnames(sim.tib)[n]), replace = F)
-      # needed because taxondive is grumpy 
-      y.df <- data.frame(matrix(1, nrow = 1, ncol = nrow(y)))
-      names(y.df) <- row.names(y)
-      # very much needed, because floods everything with complaints about sp lists not matching in length
-      vec[i] <- suppressMessages(taxondive(y.df, tax.dist.sand)$Dplus)
-      }
-    sim.tib[, n] <- vec
-    }
+## ALWAYS stop cluster afterwards!
+stopCluster(core.clust)
 
-
+## see where the bottleneck is
+library(profvis)
+profvis({
+t(apply(sim.tib[1:100, 1:5], 1, function(y) {
+  sapply(sim.list.names, function(x) simulate_Dplus(master.tax.list, tax.dist.sand, species = x))
+}))
+})
 
 ```
   Summarize the taxonomic distinctness indices by station.
