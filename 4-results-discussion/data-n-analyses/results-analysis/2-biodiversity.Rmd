@@ -1,6 +1,6 @@
 ---
 title: "Biodiversity of macrozoobenthic communities - 2"
-date: "2017-11-02"
+date: "2017-11-03"
 output: 
   html_notebook:
     theme: paper
@@ -49,6 +49,8 @@ library(viridis)
 #   theme_bw(),
 #   theme(element_text(family = "Times"))
 # )
+## always use black-and-white theme
+theme_set(theme_bw())
 
 ## helper to adjust ggplot text size & avoid repetitions 
 text_size <- function(text.x = NULL,
@@ -182,19 +184,8 @@ tax.dist.sand <- taxa2dist(master.tax.list, varstep = TRUE)
 ## get the summary - includes a significance test on Delta+
 summary(tax.distinctness.sand)
 
-# ## convert the taxonomic distinctness indices list to tibble
-# tax.distinctness.sand <- as_tibble(lapply(tax.distinctness.sand, 
-#                                           function(x) {vals <- x; return(vals)}))  
-# 
-# ## add in the metadata columns
-# tax.distinctness.sand <- bind_cols(select(zoo.abnd.sand, station:replicate), tax.distinctness.sand)
-
-## construct the funnel plots w/ 95% confidence limits based on the master species list. On the plus side, this shit only has to be done once, then can be reused for all 3 datasets (it's the same study area hence the same master species list). 
-
-## initiate empty matrix to hold the simulation results
-sim.list.names <- seq(from = 10, to = 150, by = 5) 
-sim.tib <- matrix(NA, nrow = 999, ncol = length(sim.list.names))
-colnames(sim.tib) <- sim.list.names
+## construct the 95% confidence funnels (actually probably 95% tolerance intervals, but who's counting)
+sim.list <- seq(from = 10, to = 150, by = 5) 
 
 simulate_Dplus <- function(master.list, tax.dist.mat, species) {
   ## helper calculating Dplus for a simulated community sampled at random from the master species list for the study area   
@@ -212,25 +203,27 @@ simulate_Dplus <- function(master.list, tax.dist.mat, species) {
   return(dplus)
 }
 
-## some jumping through hoops to run this in parallel
+## generate the Dplus values for each simulated dataset - using the parallel version of sapply + replicate; ~11 min for 29000 values
 library(parallel)
-core.clust <- makeCluster(detectCores() - 3, type = "FORK")
+core.clust <- makeCluster(detectCores() - 2, type = "FORK") # make core cluster (leaving some cores for the ohter processes, too), making sure to fork the environment, otherwise the functions won't be able to find objects in the global environment
 
-## generate the Dplus values for each simulated dataset - using the parallel versions of the functions
-sim.tib <- t(parApply(core.clust, sim.tib, 1, function(y) {
-  sapply(sim.list.names, function(x) simulate_Dplus(master.tax.list, tax.dist.sand, species = x))
-}))
+dplus.sim <- parSapply(core.clust, sim.list, function(x) replicate(999, simulate_Dplus(master.tax.list, tax.dist.sand, species = x)))
 
-## ALWAYS stop cluster afterwards!
-stopCluster(core.clust)
+stopCluster(core.clust) ## ALWAYS stop cluster afterwards!
+rm(core.clust)
 
-## see where the bottleneck is
-library(profvis)
-profvis({
-t(apply(sim.tib[1:100, 1:5], 1, function(y) {
-  sapply(sim.list.names, function(x) simulate_Dplus(master.tax.list, tax.dist.sand, species = x))
-}))
-})
+## transform the matrix into a long tibble, and clean & arrange it a little
+colnames(dplus.sim) <- sim.list
+
+dplus.sim.long <- as_tibble(dplus.sim) %>% 
+  gather(key = sp_number, value = Dplus_sim) %>%
+  mutate(sp_number = as.numeric(sp_number)) %>%
+  arrange(sp_number)
+
+## plot this (to test)
+ggplot(dplus.sim.long, aes(x = sp_number, y = Dplus_sim)) + 
+  geom_point(alpha = 0.25)
+
 
 ```
   Summarize the taxonomic distinctness indices by station.
