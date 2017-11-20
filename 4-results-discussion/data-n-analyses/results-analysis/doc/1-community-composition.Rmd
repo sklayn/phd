@@ -138,17 +138,19 @@ write_csv(zoo.biomass.sand,
   First we'll remove the all-0 columns (= species from the master species list which are not present in the current dataset - don't appear at these particular stations & samplings, etc.). This will simplify later analyses, especially the more complex ones that require a lot of time. 
 ```{r clean_data_sand_2}
 # long data is immensely easier to manipulate within the tidyverse, so we'll do some back-and-forth conversions
-zoo.abnd.sand <- zoo.abnd.sand %>% 
+(zoo.abnd.sand <- zoo.abnd.sand %>% 
   gather(key = species, value = sp_count, -c(station:replicate)) %>% 
   group_by(species) %>% 
   filter(sp_count > 0) %>%
-  spread(species, sp_count, fill = 0)
+  spread(species, sp_count, fill = 0) %>%
+  arrange(station, year, month))
 
-zoo.biomass.sand <- zoo.biomass.sand %>% 
+(zoo.biomass.sand <- zoo.biomass.sand %>% 
   gather(key = species, value = sp_biomass, -c(station:replicate)) %>% 
   group_by(species) %>% 
   filter(sp_biomass > 0) %>%
-  spread(species, sp_biomass, fill = 0)
+  spread(species, sp_biomass, fill = 0) %>% 
+  arrange(station, year, month))
 ```
   
 Ready to proceed with the analyses themselves! 
@@ -581,17 +583,19 @@ write_csv(zoo.biomass.zostera,
   First we'll remove the species that are absent from the current dataset - don't appear at these particular stations & samplings, etc. This will simplify later analyses, especially the more complex ones that require a lot of time. 
 ```{r clean_data_zostera_2}
 # long data is immensely easier to manipulate within the tidyverse, so we'll do some back-and-forth conversions
-zoo.abnd.zostera <- zoo.abnd.zostera %>% 
+(zoo.abnd.zostera <- zoo.abnd.zostera %>% 
   gather(key = species, value = sp_count, -c(station:replicate)) %>% 
   group_by(species) %>% 
   filter(sp_count > 0) %>%
-  spread(species, sp_count, fill = 0)
+  spread(species, sp_count, fill = 0) %>%
+  arrange(station, year, replicate))
 
-zoo.biomass.zostera <- zoo.biomass.zostera %>% 
+(zoo.biomass.zostera <- zoo.biomass.zostera %>% 
   gather(key = species, value = sp_biomass, -c(station:replicate)) %>% 
   group_by(species) %>% 
   filter(sp_biomass > 0) %>%
-  spread(species, sp_biomass, fill = 0)
+  spread(species, sp_biomass, fill = 0) %>% 
+  arrange(station, year, replicate))
 ```
   
 Ready to proceed with the community structure & composition analyses! 
@@ -922,17 +926,19 @@ write_csv(zoo.biomass.2012,
   
   Remove the species that are absent from the current dataset, as before. 
 ```{r clean_data_2012_2}
-zoo.abnd.2012 <- zoo.abnd.2012 %>% 
+(zoo.abnd.2012 <- zoo.abnd.2012 %>% 
   gather(key = species, value = sp_count, -c(station:replicate)) %>% 
   group_by(species) %>% 
   filter(sp_count > 0) %>%
-  spread(species, sp_count, fill = 0)
+  spread(species, sp_count, fill = 0) %>%
+  arrange(station, year))
 
-zoo.biomass.2012 <- zoo.biomass.2012 %>% 
+(zoo.biomass.2012 <- zoo.biomass.2012 %>% 
   gather(key = species, value = sp_biomass, -c(station:replicate)) %>% 
   group_by(species) %>% 
   filter(sp_biomass > 0) %>%
-  spread(species, sp_biomass, fill = 0)
+  spread(species, sp_biomass, fill = 0) %>% 
+  arrange(station, year))
 ```
   
   Ready to proceed with the community structure & composition analyses! 
@@ -1144,7 +1150,7 @@ nb.taxa.by.gr.habitat.2012 <- left_join(zoo.abnd.2012.long, current.taxa.2012) %
 )
 
 ggsave(file.path(figures.dir, "nb_taxa_by_tax_group_2012.png"),
-       plot.nb.taxa.by.gr.2012,
+       plot.nb.taxa.by.gr.hab.2012,
        dpi = 300)
 ```
 
