@@ -1,6 +1,6 @@
 ---
 title: "Biodiversity of macrozoobenthic communities - 2"
-date: "2017-11-03"
+date: "2017-11-28"
 output: 
   html_notebook:
     theme: paper
@@ -184,7 +184,10 @@ tax.dist.sand <- taxa2dist(master.tax.list, varstep = TRUE)
 ## get the summary - includes a significance test on Delta+
 summary(tax.distinctness.sand)
 
-## construct the 95% confidence funnels (actually probably 95% tolerance intervals, but who's counting)
+```
+  Construct the 95% confidence funnels for the taxonomic distance using the master species list. Actually, these are probably meant to be 95% tolerance intervals (limits containing at least 95% of all observations), but it's a very big can of other statistical worms that I just can't bear to open; they wrote "confidence intervals" so that stays.  
+  Thankfully, I can do this once for all three datasets - the simulation takes a lot of time and computational power.  
+```{r conf_interval_tax_distance}
 sim.list <- seq(from = 10, to = 150, by = 5) 
 
 simulate_Dplus <- function(master.list, tax.dist.mat, species) {
@@ -205,7 +208,7 @@ simulate_Dplus <- function(master.list, tax.dist.mat, species) {
 
 ## generate the Dplus values for each simulated dataset - using the parallel version of sapply + replicate; ~11 min for 29000 values
 library(parallel)
-core.clust <- makeCluster(detectCores() - 2, type = "FORK") # make core cluster (leaving some cores for the ohter processes, too), making sure to fork the environment, otherwise the functions won't be able to find objects in the global environment
+core.clust <- makeCluster(detectCores() - 2, type = "FORK") # make core cluster (leaving some threads for the other processes the computer is running), making sure to fork the environment, otherwise the functions won't be able to find objects in the global environment
 
 dplus.sim <- parSapply(core.clust, sim.list, function(x) replicate(999, simulate_Dplus(master.tax.list, tax.dist.sand, species = x)))
 
@@ -220,12 +223,24 @@ dplus.sim.long <- as_tibble(dplus.sim) %>%
   mutate(sp_number = as.numeric(sp_number)) %>%
   arrange(sp_number)
 
-## plot this (to test)
-ggplot(dplus.sim.long, aes(x = sp_number, y = Dplus_sim)) + 
-  geom_point(alpha = 0.25)
+## calculate the 95% confidence intervals for each group (sp_number)
+dplus.sim.conf.int <- dplus.sim.long %>% 
+  group_by(sp_number) %>% 
+  mutate(lower = tolerance::normtol.int(Dplus_sim, alpha = 0.05, P = 0.95, side = 2)$`2-sided.lower`, 
+         upper = tolerance::normtol.int(Dplus_sim, alpha = 0.05, P = 0.95, side = 2)$`2-sided.upper`)  
 
+dplus.sim.conf.int <- conf.int %>% 
+  distinct(sp_number, lower, upper)
+
+## plot this (just to check it out)
+ggplot(dplus.sim.long, aes(x = sp_number, y = Dplus_sim)) + 
+  geom_point(alpha = 0.25) + 
+  geom_line(aes(x = sp_number, y = lower), data = dplus.sim.conf.int, color = "red") + 
+  geom_line(aes(x = sp_number, y = upper), data = dplus.sim.conf.int, color = "red")
 
 ```
+
+
   Summarize the taxonomic distinctness indices by station.
 ```{r}
 # aggregate taxonomic distinctness indices by station and year
