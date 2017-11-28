@@ -239,10 +239,23 @@ ggplot(dplus.sim.long, aes(x = sp_number, y = Dplus_sim)) +
   geom_line(aes(x = sp_number, y = upper), data = dplus.sim.conf.int, color = "red")
 
 ```
+  Now plot the real, observed values of D-plus in the sand dataset, and add these confidence limits.  
+```{r plot_tax_distance_sand}
+s.dplus.sand <- bind_cols(S = tax.distinctness.sand$Species, 
+                          Dplus = tax.distinctness.sand$Dplus, 
+                          station = zoo.abnd.sand$station)
 
+ggplot(s.dplus.sand, aes(x = S, y = Dplus, color = station)) + 
+  geom_point(alpha = 0.5, size = 2) + 
+  #scale_color_brewer() + 
+  geom_line(aes(x = sp_number, y = lower), data = dplus.sim.conf.int, color = "grey40", lwd = 0.3) + 
+  geom_line(aes(x = sp_number, y = upper), data = dplus.sim.conf.int, color = "grey40", lwd = 0.3)
+
+```
+  
 
   Summarize the taxonomic distinctness indices by station.
-```{r}
+```{r summarize_tax_distinctness_sand}
 # aggregate taxonomic distinctness indices by station and year
 tax.dist.table$stations <- reorder.factor(tax.dist.table$stations, 
                                             new.order = stations.sand)
