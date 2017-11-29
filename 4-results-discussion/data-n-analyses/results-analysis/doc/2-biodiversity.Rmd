@@ -17,7 +17,10 @@ knit_hooks$set(small.mar = function(before, options, envir) {
     if (before) par(mar = c(2, 2, .1, 2))  # smaller margin on top
 })
 
-# set knitr options for knitting code into the report.
+## set the working directory to one up (all notebooks - kept in their own subdirectory within the project directory).
+opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+
+## set knitr options for knitting code into the report.
 opts_chunk$set(cache = TRUE, # save results so that code blocks aren't re-run unless code changes
                autodep = TRUE, # ..or unless a relevant earlier code block changed
                cache.comments = FALSE, # don't re-run if the only thing that changed was the comments
@@ -26,6 +29,9 @@ opts_chunk$set(cache = TRUE, # save results so that code blocks aren't re-run un
 ```
   Define the working subdirectories.
 ```{r workspace_setup}
+## print the working directory, just to be on the safe side
+paste("You are here: ", getwd())
+
 data.dir <- "data"    # input data files
 functions.dir <- "R"  # functions & scripts
 save.dir <- "output"  # clean data, output from models & more complex calculations
@@ -252,16 +258,7 @@ ggplot(s.dplus.sand, aes(x = S, y = Dplus, color = station)) +
   geom_line(aes(x = sp_number, y = upper), data = dplus.sim.conf.int, color = "grey40", lwd = 0.3)
 
 ```
-  
 
-  Summarize the taxonomic distinctness indices by station.
-```{r summarize_tax_distinctness_sand}
-# aggregate taxonomic distinctness indices by station and year
-tax.dist.table$stations <- reorder.factor(tax.dist.table$stations, 
-                                            new.order = stations.sand)
-tax.dist.summary <- ddply(tax.dist.table, .(stations), 
-                          colwise(mean, .cols = is.numeric))
-```
   
 
 
