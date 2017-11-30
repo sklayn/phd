@@ -1,6 +1,6 @@
 ---
 title: "Biodiversity of macrozoobenthic communities - 2"
-date: "2017-11-28"
+date: "2017-11-30"
 output: 
   html_notebook:
     theme: paper
@@ -105,13 +105,15 @@ zoo.abnd.sand <- zoo.abnd.sand %>%
   gather(key = species, value = sp_count, -c(station:replicate)) %>% 
   group_by(species) %>% 
   filter(sp_count > 0) %>%
-  spread(species, sp_count, fill = 0)
+  spread(species, sp_count, fill = 0) %>%
+  arrange(station, year, month)
 
 zoo.biomass.sand <- zoo.biomass.sand %>% 
   gather(key = species, value = sp_biomass, -c(station:replicate)) %>% 
   group_by(species) %>% 
   filter(sp_biomass > 0) %>%
-  spread(species, sp_biomass, fill = 0)
+  spread(species, sp_biomass, fill = 0) %>%
+  arrange(station, year, month)
 ```
   
 ##### Alpha diversity indices  
@@ -127,8 +129,7 @@ alpha.div.sand <- zoo.abnd.sand %>%
   alpha_diversity()
 
 ## add the metadata columns (row order is not changed, so possible) 
-(alpha.div.sand <- bind_cols(zoo.abnd.sand %>% select(station:replicate), 
-                            alpha.div.sand)
+(alpha.div.sand <- bind_cols(zoo.abnd.sand %>% select(station:replicate), alpha.div.sand)
 )
 ```
   Summarize these diversity indices by station & year.
@@ -191,7 +192,7 @@ tax.dist.sand <- taxa2dist(master.tax.list, varstep = TRUE)
 summary(tax.distinctness.sand)
 
 ```
-  Construct the 95% confidence funnels for the taxonomic distance using the master species list. Actually, these are probably meant to be 95% tolerance intervals (limits containing at least 95% of all observations), but it's a very big can of other statistical worms that I just can't bear to open; they wrote "confidence intervals" so that stays.  
+  Construct the 95% confidence funnels for the taxonomic distance using the master species list. Actually, these were probably meant to be 95% tolerance intervals (limits containing at least 95% of all observations), so that's what I'm going to calculate.  
   Thankfully, I can do this once for all three datasets - the simulation takes a lot of time and computational power.  
 ```{r simulate_tax_distance_indices}
 sim.list <- seq(from = 10, to = 150, by = 5) 
@@ -216,90 +217,109 @@ simulate_Dplus_L <- function(master.list, tax.dist.mat, species) {
 library(parallel)
 core.clust <- makeCluster(detectCores() - 2, type = "FORK") # make core cluster (leaving some threads for the other processes the computer is running), making sure to fork the environment, otherwise the functions won't be able to find objects in the global environment
 
-dplus.l.sim <- parSapply(core.clust, sim.list, function(x) replicate(999, simulate_Dplus_L(master.tax.list, tax.dist.sand, species = x)))
+dplus.l.sim <- parSapply(core.clust, sim.list, function(x) replicate(999, simulate_Dplus_L(master.tax.list, tax.dist.sand, species = x)), simplify = FALSE)
 
 stopCluster(core.clust) ## ALWAYS stop cluster afterwards!
 rm(core.clust)
 
-## fix the names
-colnames(dplus.l.sim) <- sim.list
+## fix the names of the list
+names(dplus.l.sim) <- sim.list
 
-## unfortunately, the matrix consists of Dplus (odd rows) AND Lambda (even rows). I'm too lazy to fix this at function level now, so we'll have to work around that
-dplus.sim <- dplus.l.sim[seq(1, nrow(dplus.l.sim), by = 2), ]
-lambda.sim <- dplus.l.sim[seq(2, nrow(dplus.l.sim), by = 2), ]
+## the list consists of 29 sub-lists, each with a matrix with 2 (named) rows - Dplus (odd) and Lambda (even) x 999 columns. Let's split them and make them presentable.
+dplus.sim <- lapply(dplus.l.sim, function(x) x["Dplus", ])
+dplus.sim.long <- stack(lapply(dplus.sim, unlist)) # unlist converts the sub-lists to vector, and stack puts them in a long data frame, adding a factor id column with original list item names
+names(dplus.sim.long) <- c("Dplus_sim", "sp_number")
+
+lambda.sim <- lapply(dplus.l.sim, function(x) x["Lambda", ])
+lambda.sim.long <- stack(lapply(lambda.sim, unlist))
+names(lambda.sim.long) <- c("Lambda_sim", "sp_number")
 ```
 
   Now plot the simulated D-plus & the confidence/tolerance intervlas to see if everything checks out - these will be also shown on the plot of real, observed data.
 ```{r conf_intervals_dplus}
-## transform the Dplus matrix into a long tibble, and clean & arrange it a little
-dplus.sim.long <- as_data_frame(dplus.sim) %>% 
-  unnest() %>% # because previous command results in columns of nested lists 
-  gather(key = sp_number, value = Dplus_sim) %>%
-  mutate(sp_number = as.numeric(sp_number)) %>%
+## transform the simulated Dplus data frame into a tibble, and clean it a little
+dplus.sim.long <- as_data_frame(dplus.sim.long) %>%
+  mutate(sp_number = as.numeric(as.character(sp_number))) %>%
   arrange(sp_number)
 
 ## calculate the 95% confidence/tolerance intervals for each group (sp_number)
 dplus.sim.conf.int <- dplus.sim.long %>% 
   group_by(sp_number) %>% 
   mutate(lower = tolerance::normtol.int(Dplus_sim, alpha = 0.05, P = 0.95, side = 2)$`2-sided.lower`, 
-         upper = tolerance::normtol.int(Dplus_sim, alpha = 0.05, P = 0.95, side = 2)$`2-sided.upper`)  
+         upper = tolerance::normtol.int(Dplus_sim, alpha = 0.05, P = 0.95, side = 2)$`2-sided.upper`,
+         average = mean(Dplus_sim))  
 
 dplus.sim.conf.int <- dplus.sim.conf.int %>% 
-  distinct(sp_number, lower, upper)
+  distinct(sp_number, lower, upper, average)
 
 ## plot this (just to check it out)
 ggplot(dplus.sim.long, aes(x = sp_number, y = Dplus_sim)) + 
   geom_point(alpha = 0.25) + 
   geom_line(aes(x = sp_number, y = lower), data = dplus.sim.conf.int, color = "red") + 
-  geom_line(aes(x = sp_number, y = upper), data = dplus.sim.conf.int, color = "red")
+  geom_line(aes(x = sp_number, y = upper), data = dplus.sim.conf.int, color = "red") + 
+  geom_line(aes(x = sp_number, y = average), data = dplus.sim.conf.int, color = "red")
 
 ```
   Same for Lambda: 
 ```{r conf_int_lambda}
-## transform the Dplus matrix into a long tibble, and clean & arrange it a little
-lambda.sim.long <- as_data_frame(lambda.sim) %>% 
-  unnest() %>% # because previous command results in columns of nested lists 
-  gather(key = sp_number, value = Lambda_sim) %>%
-  mutate(sp_number = as.numeric(sp_number)) %>%
+## transform the simulated Lambda data frame into a tibble, and clean & arrange it a little
+lambda.sim.long <- as_data_frame(lambda.sim.long) %>%
+  mutate(sp_number = as.numeric(as.character(sp_number))) %>%
   arrange(sp_number)
 
 ## calculate the 95% confidence/tolerance intervals for each group (sp_number)
 lambda.sim.conf.int <- lambda.sim.long %>% 
   group_by(sp_number) %>% 
   mutate(lower = tolerance::normtol.int(Lambda_sim, alpha = 0.05, P = 0.95, side = 2)$`2-sided.lower`, 
-         upper = tolerance::normtol.int(Lambda_sim, alpha = 0.05, P = 0.95, side = 2)$`2-sided.upper`)  
+         upper = tolerance::normtol.int(Lambda_sim, alpha = 0.05, P = 0.95, side = 2)$`2-sided.upper`, 
+         average = mean(Lambda_sim))  
 
 lambda.sim.conf.int <- lambda.sim.conf.int %>% 
-  distinct(sp_number, lower, upper)
+  distinct(sp_number, lower, upper, average)
 
-## plot this (just to check it out)
+## plot this, too
 ggplot(lambda.sim.long, aes(x = sp_number, y = Lambda_sim)) + 
   geom_point(alpha = 0.25) + 
   geom_line(aes(x = sp_number, y = lower), data = lambda.sim.conf.int, color = "red") + 
-  geom_line(aes(x = sp_number, y = upper), data = lambda.sim.conf.int, color = "red")
+  geom_line(aes(x = sp_number, y = upper), data = lambda.sim.conf.int, color = "red") + 
+  geom_line(aes(x = sp_number, y = average), data = lambda.sim.conf.int, color = "red")
 ```
 
   Now plot the real, observed values of D-plus in the sand dataset, and add these confidence limits.  
-```{r plot_tax_distance_sand}
+```{r plot_dplus_sand}
 s.l.dplus.sand <- bind_cols(S = tax.distinctness.sand$Species, 
-                          Dplus = tax.distinctness.sand$Dplus,
-                          Lambda = tax.distinctness.sand$Lambda,
-                          station = zoo.abnd.sand$station)
+                            Dplus = tax.distinctness.sand$Dplus,
+                            Lambda = tax.distinctness.sand$Lambda,
+                            station = zoo.abnd.sand$station)
 
-ggplot(s.l.dplus.sand, aes(x = S, y = Dplus, color = station)) +
-  scale_color_brewer(palette = "Set2", 
-                     name = "Station", 
-                     labels = paste0("S", as.numeric(unique(s.l.dplus.sand$station)))) +
-  geom_point(alpha = 0.75, size = 2) + 
-  geom_line(aes(x = sp_number, y = lower), data = dplus.sim.conf.int, color = "grey40", lwd = 0.3) + 
-  geom_line(aes(x = sp_number, y = upper), data = dplus.sim.conf.int, color = "grey40", lwd = 0.3)
+(plot.dplus.sand <- ggplot(s.l.dplus.sand, aes(x = S, y = Dplus, color = station)) +
+    scale_color_brewer(palette = "Set2",
+                       name = "Station", 
+                       labels = paste0("S", as.numeric(unique(s.l.dplus.sand$station)))) +
+    geom_point(alpha = 0.75, size = 2) +
+    xlim(0, 100) + 
+    geom_line(aes(x = sp_number, y = lower), data = dplus.sim.conf.int, color = "grey40", lwd = 0.3) + 
+    geom_line(aes(x = sp_number, y = upper), data = dplus.sim.conf.int, color = "grey40", lwd = 0.3) + 
+    geom_line(aes(x = sp_number, y = average), data = dplus.sim.conf.int, color = "grey40", lwd = 0.3)
+)
 
 ```
-  Most of the samples fall within the theoretical 95% confidence limits - therefore do not deviate from expected taxonomic breadth & structure. Exception: Agalina (several samples) + Chukalya (1 sample) - lower Dplus than expected. This might suggest stressed communities where some senstitive higher taxa have disappeared. In the case of Agalina, it's more likely due to natural stress - because the station is located next to a natural reef from which it probably receives inputs of organic matter and various detritus (also observed during sample processing). In any case, there are no major anthropogenic sources of pressure in the area.  
+  And now plot the observed Lambda values, with the theoretical (simulated) confidence intervals.  
+```{r plot_lambda_sand}
+(plot.lambda.sand <- ggplot(s.l.dplus.sand, aes(x = S, y = Lambda, color = station)) +
+   scale_color_brewer(palette = "Set2",
+                      name = "Station",
+                      labels = paste0("S", as.numeric(unique(s.l.dplus.sand$station)))) +
+   geom_point(alpha = 0.75, size = 2) +
+   xlim(0, 100) + 
+   geom_line(aes(x = sp_number, y = lower), data = lambda.sim.conf.int, color = "grey40", lwd = 0.3) + 
+   geom_line(aes(x = sp_number, y = upper), data = lambda.sim.conf.int, color = "grey40", lwd = 0.3) + 
+   geom_line(aes(x = sp_number, y = average), data = lambda.sim.conf.int, color = "grey40", lwd = 0.3)
+)
+```
+  Most of the samples fall within the theoretical 95% confidence limits, and near the average theoretical values of both taxonomic distinctness indices - therefore do not deviate from expected taxonomic breadth & structure. Exception: several samples from Agalina (+ 1 from Chukalya, but I guess it's an anomaly) - lower Dplus & higher Lambda than expected - although not extremely so. This might suggest stressed communities where some senstitive higher taxa have disappeared. In the case of Agalina, it's more likely due to **natural stress** - because the station is located next to a natural reef from which it probably receives inputs of organic matter and various detritus (also observed during sample processing). In any case, there are no major anthropogenic sources of pressure in the area.  
+  Note that half of the Sozopol (S4) samples have lower taxonomic spread than the average expected - that's because of the extreme dominance of *C. gallina* in the community. Still within the limits, though, so not indicative of any disturbance - just a natural consequence of this particular community structure.     
   
-  
-
-
 ##### Graphical analyses  
   **Diversity profiles** are a graphical representation of the shape of the community. They show how the perceived diversity changes as the emphasis shifts from common to rare species - we can judge their respective contributions in the community composition.  
   Not sure if I'll use them in the thesis (most likely not), but I'm including the calculation and graphs here, because I think they're neat and I like them.  
