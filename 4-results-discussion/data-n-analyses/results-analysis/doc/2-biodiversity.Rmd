@@ -1,6 +1,6 @@
 ---
 title: "Biodiversity of macrozoobenthic communities - 2"
-date: "2017-11-30"
+date: "2017-12-01"
 output: 
   html_notebook:
     theme: paper
@@ -173,7 +173,8 @@ specpool(select(zoo.abnd.sand, -c(station:replicate)),
   Looks good: based on the most severe estimate (second-order jacknife), the dataset captures about 77 % of the species pool, and based on the most forgiving one (bootstrap) - about 91 %.  
   
 ##### Taxonomic distance & diversity  
-  Simple diversity measures do not distinguish between species. However, in the real world, species relationships (phylogenetic, taxonomic, functional..) matter, and could carry important ecologcial information.    
+  Simple diversity measures do not distinguish between species. However, in the real world, species relationships (phylogenetic, taxonomic, functional..) matter, and could carry important ecologcial information.   
+  We'll focus on the average tax.diversity based on presence/absence - Delta+, which reflects mean tax.breadth of the species lists, and Lambda+ - the variation in tax.distinctness, also based on presence/absence, which reflects unevenness in the tax.hierarchy.  
   For these analyses, a master species list for the whole study area is needed. For the Black Sea, it was compiled using the Catalogue of Black Sea Fauna & its 2 updates, as well as other, more recent inventories (full references & details in Materials & methods).  
 ```{r import_master_taxonomic_list}
 ## NB imported with row names on purpose, otherwise later some vegan functions fail! 
@@ -239,7 +240,7 @@ names(lambda.sim.long) <- c("Lambda_sim", "sp_number")
 ```{r conf_intervals_dplus}
 ## transform the simulated Dplus data frame into a tibble, and clean it a little
 dplus.sim.long <- as_data_frame(dplus.sim.long) %>%
-  mutate(sp_number = as.numeric(as.character(sp_number))) %>%
+  mutate(sp_number = as.numeric(as.character(sp_number))) %>% # careful when converting factor to number!! have to print factor levels as character first, otherwise will get the corresponding integers!
   arrange(sp_number)
 
 ## calculate the 95% confidence/tolerance intervals for each group (sp_number)
@@ -292,12 +293,16 @@ s.l.dplus.sand <- bind_cols(S = tax.distinctness.sand$Species,
                             Lambda = tax.distinctness.sand$Lambda,
                             station = zoo.abnd.sand$station)
 
-(plot.dplus.sand <- ggplot(s.l.dplus.sand, aes(x = S, y = Dplus, color = station)) +
-    scale_color_brewer(palette = "Set2",
-                       name = "Station", 
-                       labels = paste0("S", as.numeric(unique(s.l.dplus.sand$station)))) +
-    geom_point(alpha = 0.75, size = 2) +
-    xlim(0, 100) + 
+plot.dplus.sand <- ggplot(s.l.dplus.sand, aes(x = S, y = Dplus, color = station)) +
+  scale_color_brewer(palette = "Set2", 
+                     labels = paste0("S", as.numeric(unique(s.l.dplus.sand$station)))) +
+  geom_point(alpha = 0.75, size = 2) +
+  xlim(0, 100) + 
+  ylab("Delta+") + 
+  text_size(text.x = rel(1.2), text.y = rel(1.2), legend.text = rel(1.1), title.x = rel(1.1), title.y = rel(1.1), legend.title = rel(1.1))
+  
+## add confidence/tolerance lines
+(plot.dplus.sand <- plot.dplus.sand + 
     geom_line(aes(x = sp_number, y = lower), data = dplus.sim.conf.int, color = "grey40", lwd = 0.3) + 
     geom_line(aes(x = sp_number, y = upper), data = dplus.sim.conf.int, color = "grey40", lwd = 0.3) + 
     geom_line(aes(x = sp_number, y = average), data = dplus.sim.conf.int, color = "grey40", lwd = 0.3)
@@ -306,32 +311,158 @@ s.l.dplus.sand <- bind_cols(S = tax.distinctness.sand$Species,
 ```
   And now plot the observed Lambda values, with the theoretical (simulated) confidence intervals.  
 ```{r plot_lambda_sand}
-(plot.lambda.sand <- ggplot(s.l.dplus.sand, aes(x = S, y = Lambda, color = station)) +
-   scale_color_brewer(palette = "Set2",
-                      name = "Station",
+plot.lambda.sand <- ggplot(s.l.dplus.sand, aes(x = S, y = Lambda, color = station)) +
+  scale_color_brewer(palette = "Set2",
                       labels = paste0("S", as.numeric(unique(s.l.dplus.sand$station)))) +
-   geom_point(alpha = 0.75, size = 2) +
-   xlim(0, 100) + 
-   geom_line(aes(x = sp_number, y = lower), data = lambda.sim.conf.int, color = "grey40", lwd = 0.3) + 
-   geom_line(aes(x = sp_number, y = upper), data = lambda.sim.conf.int, color = "grey40", lwd = 0.3) + 
-   geom_line(aes(x = sp_number, y = average), data = lambda.sim.conf.int, color = "grey40", lwd = 0.3)
+  geom_point(alpha = 0.75, size = 2) +
+  xlim(0, 100) + 
+  text_size(text.x = rel(1.2), text.y = rel(1.2), legend.text = rel(1.1), title.x = rel(1.1), title.y = rel(1.1), legend.title = rel(1.1))
+
+## add the confidence/tolerance intervals
+(plot.lambda.sand <- plot.lambda.sand + 
+    geom_line(aes(x = sp_number, y = lower), data = lambda.sim.conf.int, color = "grey40", lwd = 0.3) + 
+    geom_line(aes(x = sp_number, y = upper), data = lambda.sim.conf.int, color = "grey40", lwd = 0.3) + 
+    geom_line(aes(x = sp_number, y = average), data = lambda.sim.conf.int, color = "grey40", lwd = 0.3)
 )
+
 ```
-  Most of the samples fall within the theoretical 95% confidence limits, and near the average theoretical values of both taxonomic distinctness indices - therefore do not deviate from expected taxonomic breadth & structure. Exception: several samples from Agalina (+ 1 from Chukalya, but I guess it's an anomaly) - lower Dplus & higher Lambda than expected - although not extremely so. This might suggest stressed communities where some senstitive higher taxa have disappeared. In the case of Agalina, it's more likely due to **natural stress** - because the station is located next to a natural reef from which it probably receives inputs of organic matter and various detritus (also observed during sample processing). In any case, there are no major anthropogenic sources of pressure in the area.  
-  Note that half of the Sozopol (S4) samples have lower taxonomic spread than the average expected - that's because of the extreme dominance of *C. gallina* in the community. Still within the limits, though, so not indicative of any disturbance - just a natural consequence of this particular community structure.     
+ 
+```{r plot_composite_dplus_lambda_sand}
+## combine the 2 previous plots on one graph. They share a legend, so we'll jump through some (neccessary) hoops to put it at the bottom 
+
+## plot them together in a grid
+plot.dplus.l.combined.sand <- cowplot::plot_grid(plot.dplus.sand + theme(legend.position = "none"), 
+                                                 plot.lambda.sand + theme(legend.position = "none"), 
+                                                 labels = c("A", "B"), align = "h")
+
+## get the legend from one of the plots, and put it at the bottom
+dplus.legend <- cowplot::get_legend(plot.dplus.sand + theme(legend.position = "bottom"))
+
+(plot.dplus.l.combined.sand <- cowplot::plot_grid(plot.dplus.l.combined.sand,
+                                                  dplus.legend, 
+                                                  ncol = 1, rel_heights = c(1, 0.2))
+)
+
+## save & clean up
+cowplot::save_plot(file.path(figures.dir, "dplus_lambda_combined_sand.png"), 
+                   plot.dplus.l.combined.sand, 
+                   base_aspect_ratio = 0.9, base_width = 5.5, dpi = 300)
+
+rm(dplus.legend)
+```
+  
+  Most of the samples fall within the theoretical 95% confidence limits, and near the average theoretical values of both taxonomic distinctness indices - therefore do not deviate from expected taxonomic breadth & structure. Exception: several samples from S5 - Agalina (+ 1 from Chukalya, but I guess it's an anomaly) - lower Dplus & higher Lambda than expected - although not extremely so. This might suggest stressed communities where some senstitive higher taxa have disappeared. In the case of Agalina, it's more likely due to **natural stress** - because the station is located next to a natural reef from which it probably receives inputs of organic matter and various detritus (also observed during sample processing). In any case, there are no major anthropogenic sources of pressure in the area.  
+  Note that half of the Sozopol (S4) samples have lower taxonomic spread than the average expected - that's because of the extreme dominance of *C. gallina* in the community. Still within the limits, though, so not indicative of any disturbance - just a natural consequence of this particular community structure.  
   
 ##### Graphical analyses  
-  **Diversity profiles** are a graphical representation of the shape of the community. They show how the perceived diversity changes as the emphasis shifts from common to rare species - we can judge their respective contributions in the community composition.  
+###### **Diversity profiles**  
+  Diversity profiles are a graphical representation of the shape of the community. They show how the perceived diversity changes as the emphasis shifts from common to rare species - we can judge their respective contributions in the community composition.  
   Not sure if I'll use them in the thesis (most likely not), but I'm including the calculation and graphs here, because I think they're neat and I like them.  
 ```{r diversity_profiles_sand}
-div.profiles.sand <- diversity_profiles(select(zoo.abnd.sand, -c(station:replicate)))
+div.profiles.sand <- diversity_profiles(zoo.abnd.sand %>% select(-c(station:replicate)))
 
-## plot them, too
+## convert to long & add stations (manually, unfortunately)
+div.profiles.sand.long <- div.profiles.sand %>%
+  gather(key = id, value = value, -q) %>%
+  mutate(id = gsub("V", "", id),
+         station = case_when(id %in% as.character(1:9) ~ "Kraimorie", 
+                             id %in% as.character(10:18) ~ "Chukalya", 
+                             id %in% as.character(19:27) ~ "Akin", 
+                             id %in% as.character(28:35) ~ "Sozopol", 
+                             id %in% as.character(36:45) ~ "Agalina", 
+                             id %in% as.character(46:54) ~ "Paraskeva"))
+
+## convert profile id and station to factors, and q to numeric
+(div.profiles.sand.long <- div.profiles.sand.long %>%
+    mutate(station = factor(station, levels = levels(zoo.abnd.sand$station)), 
+           id = factor(id, levels = 1:54), 
+           q = as.numeric(q))
+)
 
 ```
+  Now plot them, just to see what they look like.  
+```{r plot_diversity_profiles_sand}
+plot_div_profiles <- function(div.profiles, one.panel = TRUE) {
+  ## plots the diversity profiles by sampling station.
+  ## Arguments: div.profiles - diversity profiles as data frame/tibble (long). 
+  ##            one.panel - should the profiles for each station be plotted in 
+  ##              a single panel (for example when average profiles only), or in
+  ##              separate panels by station? Default - single panel.  
+  ## Output: ggplot object.
 
-  It's possible to calculate **weighted diversity profiles** by including a measure of similarity between species - for instance, taxonomic distance between them. This approach allows for a lot more meaningful ecological and biodiversity comparisons (Leinster & Cobbold, 2012).  
+  p <- ggplot(data = div.profiles, aes(x = q, y = value, group = id, colour = station)) +
+    scale_color_brewer(palette = "Set2") + 
+    labs(x = "Sensitivity parameter q", y = "Diversity") +
+    scale_x_continuous(breaks = scales::pretty_breaks())
+
+  if(!one.panel) {
+    # plot the profiles in separate panels by station
+    p <- p + geom_line() +  
+      facet_wrap(~station) +
+      theme(legend.position = "none")
+  } else {
+    # increase the line width to make the lines more visible  
+    p <- p + geom_line(size = 0.7)
+  }
+  
+  return(p)
+}
+
+
+plot_div_profiles(div.profiles.sand.long, one.panel = FALSE)
+
+```
+  Generally, the higher the profile, the higher the diversity - here, Agalina (S5) & Chukalya (S2) have the highest profiles overall.  
+  It's better, however, to calculate **weighted diversity profiles** by including a measure of similarity between species - for instance, taxonomic distance between them. This approach allows for a lot more meaningful ecological and biodiversity comparisons (Leinster & Cobbold, 2012). The weighted diversity profiles are a community's "fingerprint".   
 ```{r weighted_diversity_profiles_sand}
+## subset the large dist object (taxonomic distance b/n species) from before, to only the currently present species - in a very clumsy, very ugly way
+tax.dist.sand.current <- as.matrix(tax.dist.sand)[which(rownames(as.matrix(tax.dist.sand)) %in% colnames(zoo.abnd.sand)), which(colnames(as.matrix(tax.dist.sand)) %in% colnames(zoo.abnd.sand))]
 
+
+weighted.div.profiles.sand <- weighted_div_profiles(zoo.abnd.sand %>% select(-c(station:replicate)), 
+                                                    tax.dist.sand.current, 
+                                                    q = 50)
+
+## convert to long, add stations & clean a little 
+weighted.div.profiles.sand.long <- weighted.div.profiles.sand %>%
+  gather(key = id, value = value, -q) %>%
+  mutate(id = gsub("V", "", id),
+         station = case_when(id %in% as.character(1:9) ~ "Kraimorie", 
+                             id %in% as.character(10:18) ~ "Chukalya", 
+                             id %in% as.character(19:27) ~ "Akin", 
+                             id %in% as.character(28:35) ~ "Sozopol", 
+                             id %in% as.character(36:45) ~ "Agalina", 
+                             id %in% as.character(46:54) ~ "Paraskeva"))
+
+## convert profile id and station to factors, and q to numeric
+(weighted.div.profiles.sand.long <- weighted.div.profiles.sand.long %>%
+    mutate(station = factor(station, levels = levels(zoo.abnd.sand$station)), 
+           id = factor(id, levels = 1:54), 
+           q = as.numeric(q))
+)
+
+plot_div_profiles(weighted.div.profiles.sand.long, one.panel = F)
 ```
+  Now, it's more clearly apparent: Chukalya & Agalina have the most diverse communities; then - Kraimorie, Akin & Paraskeva; and Sozopol has the lowest effective diversity. Agalina & Paraskeva also have several "atypical" samples with many rare species - whose profiles drop very sharply for 0 < q < 1.  
+  Let's calculate the average diversity profiles by station, because these plots are very busy, and plot everything more cleanly.  
+```{r average_weighted_div_profiles_sand}
+(aver.weighted.div.profiles.sand <- weighted.div.profiles.sand.long %>% 
+   group_by(station, q) %>%
+   summarise(value = mean(value))
+)
+```
+  
+```{r plot_weighted_div_profiles_sand}
+ggplot(aver.weighted.div.profiles.sand, 
+       aes(x = q, y = value, colour = station)) + 
+  geom_line(lwd = 0.75) +
+  scale_color_brewer(palette = "Set2", 
+                     labels = paste0("S", as.numeric(unique(aver.weighted.div.profiles.sand$station))))+ 
+  labs(x = "Sensitivity parameter q", y = "Diversity")
+ 
+```
+  Same conclusion as above.  
+  
+###### **ABC curves**  
+  These are cumulative k-dominance curves plotted from the species abundance distribution and the species biomass distribution -> y-axis scale: 0 to 100. Used to determine visually the level of disturbance of the communities. Under stable conditions, the competitive dominants in the communities are K-strategists - large-bodied, conservative species with long life-span, usually dominant in terms of biomass; when the communities suffer a perturbation, the smaller, opportunistic species are favored - small body size and short life-span, can be numerically significant, but rarely represent a large proportion of the biomass. Thus, under undisturbed conditions, the biomass curve is elevated over the abundance curve; under moderate disturbance, the biomass and the abundance curves are coincident and may cross each other one or several times; under severe disturbance, the abundance curve lies above the biomass curve throughout its length.  
   
