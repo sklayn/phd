@@ -1,6 +1,6 @@
 ---
 title: "Biodiversity of macrozoobenthic communities - 2"
-date: "2017-12-01"
+date: "2017-12-04"
 output: 
   html_notebook:
     theme: paper
@@ -465,4 +465,15 @@ ggplot(aver.weighted.div.profiles.sand,
   
 ###### **ABC curves**  
   These are cumulative k-dominance curves plotted from the species abundance distribution and the species biomass distribution -> y-axis scale: 0 to 100. Used to determine visually the level of disturbance of the communities. Under stable conditions, the competitive dominants in the communities are K-strategists - large-bodied, conservative species with long life-span, usually dominant in terms of biomass; when the communities suffer a perturbation, the smaller, opportunistic species are favored - small body size and short life-span, can be numerically significant, but rarely represent a large proportion of the biomass. Thus, under undisturbed conditions, the biomass curve is elevated over the abundance curve; under moderate disturbance, the biomass and the abundance curves are coincident and may cross each other one or several times; under severe disturbance, the abundance curve lies above the biomass curve throughout its length.  
+  First, we'll calculate them on each replicate separately:
+```{r abc_sand}
+abc.sand <- abc(zoo.abnd.sand.long, zoo.biomass.sand.long, abnd.val = sp_count, biomass.val = sp_biomass, station, year, month, replicate)
+
+## result is a list: 1) grouped df containing the curves (long), 2) summarized df with the W statistic per replicate - the distance between the 2 curves  
+```
+
+```{r summarize_abc_sand}
+
+```
+  
   

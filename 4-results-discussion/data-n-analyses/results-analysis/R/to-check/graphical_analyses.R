@@ -104,4 +104,140 @@ weighted_div_profiles <- function(community.data, dist.data, q = 50) {
 }
 
 #### ABC curves ####
+abc <- function (abnd.data, biomass.data, abnd.val, biomass.val, ...) {
+  ## calculates the cumulative abundance and biomass percentages for plotting ABC 
+  ## curves. 
+  ## Arguments: abnd.data, biomass.data - long tibbles of zoobenthic abundance and biomass.
+  ##            abnd.val, biomass.val - name of the column containing the numeric 
+  ## values for the abundance/biomass
+  ##            ... - any grouping variables. NB should be THE SAME in both abundance and biomass dfs
+  ## Dependencies: tidyverse packages, vegan
+  
+  
+  # get the columns containing the actual values of the abundance & the biomass
+  abnd.col <- enquo(abnd.val)
+  biomass.col <- enquo(biomass.val)
+  
+  # get the grouping variables
+  group.vars = quos(...)
+  
+  # sort the abundance and biomass data in decreasing order, KEEPING THE OTHER 
+  # COLUMNS IN ORDER BY STATION, YEAR, MONTH & REPLICATE - OTHERWISE THE ABUNDANCE 
+  # & BIOMASS WILL NEVER MATCH EXACTLY!
+  abnd <- abnd.data %>% 
+    group_by(!!!group.vars) %>%
+    arrange(desc(!!abnd.col), .by_group = TRUE) 
+  
+  biomass <- biomass.data %>% 
+    group_by(!!!group.vars) %>%
+    arrange(desc(!!biomass.col), .by_group = TRUE) 
 
+  # check if the abundance and biomass are imported correctly - they should 
+  # contain the same number of elements unless there is an error in the input 
+  # data - e.g. a species for which there is only an abundance or only a 
+  # biomass.
+  if (nrow(abnd) != nrow(biomass)) {
+    stop("The abundance and biomass datasets contain different numbers of species! Check your input data!")
+  }
+  
+  # calculate the number of species S in each replicate (will be needed later 
+  # for the W statistic). Shouldn't matter which dataset is used - abundance or biomass
+  s <- abnd %>%
+    summarize(s = vegan::specnumber(!!abnd.col))
+
+  # calculate the cumulative percent abundance for each species in each replicate
+  abnd <- abnd %>%
+    mutate(perc_abnd = cumsum(!!abnd.col) / sum(!!abnd.col) * 100)
+  
+  biomass <- biomass %>%
+    mutate(perc_biomass = cumsum(!!biomass.col) / sum(!!biomass.col) * 100)
+
+  # make new tibble with the results - by binding, otherwise will get mixed up because of multiple 
+  # identical combinations. MAKE SURE THE OBSERVATIONS ARE IN THE RIGHT ORDER!
+
+  if(!identical(abnd %>% select(!!!group.vars), 
+                biomass %>% select(!!!group.vars))) {
+    
+    stop("Observations in abundance & biomass datasets not in the same order!")
+  
+  } else {
+    
+    abnd.sub <- abnd %>% select(!!!group.vars, perc_abnd)
+    biomass.sub <- biomass %>% select(perc_biomass)
+    
+    abc <- bind_cols(abnd.sub, biomass.sub)
+    
+    abc <- abc %>% 
+      select(!!!group.vars, perc_abnd, perc_biomass) # the grouping columns from the biomass tibble are added by default, but are not really needed
+    
+  }
+
+  ## calculate the W statistic (= quantification of the distance between the abundance
+  ## & the biomass curves)
+  w <- abc %>%
+    summarize(sum_ba = sum((perc_biomass - perc_abnd)))
+  
+  w <- left_join(w, s) %>%
+    mutate(w = sum_ba / (50 * (s - 1))) %>%
+    select(!!!group.vars, w)
+  
+
+  return(list(abc, w))
+}
+
+
+
+#### STILL HAVE TO FIX: #####
+
+partial_dominance_curves <- function(abnd.data, biomass.data) {
+  ## calculates partial dominance curves from a macrobenthic abundance-biomass
+  ## dataset. Arguments: abnd.data, biomass.data - vectors/data frames of abundance
+  ## and biomass, respectively.
+  
+  # get the abundance and biomass data and sort them in decreasing order 
+  abundance <- sort(abnd.data, decreasing = TRUE)
+  biomass <- sort(biomass.data, decreasing = TRUE)
+  
+  # check if the abundance and biomass vectors contain the same number of elements
+  # (i.e., if there is an error in the input data - a species for which only an
+  # abundance or only a biomass value is given)
+  if (sum(abundance != 0) != sum(biomass != 0)) {
+    stop("The abundance and biomass vectors have different lengths! Check your input data!")
+  }
+  
+  # get rid of double-0 - species absent from the sample, which would lead to a division by 0
+  abundance <- abundance[abundance > 0]
+  biomass <- biomass[biomass > 0]
+  
+  # make a vector to hold partial percent abundances 
+  perc.abnd <- NA
+  # calculate the partial abundances, successively removing each species and calculating 
+  # over the rest 
+  for (i in 1:length(abundance)) {
+    
+    if (sum(abundance[i:length(abundance)]) == 0){
+      perc.abnd[i] <- NA
+    }
+    else {
+      perc.abnd[i] <- (abundance[i] / sum(abundance[i:length(abundance)])) * 100  
+    }    
+  }
+  
+  # same procedure for the biomass
+  perc.bio <- NA
+  for (i in 1:length(biomass)) {
+    if (sum(biomass[i:length(biomass)]) == 0){
+      perc.bio[i] <- NA
+    }
+    else {
+      perc.bio[i] <- (biomass[i] / sum(biomass[i:length(biomass)])) * 100  
+    }      
+  }
+  
+  # bind the partial abundance and biomass into a new data frame, without matching
+  # the species names to its specific values for partial abundance & biomass.
+  abc.partial <- as.data.frame(cbind(perc.abnd, perc.bio))
+  colnames(abc.partial) <- c("partial.abnd", "partial.biomass")
+  
+  return(abc.partial)
+}
