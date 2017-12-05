@@ -1,6 +1,6 @@
 ---
 title: "Biodiversity of macrozoobenthic communities - 2"
-date: "2017-12-04"
+date: "2017-12-05"
 output: 
   html_notebook:
     theme: paper
@@ -467,13 +467,37 @@ ggplot(aver.weighted.div.profiles.sand,
   These are cumulative k-dominance curves plotted from the species abundance distribution and the species biomass distribution -> y-axis scale: 0 to 100. Used to determine visually the level of disturbance of the communities. Under stable conditions, the competitive dominants in the communities are K-strategists - large-bodied, conservative species with long life-span, usually dominant in terms of biomass; when the communities suffer a perturbation, the smaller, opportunistic species are favored - small body size and short life-span, can be numerically significant, but rarely represent a large proportion of the biomass. Thus, under undisturbed conditions, the biomass curve is elevated over the abundance curve; under moderate disturbance, the biomass and the abundance curves are coincident and may cross each other one or several times; under severe disturbance, the abundance curve lies above the biomass curve throughout its length.  
   First, we'll calculate them on each replicate separately:
 ```{r abc_sand}
-abc.sand <- abc(zoo.abnd.sand.long, zoo.biomass.sand.long, abnd.val = sp_count, biomass.val = sp_biomass, station, year, month, replicate)
-
+(abc.sand <- abc(zoo.abnd.sand.long, zoo.biomass.sand.long, 
+                 abnd.val = sp_count, biomass.val = sp_biomass, 
+                 station, year, month, replicate)
+)
 ## result is a list: 1) grouped df containing the curves (long), 2) summarized df with the W statistic per replicate - the distance between the 2 curves  
+
+```
+  
+  We'll plot W, because there are too many stations & replicates and the curves will be unreadable.   
+```{r plot_w_sand}
+ggplot(abc.sand[[2]], aes(x = station, y = w, colour = factor(year))) + 
+  geom_boxplot(name = "") + 
+  scale_x_discrete(name = "Station", 
+                   labels = paste0("S", as.numeric(unique(abc.sand[[2]]$station)))) + 
+  ylab("W") + 
+  theme(legend.title = element_blank()) +
+  geom_hline(yintercept = 0)
 ```
 
+  W > 0 for all samples => the biomass curve is above the abundance curve, so none of the stations/replicates can be considered terribly disturbed. The closer to 0 the statistic gets, the closer the 2 curves are; here, S5-Agalina comes closest, but still not too close. Nowhere is there complete dominance of one species in the biomass, but even distribution of the abundance among species (W = 1, or tending towards it), nor the opposite (W = -1). In short, the structure of the communities is more or less even and normal, with variations characteristic of macrozoobenthic samples/communities. 
+  For S1, S2, S5, S6, W decreases somewhat between 2013-2014. There were less samples in 2014, but still, there might be some disturbance -> due to the heavy rains in the summer of 2014, esp. for S5-6 which were sampled immediately afterwards.      
+  
 ```{r summarize_abc_sand}
+### BETTER CALCULATE ON SUMMARY DATA (AVERAGE BY ST & YEAR, FOR EX.)? - NOT SURE THIS WAY IS VALID; WILL PLOT TO SEE WHAT IT LOOKS LIKE.. 
 
+(summary.abc.sand <- abc.sand[[1]] %>%
+   ungroup() %>%
+   group_by(station, year, sp_rank) %>%
+   summarize(mean_perc_abnd = mean(perc_abnd), 
+             mean_perc_biomass = mean(perc_biomass))
+)
 ```
   
   

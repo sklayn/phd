@@ -147,28 +147,29 @@ abc <- function (abnd.data, biomass.data, abnd.val, biomass.val, ...) {
 
   # calculate the cumulative percent abundance for each species in each replicate
   abnd <- abnd %>%
-    mutate(perc_abnd = cumsum(!!abnd.col) / sum(!!abnd.col) * 100)
+    mutate(sp_rank = row_number(), 
+           perc_abnd = cumsum(!!abnd.col) / sum(!!abnd.col) * 100)
   
   biomass <- biomass %>%
-    mutate(perc_biomass = cumsum(!!biomass.col) / sum(!!biomass.col) * 100)
+    mutate(sp_rank = row_number(), 
+           perc_biomass = cumsum(!!biomass.col) / sum(!!biomass.col) * 100)
 
   # make new tibble with the results - by binding, otherwise will get mixed up because of multiple 
   # identical combinations. MAKE SURE THE OBSERVATIONS ARE IN THE RIGHT ORDER!
 
-  if(!identical(abnd %>% select(!!!group.vars), 
-                biomass %>% select(!!!group.vars))) {
-    
+  if(!identical(abnd %>% select(!!!group.vars), biomass %>% select(!!!group.vars))) {
+
     stop("Observations in abundance & biomass datasets not in the same order!")
   
   } else {
     
-    abnd.sub <- abnd %>% select(!!!group.vars, perc_abnd)
+    abnd.sub <- abnd %>% select(!!!group.vars, sp_rank, perc_abnd)
     biomass.sub <- biomass %>% select(perc_biomass)
     
     abc <- bind_cols(abnd.sub, biomass.sub)
     
     abc <- abc %>% 
-      select(!!!group.vars, perc_abnd, perc_biomass) # the grouping columns from the biomass tibble are added by default, but are not really needed
+      select(!!!group.vars, sp_rank, perc_abnd, perc_biomass) # the grouping columns from the biomass tibble are added by default, but are not really needed
     
   }
 
