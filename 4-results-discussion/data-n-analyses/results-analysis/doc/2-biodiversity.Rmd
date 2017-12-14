@@ -1,6 +1,6 @@
 ---
 title: "Biodiversity of macrozoobenthic communities - 2"
-date: "2017-12-06"
+date: "2017-12-14"
 output: 
   html_notebook:
     theme: paper
@@ -487,7 +487,7 @@ ggplot(abc.sand[[2]], aes(x = station, y = w, colour = factor(year))) +
 ```
 
   W > 0 for all samples => the biomass curve is above the abundance curve, so none of the stations/replicates can be considered terribly disturbed. The closer to 0 the statistic gets, the closer the 2 curves are; here, S5-Agalina comes closest, but still not too close. Nowhere is there complete dominance of one species in the biomass, but even distribution of the abundance among species (W = 1, or tending towards it), nor the opposite (W = -1). In short, the structure of the communities is more or less even and normal, with variations characteristic of macrozoobenthic samples/communities. 
-  For S1, S2, S5, S6, W decreases somewhat between 2013-2014. There were less samples in 2014, but still, there might be some disturbance -> due to the heavy rains in the summer of 2014, esp. for S5-6 which were sampled immediately afterwards.      
+  For S1, S2, S5, S6, W decreases somewhat between 2013-2014. There were less samples in 2014, but still, there might be some disturbance -> perhaps due to the heavy rains in the summer of 2014, esp. for S5-6 which were sampled immediately afterwards.      
   
 ```{r summarize_abc_sand}
 ### BETTER CALCULATE ON SUMMARY DATA (AVERAGE BY ST & YEAR, FOR EX.)? - NOT SURE THIS WAY IS VALID; WILL PLOT TO SEE WHAT IT LOOKS LIKE.. 
