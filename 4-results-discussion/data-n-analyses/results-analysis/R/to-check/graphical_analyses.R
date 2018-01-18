@@ -214,18 +214,20 @@ partial_dominance_curves <- function(abnd.data, biomass.data, abnd.val, biomass.
     group_by(!!!group.vars) %>%
     arrange(desc(!!biomass.col), .by_group = TRUE) 
 
+  # get rid of double-0 - species absent from the sample, which would lead to a division by 0
+  abnd <- abnd %>%
+    filter(!!abnd.col > 0)
+  
+  biomass <- biomass %>%
+    filter(!!biomass.col > 0)
+  
   # check the input data for errors - e.g. a species for which only an abundance 
   # or only a biomass value is given
   if (nrow(abnd) != nrow(biomass)) {
     stop("The abundance and biomass datasets contain different numbers of species! Check your input data!")
   }
 
-  # get rid of double-0 - species absent from the sample, which would lead to a division by 0
-  abundance <- abundance[abundance > 0]
-  biomass <- biomass[biomass > 0]
-  
-  # make a vector to hold partial percent abundances 
-  perc.abnd <- NA
+  ### START FIXING HERE!
   # calculate the partial abundances, successively removing each species and calculating 
   # over the rest 
   for (i in 1:length(abundance)) {
