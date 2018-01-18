@@ -486,20 +486,31 @@ ggplot(abc.sand[[2]], aes(x = station, y = w, colour = factor(year))) +
   geom_hline(yintercept = 0)
 ```
 
-  W > 0 for all samples => the biomass curve is above the abundance curve, so none of the stations/replicates can be considered terribly disturbed. The closer to 0 the statistic gets, the closer the 2 curves are; here, S5-Agalina comes closest, but still not too close. Nowhere is there complete dominance of one species in the biomass, but even distribution of the abundance among species (W = 1, or tending towards it), nor the opposite (W = -1). In short, the structure of the communities is more or less even and normal, with variations characteristic of macrozoobenthic samples/communities. 
-  For S1, S2, S5, S6, W decreases somewhat between 2013-2014. There were less samples in 2014, but still, there might be some disturbance -> perhaps due to the heavy rains in the summer of 2014, esp. for S5-6 which were sampled immediately afterwards.      
+  W > 0 for all samples => the biomass curve is above the abundance curve, so none of the stations/replicates can be considered terribly disturbed. The closer to 0 the statistic gets, the closer the 2 curves are; here, S5-Agalina comes closest, but still not too close. Nowhere is there complete dominance of one species in the biomass, perfectly even distribution of the abundance among species (W = 1, or tending towards it), nor the opposite (W = -1). In short, the structure of the communities is more or less even and normal, with variations characteristic of macrozoobenthic samples/communities. 
+  For S1, S2, S5, S6, W decreases somewhat between 2013-2014. There were less samples in 2014, but still, there might be some disturbance -> perhaps due to the heavy rains in the summer of 2014, esp. for S5-6 which were sampled immediately afterwards (although not really enough time for the communities to react, in my opinion - but will keep in mind just in case).  
   
-```{r summarize_abc_sand}
-### BETTER CALCULATE ON SUMMARY DATA (AVERAGE BY ST & YEAR, FOR EX.)? - NOT SURE THIS WAY IS VALID; WILL PLOT TO SEE WHAT IT LOOKS LIKE.. 
+  Let's plot the summary ABC curves - per station and year. 2 rows (for the 2 years) + 6 columns (stations) in the plot - will put it in landscape format in the text.  
+  The summary curves will be calculated on **data averaged by year** - this way, there will hopefully be enough replication to reduce the over-dominance of large mollusks etc. in the biomass (they are rarely dominant in the abundance - more often represented by 1-2 individuals/sample). Also, will calculate the partial dominance curves as well, for comparison.  
+```{r summarize_abnd_biomass_sand}
+## summarize the abundance and biomass data per year (average)  
+(summary.abnd.sand <- zoo.abnd.sand.long %>%
+   group_by(station, year, species) %>%
+   summarize(mean_count = mean(sp_count))
+)
 
-(summary.abc.sand <- abc.sand[[1]] %>%
-   ungroup() %>%
-   group_by(station, year, sp_rank) %>%
-   summarize(mean_perc_abnd = mean(perc_abnd), 
-             mean_perc_biomass = mean(perc_biomass))
+(summary.biomass.sand <- zoo.biomass.sand.long %>%
+   group_by(station, year, species) %>%
+   summarize(mean_biomass = mean(sp_biomass))
 )
 ```
-  
+  Now calculate the summary ABC for 2013 and 2014 for the sand stations.  
+```{r summary_abc_sand}
+(abc.summary.sand <- abc(summary.abnd.sand, summary.biomass.sand, 
+                         abnd.val = mean_count, biomass.val = mean_biomass, 
+                         station, year)
+)
+```
+  All good, let's plot these! 
 ```{r plot_summary_abc_sand}
 
 ```
