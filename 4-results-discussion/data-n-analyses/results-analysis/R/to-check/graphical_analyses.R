@@ -227,34 +227,57 @@ partial_dominance_curves <- function(abnd.data, biomass.data, abnd.val, biomass.
     stop("The abundance and biomass datasets contain different numbers of species! Check your input data!")
   }
 
-  ### START FIXING HERE!
-  # calculate the partial abundances, successively removing each species and calculating 
-  # over the rest 
-  for (i in 1:length(abundance)) {
+  run_sum <- function(x) { 
+    ## helper to calculate the partial abundances, successively removing each species and 
+    ## calculating the total over the rest 
+    sum_x <- NA
     
-    if (sum(abundance[i:length(abundance)]) == 0){
-      perc.abnd[i] <- NA
+    for (i in 1:length(x)) {
+      
+      if(sum(x[i:length(x)]) == 0) {
+        
+        sum_x[i] <- NA
+        
+      } else { 
+        
+        sum_x[i] <- sum(x[i:length(x)])
+      }
     }
-    else {
-      perc.abnd[i] <- (abundance[i] / sum(abundance[i:length(abundance)])) * 100  
-    }    
+    
+    return(sum_x)
   }
+
+    
+  abnd <- abnd %>% 
+    mutate(sp_rank = row_number(), 
+           part_sum = run_sum(!!abnd.col), 
+           partial_abnd <- !!abnd.col / part_sum * 100)
   
   # same procedure for the biomass
-  perc.bio <- NA
-  for (i in 1:length(biomass)) {
-    if (sum(biomass[i:length(biomass)]) == 0){
-      perc.bio[i] <- NA
-    }
-    else {
-      perc.bio[i] <- (biomass[i] / sum(biomass[i:length(biomass)])) * 100  
-    }      
+  biomass <- biomass %>% 
+    mutate(sp_rank = row_number(), 
+           part_sum = run_sum(!!biomass.col), 
+           partial_biomass <- !!biomass.col / part_sum * 100)
+  
+
+  # make new tibble with the results - by binding, otherwise will get mixed up because of multiple 
+  # identical combinations. MAKE SURE THE OBSERVATIONS ARE IN THE RIGHT ORDER!
+  
+  if(!identical(abnd %>% select(!!!group.vars), biomass %>% select(!!!group.vars))) {
+    
+    stop("Observations in abundance & biomass datasets not in the same order!")
+    
+  } else {
+    
+    abnd.sub <- abnd %>% select(!!!group.vars, sp_rank, partial_abnd)
+    biomass.sub <- biomass %>% select(partial_biomass)
+    
+    abc.partial <- bind_cols(abnd.sub, biomass.sub)
+    
+    abc.partial <- abc.partial %>% 
+      select(!!!group.vars, sp_rank, partial_abnd, partial_biomass) # the grouping columns from the biomass tibble are added by default, but are not really needed
+    
+    return(abc.partial)
+    
   }
-  
-  # bind the partial abundance and biomass into a new data frame, without matching
-  # the species names to its specific values for partial abundance & biomass.
-  abc.partial <- as.data.frame(cbind(perc.abnd, perc.bio))
-  colnames(abc.partial) <- c("partial.abnd", "partial.biomass")
-  
-  return(abc.partial)
 }
