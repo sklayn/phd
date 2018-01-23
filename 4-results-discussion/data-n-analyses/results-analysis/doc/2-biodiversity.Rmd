@@ -490,7 +490,7 @@ ggplot(abc.sand[[2]], aes(x = station, y = w, colour = factor(year))) +
   For S1, S2, S5, S6, W decreases somewhat between 2013-2014. There were less samples in 2014, but still, there might be some disturbance -> perhaps due to the heavy rains in the summer of 2014, esp. for S5-6 which were sampled immediately afterwards (although not really enough time for the communities to react, in my opinion - but will keep in mind just in case).  
   
   Let's plot the summary ABC curves - per station and year. 2 rows (for the 2 years) + 6 columns (stations) in the plot - will put it in landscape format in the text.  
-  The summary curves will be calculated on **data averaged by year** - this way, there will hopefully be enough replication to reduce the over-dominance of large mollusks etc. in the biomass (they are rarely dominant in the abundance - more often represented by 1-2 individuals/sample). Also, will calculate the partial dominance curves as well, for comparison.  
+  The summary curves will be calculated on **data averaged by year** - this way, there will hopefully be enough replication to reduce the over-dominance of large mollusks etc. in the biomass (they are rarely dominant in the abundance - more often represented by 1-2 individuals/sample).  
 ```{r summarize_abnd_biomass_sand}
 ## summarize the abundance and biomass data per year (average)  
 (summary.abnd.sand <- zoo.abnd.sand.long %>%
@@ -510,7 +510,7 @@ ggplot(abc.sand[[2]], aes(x = station, y = w, colour = factor(year))) +
                          station, year)
 )
 ```
-  All good, let's plot these! 
+  All good, let's plot these!   
   Very often, the curves approach a cumulative frequency of 100 % for a large part of their length, esp. in highly dominated communities - often after the first 2-3 top-ranked species, making the forms of the abundance and biomass curves difficult to distinguish. We can transform the y-axis so that the cumulative values are closer to linearity - e.g. using a modified logistic transformation (Clarke & Warwick 2001).  
 ```{r ggplot_modif_logistic_transform}
 ## define a custom transformation and its inverse for the y axis (modified logistic transformation) using the scales package (for ggplot graphics).
@@ -521,26 +521,40 @@ modif_logistic_trans <- function() scales::trans_new("modif_logistic",
 ```
 
 ```{r plot_summary_abc_sand}
+## reshape the data for easier plotting - and to have a legend..
+abc.summary.sand.long <- abc.summary.sand[[1]] %>% 
+  gather(key = variable, value = value, -c(station:sp_rank)) %>%
+  mutate(variable = case_when(variable == "cum_abnd" ~ "abundance", 
+                              variable == "cum_biomass" ~ "biomass"))
+
 ## make named character vector for the custom station labels   
 stations.sand <- paste0("S", as.numeric(unique(abc.summary.sand[[1]]$station)))
 names(stations.sand) <- as.character(unique(abc.summary.sand[[1]]$station))
 
-plot.summary.abc.sand <- ggplot(abc.summary.sand[[1]], aes(x = sp_rank)) + 
-  geom_line(aes(y = cum_abnd), colour = "skyblue") + 
-  geom_line(aes(y = cum_biomass), colour = "orange") +
+## plot 
+plot.summary.abc.sand <- ggplot(abc.summary.sand.long, 
+                                aes(x = sp_rank, y = value, colour = variable)) + 
+  geom_line() + 
+  # apply axis transformations 
   scale_x_log10() +
-  coord_trans(y = "modif_logistic") +
+  coord_trans(y = "modif_logistic")  + 
+  # curve colours and legend 
+  scale_colour_manual(values = c("skyblue", "orange"), name = "") + 
+  theme(legend.position = "top") + 
+  # facets & labels
   facet_grid(year ~ station, labeller = labeller(station = as_labeller(stations.sand))) + 
   labs(x = "Species rank (log)", y = "Cumulative %")
 
 ## modify text size a little 
-(plot.summary.abc.sand <- plot.summary.abc.sand + text_size(text.x = rel(1.2), text.y = rel(1.2), legend.text = rel(1.1), title.x = rel(1.1), title.y = rel(1.1), strip.x = rel(1.1), strip.y = rel(1.1))
+(plot.summary.abc.sand <- plot.summary.abc.sand + text_size(text.x = rel(1.2), text.y = rel(1.2), legend.text = rel(1), title.x = rel(1.1), title.y = rel(1.1), strip.x = rel(1.1), strip.y = rel(1.1))
 )
 
 ## and save this - huge, because I think it will be displayed best as a whole-page graph.. 
 ggsave(here::here(figures.dir, "summary_abc_sand.png"), 
        plot.summary.abc.sand, 
        width = 25, height = 15, units = "cm", dpi = 300)
+
+rm(abc.summary.sand.long)
 ```
   General conclusions still the same: overall, biomass curve above abundance curve everywhere; slightly worse condition of the communities in 2014 (curves closer to one another for more stations); no change at some stations (S3-Akin, S4-Sozopol, S6-Paraskeva). Otherwise, results seem to follow gradient more or less - curves closer to one another at inner stations, wider apart at outer ones; exception - S5-Agalina - arguably the worst - but again, probably naturally "stressed" - no major pressure sources nearby..   
   
@@ -556,21 +570,35 @@ ggsave(here::here(figures.dir, "summary_abc_sand.png"),
 
   Let's see what this looks like (and if it's any improvement over the regular ABS curves)..  
 ```{r plot_partial_dominance_sand}
-plot.pd.sand <- ggplot(pd.summary.sand, aes(x = sp_rank)) + 
-  geom_line(aes(y = partial_abnd), colour = "skyblue") + 
-  geom_line(aes(y = partial_biomass), colour = "orange") +
+## reshape the data as before..
+pd.summary.sand.long <- pd.summary.sand %>% 
+  gather(key = variable, value = value, -c(station:sp_rank)) %>%
+  mutate(variable = case_when(variable == "partial_abnd" ~ "abundance", 
+                              variable == "partial_biomass" ~ "biomass"))
+
+## plot
+plot.pd.sand <- ggplot(pd.summary.sand.long, aes(x = sp_rank, y = value, colour = variable)) + 
+  geom_line() + 
+  # apply axis transformations 
   scale_x_log10() +
+  coord_trans(y = "modif_logistic")  + 
+  # curve colours and legend 
+  scale_colour_manual(values = c("skyblue", "orange"), name = "") + 
+  theme(legend.position = "top") + 
+  # facets & labels
   facet_grid(year ~ station, labeller = labeller(station = as_labeller(stations.sand))) + 
   labs(x = "Species rank (log)", y = "%")
 
 ## modify text size a little
-(plot.pd.sand <- plot.pd.sand + text_size(text.x = rel(1.2), text.y = rel(1.2), legend.text = rel(1.1), title.x = rel(1.1), title.y = rel(1.1), strip.x = rel(1.1), strip.y = rel(1.1))
+(plot.pd.sand <- plot.pd.sand + text_size(text.x = rel(1.2), text.y = rel(1.2), title.x = rel(1.1), title.y = rel(1.1), strip.x = rel(1.1), strip.y = rel(1.1))
 )
 
 ## save, just in case, although I don't much see the point in using ALL of them, when they're showing basically the same thing..
 ggsave(here::here(figures.dir, "summary_pd_sand.png"), 
        plot.pd.sand, 
        width = 25, height = 15, units = "cm", dpi = 300)
+
+rm(pd.summary.sand.long)
 ```
   More or less the same pattern.. Slight apparent worsening of the community structure in 2014; S5-Agalina - the most disturbed (curves instersect several times and are closest together, as well as somewhat ragged). Interesting - S4-Sozopol (and S6-Paraskeva, a little) - the dominance of the clam *C. gallina* is very clear from the curves - sharp drop of the biomass & abundance after the first-ranked species.  
   
