@@ -236,7 +236,7 @@ lambda.sim.long <- stack(lapply(lambda.sim, unlist))
 names(lambda.sim.long) <- c("Lambda_sim", "sp_number")
 ```
 
-  Now plot the simulated D-plus & the confidence/tolerance intervlas to see if everything checks out - these will be also shown on the plot of real, observed data.
+  Now plot the simulated D-plus & the confidence/tolerance intervals to see if everything checks out - these will be also shown on the plot of real, observed data.
 ```{r conf_intervals_dplus}
 ## transform the simulated Dplus data frame into a tibble, and clean it a little
 dplus.sim.long <- as_data_frame(dplus.sim.long) %>%
@@ -511,8 +511,68 @@ ggplot(abc.sand[[2]], aes(x = station, y = w, colour = factor(year))) +
 )
 ```
   All good, let's plot these! 
-```{r plot_summary_abc_sand}
+  Very often, the curves approach a cumulative frequency of 100 % for a large part of their length, esp. in highly dominated communities - often after the first 2-3 top-ranked species, making the forms of the abundance and biomass curves difficult to distinguish. We can transform the y-axis so that the cumulative values are closer to linearity - e.g. using a modified logistic transformation (Clarke & Warwick 2001).  
+```{r ggplot_modif_logistic_transform}
+## define a custom transformation and its inverse for the y axis (modified logistic transformation) using the scales package (for ggplot graphics).
+modif_logistic_trans <- function() scales::trans_new("modif_logistic", 
+                                                     function(x) log((1 + x)/(101 - x)), 
+                                                     function(x) exp((1 + x)/(101 - x)))
 
 ```
+
+```{r plot_summary_abc_sand}
+## make named character vector for the custom station labels   
+stations.sand <- paste0("S", as.numeric(unique(abc.summary.sand[[1]]$station)))
+names(stations.sand) <- as.character(unique(abc.summary.sand[[1]]$station))
+
+plot.summary.abc.sand <- ggplot(abc.summary.sand[[1]], aes(x = sp_rank)) + 
+  geom_line(aes(y = cum_abnd), colour = "skyblue") + 
+  geom_line(aes(y = cum_biomass), colour = "orange") +
+  scale_x_log10() +
+  coord_trans(y = "modif_logistic") +
+  facet_grid(year ~ station, labeller = labeller(station = as_labeller(stations.sand))) + 
+  labs(x = "Species rank (log)", y = "Cumulative %")
+
+## modify text size a little 
+(plot.summary.abc.sand <- plot.summary.abc.sand + text_size(text.x = rel(1.2), text.y = rel(1.2), legend.text = rel(1.1), title.x = rel(1.1), title.y = rel(1.1), strip.x = rel(1.1), strip.y = rel(1.1))
+)
+
+## and save this - huge, because I think it will be displayed best as a whole-page graph.. 
+ggsave(here::here(figures.dir, "summary_abc_sand.png"), 
+       plot.summary.abc.sand, 
+       width = 25, height = 15, units = "cm", dpi = 300)
+```
+  General conclusions still the same: overall, biomass curve above abundance curve everywhere; slightly worse condition of the communities in 2014 (curves closer to one another for more stations); no change at some stations (S3-Akin, S4-Sozopol, S6-Paraskeva). Otherwise, results seem to follow gradient more or less - curves closer to one another at inner stations, wider apart at outer ones; exception - S5-Agalina - arguably the worst - but again, probably naturally "stressed" - no major pressure sources nearby..   
+  
+###### **Partial dominance curves**  
+  Used in order to avoid problems of over-dominance of species affecting the curves and their interpretation. Partial dominance curves compute the dominance of the second ranked species over the remainder, ignoring the first-ranked species, and so on with the remaining species. Thus, earlier values do not affect later points on the curve. Partial dominance ABC curves for undisturbed macrobenthic communities have the biomass curve over the abundance curve (mostly) throughout its length. The abundance curve is smoother; the biomass curve shows a slight and steady decline before its inevitable final rise. Under polluted conditions, there is still a change in position of partial dominance curves, and the abundance curve is much more "ragged": the implication is that the disturbance is affecting the whole suite of species in the community (Clarke & Warwick 2001).  
+```{r partial_dominance_sand}
+## will be calculated directly on the summarized abundance/biomass data
+(pd.summary.sand <- partial_dominance_curves(summary.abnd.sand, summary.biomass.sand, 
+                                            abnd.val = mean_count, biomass.val = mean_biomass, 
+                                            station, year)
+)
+```
+
+  Let's see what this looks like (and if it's any improvement over the regular ABS curves)..  
+```{r plot_partial_dominance_sand}
+plot.pd.sand <- ggplot(pd.summary.sand, aes(x = sp_rank)) + 
+  geom_line(aes(y = partial_abnd), colour = "skyblue") + 
+  geom_line(aes(y = partial_biomass), colour = "orange") +
+  scale_x_log10() +
+  facet_grid(year ~ station, labeller = labeller(station = as_labeller(stations.sand))) + 
+  labs(x = "Species rank (log)", y = "%")
+
+## modify text size a little
+(plot.pd.sand <- plot.pd.sand + text_size(text.x = rel(1.2), text.y = rel(1.2), legend.text = rel(1.1), title.x = rel(1.1), title.y = rel(1.1), strip.x = rel(1.1), strip.y = rel(1.1))
+)
+
+## save, just in case, although I don't much see the point in using ALL of them, when they're showing basically the same thing..
+ggsave(here::here(figures.dir, "summary_pd_sand.png"), 
+       plot.pd.sand, 
+       width = 25, height = 15, units = "cm", dpi = 300)
+```
+  More or less the same pattern.. Slight apparent worsening of the community structure in 2014; S5-Agalina - the most disturbed (curves instersect several times and are closest together, as well as somewhat ragged). Interesting - S4-Sozopol (and S6-Paraskeva, a little) - the dominance of the clam *C. gallina* is very clear from the curves - sharp drop of the biomass & abundance after the first-ranked species.  
+  
   
   
