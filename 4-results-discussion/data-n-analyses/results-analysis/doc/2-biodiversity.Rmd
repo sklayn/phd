@@ -1,6 +1,6 @@
 ---
 title: "Biodiversity of macrozoobenthic communities - 2"
-date: "2017-12-14"
+date: "2017-01-23"
 output: 
   html_notebook:
     theme: paper
@@ -83,10 +83,10 @@ text_size <- function(text.x = NULL,
 Import the zoobenthic abundance & biomass data - as an exception, from the cleaned & saved datasets, to avoid (most of) the cleaning steps. 
 ```{r zoo_data_sand_import, message = FALSE, results = FALSE}
 ## dimensions should be 54 x 205 (5 metadata + 200 species columns); all species columns should be numeric.
-zoo.abnd.sand <- read_csv(file.path(save.dir, "abnd_sand_orig_clean.csv"))
+zoo.abnd.sand <- read_csv(here::here(save.dir, "abnd_sand_orig_clean.csv"))
 
 ## same for biomass; same expected structure as the abundance
-zoo.biomass.sand <- read_csv(file.path(save.dir, "biomass_sand_orig_clean.csv"))
+zoo.biomass.sand <- read_csv(here::here(save.dir, "biomass_sand_orig_clean.csv"))
 ```
   Convert columns to the proper type, arrange the datasets by station, etc.
 ```{r clean_zoo_data_sand, results = FALSE}
@@ -115,7 +115,15 @@ zoo.biomass.sand <- zoo.biomass.sand %>%
   spread(species, sp_biomass, fill = 0) %>%
   arrange(station, year, month)
 ```
-  
+  Transform to long format, because for some functions it's better.  
+```{r zoo_data_long_sand}
+zoo.abnd.sand.long <- zoo.abnd.sand %>% 
+  gather(key = species, value = sp_count, -c(station:replicate))
+
+zoo.biomass.sand.long <- zoo.biomass.sand %>% 
+  gather(key = species, value = sp_biomass, -c(station:replicate))
+```
+
 ##### Alpha diversity indices  
 All of the following can be calculated using package vegan. 
   + species richness S  
@@ -344,7 +352,7 @@ dplus.legend <- cowplot::get_legend(plot.dplus.sand + theme(legend.position = "b
 )
 
 ## save & clean up
-cowplot::save_plot(file.path(figures.dir, "dplus_lambda_combined_sand.png"), 
+cowplot::save_plot(here::here(figures.dir, "dplus_lambda_combined_sand.png"), 
                    plot.dplus.l.combined.sand, 
                    base_aspect_ratio = 0.9, base_width = 5.5, dpi = 300)
 
@@ -600,7 +608,393 @@ ggsave(here::here(figures.dir, "summary_pd_sand.png"),
 
 rm(pd.summary.sand.long)
 ```
-  More or less the same pattern.. Slight apparent worsening of the community structure in 2014; S5-Agalina - the most disturbed (curves instersect several times and are closest together, as well as somewhat ragged). Interesting - S4-Sozopol (and S6-Paraskeva, a little) - the dominance of the clam *C. gallina* is very clear from the curves - sharp drop of the biomass & abundance after the first-ranked species.  
+  More or less the same pattern.. Slight apparent worsening of the community structure in 2014; S5-Agalina - the most disturbed (curves instersect several times and are closest together, as well as somewhat ragged). Interesting - S4-Sozopol (and S6-Paraskeva, a little) - the dominance of the clam *C. gallina* is very clear from the curves - sharp drop of the biomass & abundance after the first-ranked species.    
+
+
+#### Macrozoobenthic communities in the seagrasses of Burgas Bay (2013-2014)
+Import the abundance & biomass data - again, from the cleaned & saved datasets, to avoid (most of) the cleaning steps. 
+```{r zoo_data_zostera_import, message = FALSE, results = FALSE}
+## dimensions should be 32 x 205 (5 metadata + 200 species columns); all species columns should be numeric.
+zoo.abnd.zostera <- read_csv(here::here(save.dir, "abnd_zostera_orig_clean.csv"))
+
+## same for biomass; same expected structure as the abundance
+zoo.biomass.zostera <- read_csv(here::here(save.dir, "biomass_zostera_orig_clean.csv"))
+```
+  Convert columns to the proper type, arrange the datasets by station, etc.
+```{r clean_zoo_data_zostera, results = FALSE}
+zoo.abnd.zostera <- zoo.abnd.zostera %>% 
+  mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo"))) %>%
+  arrange(station, year, month)
+
+zoo.biomass.zostera <- zoo.biomass.zostera %>% 
+  mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo"))) %>%
+  arrange(station, year, month)
+```
+  Remove all species not present in the datasets (= all-0 columns). 
+```{r clean_zoo_data_zostera_2, results = FALSE}
+## result should have dimensions 32 x 99 (94 species + 5 metadata columns) 
+zoo.abnd.zostera <- zoo.abnd.zostera %>% 
+  gather(key = species, value = sp_count, -c(station:replicate)) %>% 
+  group_by(species) %>% 
+  filter(sp_count > 0) %>%
+  spread(species, sp_count, fill = 0) %>%
+  arrange(station, year, month)
+
+zoo.biomass.zostera <- zoo.biomass.zostera %>% 
+  gather(key = species, value = sp_biomass, -c(station:replicate)) %>% 
+  group_by(species) %>% 
+  filter(sp_biomass > 0) %>%
+  spread(species, sp_biomass, fill = 0) %>%
+  arrange(station, year, month)
+```
+  Transform to long format.  
+```{r zoo_data_long_zostera}
+zoo.abnd.zostera.long <- zoo.abnd.zostera %>% 
+  gather(key = species, value = sp_count, -c(station:replicate))
+
+zoo.biomass.zostera.long <- zoo.biomass.zostera %>% 
+  gather(key = species, value = sp_biomass, -c(station:replicate))
+```
   
+##### Alpha diversity indices  
+
+```{r alpha_diversity_zostera}
+## uses custom function for convenience - has to be imported first! 
+alpha.div.zostera <- zoo.abnd.zostera %>%
+  select(-c(station:replicate)) %>%
+  alpha_diversity()
+
+## add the metadata columns (row order is not changed, so possible) 
+(alpha.div.zostera <- bind_cols(zoo.abnd.zostera %>% select(station:replicate), alpha.div.zostera)
+)
+```
+  Summarize these diversity indices by station & year.
+```{r summarize_alpha_diversity_zostera}
+## STILL haven't learned how to use the functions from package sjPlot for printing pretty (and easy!) tables...   
+alpha.div.zostera %>% 
+  group_by(station, year) %>%
+  summarise(h_mean = mean(shannon_h), h_sd = sd(shannon_h), 
+            j_mean = mean(evenness_j), j_sd = sd(evenness_j),
+            h_eff_mean = mean(h_effective), h_eff_sd = sd(h_effective)
+            )
+```
   
+  2. Species accumulation curves - see how species are added when the number of samples (sites) increases. Usually used to see if the sampling effort is adequate & captures most of the diversity in the study area.  
+```{r sp_accumulation_curves_zostera}
+sac.zostera <- specaccum(select(zoo.abnd.zostera, -c(station:replicate)))
+
+plot(sac.zostera, 
+     xlab = "Samples", ylab = "Cumulative species richness", 
+     ci.type = "polygon", ci.col = "light blue")
+```
+  Again, about 10 (mayeb a little more) samples seem to be enough to capture most of the biodiversity in the study area (in terms of species richness) - this is where the curve starts to smooth out (slope < 1). In my seagrass dataset, there are 8 samples/station for most (except Ropotamo & Vromos - 4 each, only one sampling) - marginally enough, but should be kept in mind, esp. for those two under-sampled stations.  
+  NB IF this method is applied correctly, since the samples are not independent but in fact represent replicates at each station..   
+  
+##### Species pool  
+The species pool is the total extrapolated number of species in the study area (various estimates used here). Used to estimate the number of **unobserved species**. The functions assume that the number of unobserved species is related to he number of rare species (= seen only once or twice).     
+```{r sp_pool_zostera}
+## this function is based on incidences in sample sites - presence/absence data; gives a single estimate for a collection of sample sites
+specpool(select(zoo.abnd.zostera, -c(station:replicate)), 
+         pool = zoo.abnd.zostera$station, 
+         smallsample = TRUE)
+
+## this function is quantitative - based on abundances on single sample site
+estimateR(select(zoo.abnd.zostera, -c(station:replicate)))
+```
+  Now let's do it for the whole dataset. 
+```{r sp_pool_total_zostera}
+specpool(select(zoo.abnd.zostera, -c(station:replicate)), 
+         smallsample = TRUE)
+```
+  Looks good enough: based on the most severe estimate (second-order jacknife), the dataset captures about 76 % of the species pool, and based on the most forgiving one (bootstrap) - about 91 %. Not too bad, considering that some sites are underrepresented..   
+  
+##### Taxonomic distance & diversity  
+  No need to redo all the master list/simulated community calculations as before - they're valid for the seagrasses, too.  
+  Calculate the **taxonomic distance** for the seagrass zoobenthic communities.  
+```{r tax_distance_zostera}
+## we'll use the same taxonomic distance for the master species list as before
+
+## calculate the taxonomic distinctness indices for the abundance dataset
+(tax.distinctness.zostera <- taxondive(select(zoo.abnd.zostera, -c(station:replicate)), tax.dist.sand)
+)
+
+## get the summary - includes a significance test on Delta+
+summary(tax.distinctness.zostera)
+
+```
+  Huh, not even a single significant p-value.. How sweet.  
+  Now plot the real, observed values of D-plus in the seagrass dataset, and add these confidence limits.  
+```{r plot_dplus_zostera}
+s.l.dplus.zostera <- bind_cols(S = tax.distinctness.zostera$Species,
+                               Dplus = tax.distinctness.zostera$Dplus,
+                               Lambda = tax.distinctness.zostera$Lambda,
+                               station = zoo.abnd.zostera$station)
+
+plot.dplus.zostera <- ggplot(s.l.dplus.zostera, aes(x = S, y = Dplus, color = station)) +
+  scale_color_brewer(palette = "Set2", 
+                     labels = paste0("Z", as.numeric(unique(s.l.dplus.zostera$station)))) +
+  geom_point(alpha = 0.85, size = 2) +
+  xlim(0, 100) + 
+  ylab("Delta+") + 
+  text_size(text.x = rel(1.2), text.y = rel(1.2), legend.text = rel(1.1), title.x = rel(1.1), title.y = rel(1.1), legend.title = rel(1.1))
+  
+## add confidence/tolerance lines
+(plot.dplus.zostera <- plot.dplus.zostera + 
+    geom_line(aes(x = sp_number, y = lower), data = dplus.sim.conf.int, color = "grey40", lwd = 0.3) + 
+    geom_line(aes(x = sp_number, y = upper), data = dplus.sim.conf.int, color = "grey40", lwd = 0.3) + 
+    geom_line(aes(x = sp_number, y = average), data = dplus.sim.conf.int, color = "grey40", lwd = 0.3)
+)
+
+```
+  And now plot the observed Lambda values, with the theoretical (simulated) confidence intervals.  
+```{r plot_lambda_zostera}
+plot.lambda.zostera <- ggplot(s.l.dplus.zostera, aes(x = S, y = Lambda, color = station)) +
+  scale_color_brewer(palette = "Set2",
+                      labels = paste0("Z", as.numeric(unique(s.l.dplus.zostera$station)))) +
+  geom_point(alpha = 0.85, size = 2) +
+  xlim(0, 100) + 
+  text_size(text.x = rel(1.2), text.y = rel(1.2), legend.text = rel(1.1), title.x = rel(1.1), title.y = rel(1.1), legend.title = rel(1.1))
+
+## add the confidence/tolerance intervals
+(plot.lambda.zostera <- plot.lambda.zostera + 
+    geom_line(aes(x = sp_number, y = lower), data = lambda.sim.conf.int, color = "grey40", lwd = 0.3) + 
+    geom_line(aes(x = sp_number, y = upper), data = lambda.sim.conf.int, color = "grey40", lwd = 0.3) + 
+    geom_line(aes(x = sp_number, y = average), data = lambda.sim.conf.int, color = "grey40", lwd = 0.3)
+)
+
+```
+ 
+```{r plot_composite_dplus_lambda_zostera}
+## combine the 2 previous plots on one graph. They share a legend, so we'll jump through some (neccessary) hoops to put it at the bottom 
+
+## plot them together in a grid
+plot.dplus.l.combined.zostera <- cowplot::plot_grid(plot.dplus.zostera + theme(legend.position = "none"), 
+                                                 plot.lambda.zostera + theme(legend.position = "none"), 
+                                                 labels = c("A", "B"), align = "h")
+
+## get the legend from one of the plots, and put it at the bottom
+dplus.legend <- cowplot::get_legend(plot.dplus.zostera + theme(legend.position = "bottom"))
+
+(plot.dplus.l.combined.zostera <- cowplot::plot_grid(plot.dplus.l.combined.zostera,
+                                                  dplus.legend, 
+                                                  ncol = 1, rel_heights = c(1, 0.2))
+)
+
+## save & clean up
+cowplot::save_plot(here::here(figures.dir, "dplus_lambda_combined_zostera.png"), 
+                   plot.dplus.l.combined.zostera, 
+                   base_aspect_ratio = 0.9, base_width = 5.5, dpi = 300)
+
+rm(dplus.legend)
+```
+  
+  All of the samples fall within the theoretical 95% confidence limits, and near the average theoretical values of both taxonomic distinctness indices - therefore do not deviate from expected taxonomic breadth & structure. This confirms the lack of significant values in the z-test above (-> no difference in observed taxonomic structure than expected).  
+  
+##### Graphical analyses  
+###### **Diversity profiles**  
+ Included more for the sake of completeness than for any other reason.   
+```{r diversity_profiles_zostera}
+div.profiles.zostera <- diversity_profiles(zoo.abnd.zostera %>% select(-c(station:replicate)))
+
+## convert to long & add stations (manually, unfortunately)
+div.profiles.zostera.long <- div.profiles.zostera %>%
+  gather(key = id, value = value, -q) %>%
+  mutate(id = gsub("V", "", id),
+         station = case_when(id %in% as.character(1:8) ~ "Poda", 
+                             id %in% as.character(9:16) ~ "Otmanli", 
+                             id %in% as.character(17:20) ~ "Vromos", 
+                             id %in% as.character(21:28) ~ "Gradina", 
+                             id %in% as.character(29:32) ~ "Ropotamo"))
+
+## convert profile id and station to factors, and q to numeric
+(div.profiles.zostera.long <- div.profiles.zostera.long %>%
+    mutate(station = factor(station, levels = levels(zoo.abnd.zostera$station)), 
+           id = factor(id, levels = 1:54), 
+           q = as.numeric(q))
+)
+
+```
+  Now plot them, just to see what they look like.  
+```{r plot_diversity_profiles_zostera}
+plot_div_profiles(div.profiles.zostera.long, one.panel = FALSE)
+
+```
+  Here, Gradina (Z4), Otmanli (Z2) & Ropotamo (Z5) seem to have the highest profiles (= highest diversity) overall.  
+  Calculate the **weighted diversity profiles** by including a measure of similarity between species - here, again, the taxonomic distance between them. 
+```{r weighted_diversity_profiles_zostera}
+## subset the large dist object (taxonomic distance b/n species) from before, to only the currently present species - in a very clumsy, very ugly way
+tax.dist.zostera.current <- as.matrix(tax.dist.sand)[which(rownames(as.matrix(tax.dist.sand)) %in% colnames(zoo.abnd.zostera)), which(colnames(as.matrix(tax.dist.sand)) %in% colnames(zoo.abnd.zostera))]
+
+
+weighted.div.profiles.zostera <- weighted_div_profiles(zoo.abnd.zostera %>% select(-c(station:replicate)), 
+                                                       tax.dist.zostera.current, q = 50)
+
+## convert to long, add stations & clean a little (as before)
+weighted.div.profiles.zostera.long <- weighted.div.profiles.zostera %>%
+  gather(key = id, value = value, -q) %>%
+  mutate(id = gsub("V", "", id),
+         station = case_when(id %in% as.character(1:8) ~ "Poda", 
+                             id %in% as.character(9:16) ~ "Otmanli", 
+                             id %in% as.character(17:20) ~ "Vromos", 
+                             id %in% as.character(21:28) ~ "Gradina", 
+                             id %in% as.character(29:32) ~ "Ropotamo"))
+
+## convert profile id and station to factors, and q to numeric
+(weighted.div.profiles.zostera.long <- weighted.div.profiles.zostera.long %>%
+    mutate(station = factor(station, levels = levels(zoo.abnd.zostera$station)), 
+           id = factor(id, levels = 1:54), 
+           q = as.numeric(q))
+)
+
+plot_div_profiles(weighted.div.profiles.zostera.long, one.panel = FALSE)
+```
+  Now, it's more clearly apparent: Gradina, Otmanli & Ropotamo have the most diverse communities. However, there is high variability between samples from the same station - very obvious e.g. for Gradina.    
+  Let's calculate the average diversity profiles by station, because these last plots are very busy, it's hard to distinguish anything.    
+```{r average_weighted_div_profiles_zostera}
+(aver.weighted.div.profiles.zostera <- weighted.div.profiles.zostera.long %>% 
+   group_by(station, q) %>%
+   summarise(value = mean(value))
+)
+```
+  
+```{r plot_weighted_div_profiles_zostera}
+ggplot(aver.weighted.div.profiles.zostera, 
+       aes(x = q, y = value, colour = station)) + 
+  geom_line(lwd = 0.75) +
+  scale_color_brewer(palette = "Set2", 
+                     labels = paste0("Z", as.numeric(unique(aver.weighted.div.profiles.zostera$station))))+ 
+  labs(x = "Sensitivity parameter q", y = "Diversity")
+ 
+```
+  Same conclusion as above. Also, Z1-Poda drops sharply - suggests presence of rare species & lower diversity.  
+  
+###### **ABC curves**  
+  First, we'll calculate them on each replicate separately:
+```{r abc_zostera}
+(abc.zostera <- abc(zoo.abnd.zostera.long, zoo.biomass.zostera.long, 
+                 abnd.val = sp_count, biomass.val = sp_biomass, 
+                 station, year, month, replicate)
+)
+## result is a list: 1) grouped df containing the curves (long), 2) summarized df with the W statistic per replicate - the distance between the 2 curves  
+
+```
+  
+  We'll plot W, because there are too many stations & replicates and the curves will be unreadable.   
+```{r plot_w_zostera}
+ggplot(abc.zostera[[2]], aes(x = station, y = w, colour = factor(year))) + 
+  geom_boxplot() + 
+  scale_x_discrete(name = "Station", 
+                   labels = paste0("Z", as.numeric(unique(abc.zostera[[2]]$station)))) + 
+  ylab("W") + 
+  theme(legend.title = element_blank()) +
+  geom_hline(yintercept = 0)
+```
+
+  W > 0 for most samples except Vromos => the biomass curve is above the abundance curve, so none of the stations/replicates can be considered terribly disturbed. The mean W for Z3-Vromos is still above 0, but some of the samples are below => the curves are close together, suggesting disturbance. Not really very surprising, because 1) Vromos was close to an untreated sewage water source, and 2) there are less samples than for the other stations. Again, there is no evidence for complete dominance of one species in the biomass, perfectly even distribution of the abundance among species (W = 1, or tending towards it), nor the opposite (W = -1). In short, the structure of the communities is more or less even and normal, with variations characteristic of macrozoobenthic samples/communities. 
+  For Z2 & Z4, W decreases somewhat between 2013-2014. There might be some disturbance -> perhaps due to the heavy rains in the summer of 2014 - something to keep in mind just in case (again, prob. not enough time for the communities to display a reaction).  
+  
+  Plot the summary ABC curves - per station and year. 2 rows (for the 2 years) + 5 columns (stations) in the plot - will put it in landscape format in the text.  
+  The summary curves will be calculated on **data averaged by year** - again, to reduce the over-dominance of large mollusks etc. in the biomass.  
+```{r summarize_abnd_biomass_zostera}
+## summarize the abundance and biomass data per year (average)  
+(summary.abnd.zostera <- zoo.abnd.zostera.long %>%
+   group_by(station, year, species) %>%
+   summarize(mean_count = mean(sp_count))
+)
+
+(summary.biomass.zostera <- zoo.biomass.zostera.long %>%
+   group_by(station, year, species) %>%
+   summarize(mean_biomass = mean(sp_biomass))
+)
+```
+  Now calculate the summary ABC for 2013 and 2014 for the zostera stations.  
+```{r summary_abc_zostera}
+(abc.summary.zostera <- abc(summary.abnd.zostera, summary.biomass.zostera, 
+                         abnd.val = mean_count, biomass.val = mean_biomass, 
+                         station, year)
+)
+```
+  All good, let's plot them!   
+```{r plot_summary_abc_zostera}
+## reshape the data for easier plotting - and to have a legend..
+abc.summary.zostera.long <- abc.summary.zostera[[1]] %>% 
+  gather(key = variable, value = value, -c(station:sp_rank)) %>%
+  mutate(variable = case_when(variable == "cum_abnd" ~ "abundance", 
+                              variable == "cum_biomass" ~ "biomass"))
+
+## make named character vector for the custom station labels   
+stations.zostera <- paste0("Z", as.numeric(unique(abc.summary.zostera[[1]]$station)))
+names(stations.zostera) <- as.character(unique(abc.summary.zostera[[1]]$station))
+
+## plot 
+plot.summary.abc.zostera <- ggplot(abc.summary.zostera.long, 
+                                aes(x = sp_rank, y = value, colour = variable)) + 
+  geom_line() + 
+  # apply axis transformations 
+  scale_x_log10() +
+  coord_trans(y = "modif_logistic")  + 
+  # curve colours and legend 
+  scale_colour_manual(values = c("skyblue", "orange"), name = "") + 
+  theme(legend.position = "top") + 
+  # facets & labels
+  facet_grid(year ~ station, labeller = labeller(station = as_labeller(stations.zostera))) + 
+  labs(x = "Species rank (log)", y = "Cumulative %")
+
+## modify text size a little 
+(plot.summary.abc.zostera <- plot.summary.abc.zostera + text_size(text.x = rel(1.2), text.y = rel(1.2), legend.text = rel(1), title.x = rel(1.1), title.y = rel(1.1), strip.x = rel(1.1), strip.y = rel(1.1))
+)
+
+## and save this - huge, because I think it will be displayed best as a whole-page graph.. 
+ggsave(here::here(figures.dir, "summary_abc_zostera.png"), 
+       plot.summary.abc.zostera, 
+       width = 25, height = 15, units = "cm", dpi = 300)
+
+rm(abc.summary.zostera.long)
+```
+  Overall, the biomass curve is above the abundance curve almost everywhere, with some exceptions: Z3-Vromos - as suggested by W; Z4-Gradina in 2014. The curves otherwise are very close together - indicative of a slight disturbance. Very characteristic of seagrass communities - appear disturbed because of the high natural organic loading (-> tolerant r-strategist species present even in the most pristine conditions). Must be taken into account when applying biotic indices - they will most likely function incorrectly!   
+  Results do not follow the pressure gradient at all - the curves at all stations are close to one another.  
+  Of course, another contributing factor could be insufficient replication which might hide dominance patterns...  
+  
+###### **Partial dominance curves**  
+
+```{r partial_dominance_zostera}
+## will be calculated directly on the summarized abundance/biomass data
+(pd.summary.zostera <- partial_dominance_curves(summary.abnd.zostera, summary.biomass.zostera, 
+                                                abnd.val = mean_count, biomass.val = mean_biomass, 
+                                                station, year)
+)
+```
+
+```{r plot_partial_dominance_zostera}
+## reshape the data as before..
+pd.summary.zostera.long <- pd.summary.zostera %>% 
+  gather(key = variable, value = value, -c(station:sp_rank)) %>%
+  mutate(variable = case_when(variable == "partial_abnd" ~ "abundance", 
+                              variable == "partial_biomass" ~ "biomass"))
+
+## plot
+plot.pd.zostera <- ggplot(pd.summary.zostera.long, aes(x = sp_rank, y = value, colour = variable)) + 
+  geom_line() + 
+  # apply axis transformations 
+  scale_x_log10() +
+  coord_trans(y = "modif_logistic")  + 
+  # curve colours and legend 
+  scale_colour_manual(values = c("skyblue", "orange"), name = "") + 
+  theme(legend.position = "top") + 
+  # facets & labels
+  facet_grid(year ~ station, labeller = labeller(station = as_labeller(stations.zostera))) + 
+  labs(x = "Species rank (log)", y = "%")
+
+## modify text size a little
+(plot.pd.zostera <- plot.pd.zostera + text_size(text.x = rel(1.2), text.y = rel(1.2), title.x = rel(1.1), title.y = rel(1.1), strip.x = rel(1.1), strip.y = rel(1.1))
+)
+
+## save, just in case, although I don't much see the point in using ALL of them, when they're showing basically the same thing..
+ggsave(here::here(figures.dir, "summary_pd_zostera.png"), 
+       plot.pd.zostera, 
+       width = 25, height = 15, units = "cm", dpi = 300)
+
+rm(pd.summary.zostera.long)
+```
+  More or less the same pattern.. Interesting - compared to the partial dominance curves in the sand samples - much less dominance (both curves start at about the same level). There is also more variability - probably because the samples are smaller (taken with a corer) and fewer.  
   
