@@ -216,48 +216,30 @@ partial_dominance_curves <- function(abnd.data, biomass.data, abnd.val, biomass.
 
   # get rid of double-0 - species absent from the sample, which would lead to a division by 0
   abnd <- abnd %>%
-    filter(!!abnd.col > 0)
+    filter((!!abnd.col) > 0)
   
   biomass <- biomass %>%
-    filter(!!biomass.col > 0)
+    filter((!!biomass.col) > 0)
   
   # check the input data for errors - e.g. a species for which only an abundance 
   # or only a biomass value is given
   if (nrow(abnd) != nrow(biomass)) {
     stop("The abundance and biomass datasets contain different numbers of species! Check your input data!")
   }
-
-  run_sum <- function(x) { 
-    ## helper to calculate the partial abundances, successively removing each species and 
-    ## calculating the total over the rest 
-    sum_x <- NA
-    
-    for (i in 1:length(x)) {
-      
-      if(sum(x[i:length(x)]) == 0) {
-        
-        sum_x[i] <- NA
-        
-      } else { 
-        
-        sum_x[i] <- sum(x[i:length(x)])
-      }
-    }
-    
-    return(sum_x)
-  }
-
-    
+  
+  # calculate the partial abundances, successively removing each species and 
+  # calculating the total over the rest 
   abnd <- abnd %>% 
     mutate(sp_rank = row_number(), 
-           part_sum = run_sum(!!abnd.col), 
-           partial_abnd <- !!abnd.col / part_sum * 100)
+           ## MAKE SURE TO WRAP THE !! IN () TO SAFELY BIND THEM (B.C. ! HAS REALLY LOW PRIORITY) 
+           part_sum = rev(cumsum(rev((!!abnd.col)))), 
+           partial_abnd = ((!!abnd.col) / part_sum) * 100)
   
   # same procedure for the biomass
   biomass <- biomass %>% 
     mutate(sp_rank = row_number(), 
-           part_sum = run_sum(!!biomass.col), 
-           partial_biomass <- !!biomass.col / part_sum * 100)
+           part_sum = rev(cumsum(rev((!!biomass.col)))), 
+           partial_biomass = ((!!biomass.col) / part_sum) * 100)
   
 
   # make new tibble with the results - by binding, otherwise will get mixed up because of multiple 
@@ -281,3 +263,4 @@ partial_dominance_curves <- function(abnd.data, biomass.data, abnd.val, biomass.
     
   }
 }
+
