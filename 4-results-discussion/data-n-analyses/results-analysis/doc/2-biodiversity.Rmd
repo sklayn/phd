@@ -1,6 +1,6 @@
 ---
 title: "Biodiversity of macrozoobenthic communities - 2"
-date: "2017-01-23"
+date: "2017-01-24"
 output: 
   html_notebook:
     theme: paper
@@ -44,6 +44,7 @@ source(file.path(functions.dir, "alpha_diversity.R"))
   
   Import the necessary libraries.  
 ```{r import_packages, message = FALSE}
+library(here)
 library(vegan)
 library(tidyverse)
 library(viridis)
@@ -977,7 +978,6 @@ plot.pd.zostera <- ggplot(pd.summary.zostera.long, aes(x = sp_rank, y = value, c
   geom_line() + 
   # apply axis transformations 
   scale_x_log10() +
-  coord_trans(y = "modif_logistic")  + 
   # curve colours and legend 
   scale_colour_manual(values = c("skyblue", "orange"), name = "") + 
   theme(legend.position = "top") + 
@@ -998,3 +998,5 @@ rm(pd.summary.zostera.long)
 ```
   More or less the same pattern.. Interesting - compared to the partial dominance curves in the sand samples - much less dominance (both curves start at about the same level). There is also more variability - probably because the samples are smaller (taken with a corer) and fewer.  
   
+
+#### Macrozoobenthic communities in Sozopol Bay (2012)  
