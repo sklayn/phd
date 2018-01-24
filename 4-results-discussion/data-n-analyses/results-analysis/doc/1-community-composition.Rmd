@@ -1,6 +1,6 @@
 ---
 title: "Biodiversity of macrozoobenthic communities - 1"
-date: "2017-10-30"
+date: "2018-01-24"
 output:
   html_notebook:
     theme: paper
@@ -49,7 +49,7 @@ figures.dir <- "figs" # plots & figures
 ```
   Next, import the custom functions we'll use in the analyses. They're organized in a separate subdirectory, in several files by type of analysis, but we'll import them manually (for now).
 ```{r import_custom_functions}
-source(file.path(functions.dir, "import_data.R"))
+source(here::here(functions.dir, "import_data.R"))
 ```
 
 Import some necessary libraries.
@@ -136,9 +136,9 @@ Now on to the biomass!
 Everything looks fine! To be on the safe side, save the cleaned abundance & biomass data frames.
 ```{r save_clean_data_sand}
 write_csv(zoo.abnd.sand, 
-          path = file.path(save.dir, "abnd_sand_orig_clean.csv"))
+          path = here::here(save.dir, "abnd_sand_orig_clean.csv"))
 write_csv(zoo.biomass.sand, 
-          path = file.path(save.dir, "biomass_sand_orig_clean.csv"))
+          path = here::here(save.dir, "biomass_sand_orig_clean.csv"))
 ```
 
   Now, on with the cleaning.  
@@ -246,7 +246,7 @@ summarize_zoo_data(zoo.biomass.sand.long, value.col = sp_biomass, per.m2 = 20, r
   Import the taxonomic data. This includes all species on my current species list, so it applies to all analyses.
 ```{r import_taxonomic_data}
 # print afterwards, as a way to quickly check the structure and make sure there are no weird import errors. Same goes for every import; don't care about space taken up by printing tables. 
-(zoo.taxonomy <- read_csv(file.path(data.dir, "zoo_taxonomy.csv")))
+(zoo.taxonomy <- read_csv(here::here(data.dir, "zoo_taxonomy.csv")))
 ```
   
   Leave only the taxa which were present in the sand samples (abundance > 0 in at least one sample). Here it's done by matching the species names against the column names of the (filtered) abundance dataset, again excluding the polychaete & decapod larvae from the count.
@@ -303,7 +303,7 @@ plot.nb.taxa.by.group <- current.taxa.sand %>%
     text_size(text.x = rel(1.3), text.y = rel(1.3)) + 
     theme_bw()
 
-ggsave(file.path(figures.dir, "nb_taxa_by_tax_group_sand.png"), 
+ggsave(here::here(figures.dir, "nb_taxa_by_tax_group_sand.png"), 
        plot.nb.taxa.by.group, 
        dpi = 300)
 ```
@@ -392,7 +392,7 @@ plot_tax_props <- function(tax.props.data, x.labels = NULL, col.palette = "virid
 )
 
 ## save as file
-ggsave(file.path(figures.dir, "tax_gr_props_st_yr_sand.png"), 
+ggsave(here::here(figures.dir, "tax_gr_props_st_yr_sand.png"), 
        plot.tax.props.st.yr.sand, 
        dpi = 300)
 ```
@@ -453,7 +453,7 @@ plot.most.abnd.sp.sand <- plot_top_n(top20.counts.sand.st,
 )
 
 ## save as file
-ggsave(file.path(figures.dir, "most_abnd_sp_st_sand.png"), 
+ggsave(here::here(figures.dir, "most_abnd_sp_st_sand.png"), 
        plot.most.abnd.sp.sand, 
        dpi = 300)
 ```
@@ -488,7 +488,7 @@ tax.props.biomass.st.yr.sand <- zoo.biomass.sand.long %>%
 )
 
 ## save as file
-ggsave(file.path(figures.dir, "tax_gr_props_biomass_st_yr_sand.png"), 
+ggsave(here::here(figures.dir, "tax_gr_props_biomass_st_yr_sand.png"), 
        plot.tax.props.biomass.st.yr.sand, 
        dpi = 300)
 ```
@@ -510,7 +510,7 @@ tax.props.sand.all <- full_join(tax.props.st.yr.sand,
     text_size(text.x = rel(1.2), text.y = rel(1), title.x = rel(1.2), legend.text = rel(1), strip.x = rel(1.2), strip.y = rel(1.2))
 )
 
-ggsave(file.path(figures.dir, "tax_gr_props_sand_composite.png"),
+ggsave(here::here(figures.dir, "tax_gr_props_sand_composite.png"),
        plot.composite.tax.gr.props.sand,       
        dpi = 300, width = 15, units = "cm")
 ```
@@ -535,7 +535,7 @@ plot.highest.biomass.sp.sand <- plot_top_n(top20.biomass.sand.st,
 )
   
 ## save as file
-ggsave(file.path(figures.dir, "highest_biomass_sp_st_sand.png"), 
+ggsave(here::here(figures.dir, "highest_biomass_sp_st_sand.png"), 
        plot.highest.biomass.sp.sand, 
        dpi = 300)
 ```
@@ -581,9 +581,9 @@ Now on to the biomass!
 Goody! To be on the safe side, save the cleaned abundance & biomass data frames.
 ```{r save_clean_data_zostera}
 write_csv(zoo.abnd.zostera, 
-          path = file.path(save.dir, "abnd_zostera_orig_clean.csv"))
+          path = here::here(save.dir, "abnd_zostera_orig_clean.csv"))
 write_csv(zoo.biomass.zostera, 
-          path = file.path(save.dir, "biomass_zostera_orig_clean.csv"))
+          path = here::here(save.dir, "biomass_zostera_orig_clean.csv"))
 ```
 
   On with the cleaning.  
@@ -721,7 +721,7 @@ plot.nb.taxa.by.group <- current.taxa.zostera %>%
           axis.text.y = element_text(size = rel(1.3))) +
     theme_bw()
 
-ggsave(file.path(figures.dir, "nb_taxa_by_tax_group_zostera.png"), 
+ggsave(here::here(figures.dir, "nb_taxa_by_tax_group_zostera.png"), 
        plot.nb.taxa.by.group, 
        dpi = 300)
 ```
@@ -771,7 +771,7 @@ tax.props.st.yr.zostera <- zoo.abnd.zostera.long %>%
 )
 
 ## save as file
-ggsave(file.path(figures.dir, "tax_gr_props_st_yr_zostera.png"), 
+ggsave(here::here(figures.dir, "tax_gr_props_st_yr_zostera.png"), 
        plot.tax.props.st.yr.zostera, 
        dpi = 300)
 ```
@@ -794,7 +794,7 @@ plot.most.abnd.sp.zostera <- plot_top_n(top20.counts.zostera.st,
 )
 
 ## save as file
-ggsave(file.path(figures.dir, "most_abnd_sp_st_zostera.png"), 
+ggsave(here::here(figures.dir, "most_abnd_sp_st_zostera.png"), 
        plot.most.abnd.sp.zostera, 
        dpi = 300)
 ```
@@ -829,7 +829,7 @@ tax.props.biomass.st.yr.zostera <- zoo.biomass.zostera.long %>%
 )
 
 ## save as file
-ggsave(file.path(figures.dir, "tax_gr_props_biomass_st_yr_zostera.png"), 
+ggsave(here::here(figures.dir, "tax_gr_props_biomass_st_yr_zostera.png"), 
        plot.tax.props.biomass.st.yr.zostera, 
        dpi = 300)
 ```
@@ -851,7 +851,7 @@ tax.props.zostera.all <- full_join(tax.props.st.yr.zostera,
     text_size(text.x = rel(1.2), text.y = rel(1), title.x = rel(1.2), legend.text = rel(1), strip.x = rel(1.2), strip.y = rel(1.2))
 )
 
-ggsave(file.path(figures.dir, "tax_gr_props_zostera_composite.png"),
+ggsave(here::here(figures.dir, "tax_gr_props_zostera_composite.png"),
        plot.composite.tax.gr.props.zostera,       
        dpi = 300, width = 15, units = "cm")
 ```
@@ -876,7 +876,7 @@ plot.highest.biomass.sp.zostera <- plot_top_n(top20.biomass.zostera.st,
 )
   
 ## save as file
-ggsave(file.path(figures.dir, "highest_biomass_sp_st_zostera.png"), 
+ggsave(here::here(figures.dir, "highest_biomass_sp_st_zostera.png"), 
        plot.highest.biomass.sp.zostera, 
        dpi = 300)
 ```
@@ -926,9 +926,9 @@ Now on to the biomass!
   Great! To be on the safe side, save the cleaned abundance & biomass data frames.
 ```{r save_clean_data_2012}
 write_csv(zoo.abnd.2012, 
-          path = file.path(save.dir, "abnd_2012_orig_clean.csv"))
+          path = here::here(save.dir, "abnd_2012_orig_clean.csv"))
 write_csv(zoo.biomass.2012, 
-          path = file.path(save.dir, "biomass_2012_orig_clean.csv"))
+          path = here::here(save.dir, "biomass_2012_orig_clean.csv"))
 ```
   
   Remove the species that are absent from the current dataset, as before. 
@@ -1156,7 +1156,7 @@ nb.taxa.by.gr.habitat.2012 <- left_join(zoo.abnd.2012.long, current.taxa.2012) %
     theme_bw()
 )
 
-ggsave(file.path(figures.dir, "nb_taxa_by_tax_group_2012.png"),
+ggsave(here::here(figures.dir, "nb_taxa_by_tax_group_2012.png"),
        plot.nb.taxa.by.gr.hab.2012,
        dpi = 300)
 ```
@@ -1221,7 +1221,7 @@ tax.props.st.yr.2012 <- zoo.abnd.2012.long %>%
 )
 
 ## save as file
-ggsave(file.path(figures.dir, "tax_gr_props_st_yr_2012.png"),
+ggsave(here::here(figures.dir, "tax_gr_props_st_yr_2012.png"),
        plot.tax.props.st.yr.2012,
        dpi = 300)
 ```
@@ -1248,7 +1248,7 @@ plot.most.abnd.sp.2012 <- plot_top_n(top20.counts.2012.st,
 )
 
 ## save as file
-ggsave(file.path(figures.dir, "most_abnd_sp_st_2012.png"), 
+ggsave(here::here(figures.dir, "most_abnd_sp_st_2012.png"), 
        plot.most.abnd.sp.2012, 
        dpi = 300, width = 15, units = "cm")
 ```
@@ -1279,7 +1279,7 @@ tax.props.biomass.st.yr.2012 <- zoo.biomass.2012.long %>%
 )
 
 ## save as file
-ggsave(file.path(figures.dir, "tax_gr_props_biomass_st_yr_2012.png"), 
+ggsave(here::here(figures.dir, "tax_gr_props_biomass_st_yr_2012.png"), 
        plot.tax.props.biomass.st.yr.2012, 
        dpi = 300)
 ```
@@ -1306,7 +1306,7 @@ tax.props.2012.all <- full_join(tax.props.st.yr.2012,
     text_size(text.x = rel(1.2), text.y = rel(1), title.x = rel(1.2), legend.text = rel(1), strip.x = rel(1.2), strip.y = rel(1.2))
 )
 
-ggsave(file.path(figures.dir, "tax_gr_props_2012_composite.png"),
+ggsave(here::here(figures.dir, "tax_gr_props_2012_composite.png"),
        plot.composite.tax.gr.props.2012,       
        dpi = 300, width = 15, units = "cm")
 ```
@@ -1334,7 +1334,7 @@ plot.highest.biomass.sp.2012 <- plot_top_n(top20.biomass.2012.st,
 )
   
 ## save as file
-ggsave(file.path(figures.dir, "highest_biomass_sp_st_2012.png"), 
+ggsave(here::here(figures.dir, "highest_biomass_sp_st_2012.png"), 
        plot.highest.biomass.sp.2012, 
        dpi = 300, width = 15, units = "cm")
 ```
@@ -1400,14 +1400,14 @@ comm.diff.2012.st.summary
   NB Save the models & summaries as R data objects, because they take way too much time to repeat.
 ```{r save_models_2012}
 ## community difference between sites & habitats
-write_rds(comm.diff.2012.mod, file.path(save.dir, "comm_diff_model_2012.RDS"))
+write_rds(comm.diff.2012.mod, here::here(save.dir, "comm_diff_model_2012.RDS"))
 
-write_rds(comm.diff.2012.mod.summary, file.path(save.dir, "comm_diff_model_2012_summary.RDS"))
+write_rds(comm.diff.2012.mod.summary, here::here(save.dir, "comm_diff_model_2012_summary.RDS"))
 
 ## community difference between stations & habitats within each site
-write_rds(comm.diff.2012.st, file.path(save.dir, "comm_diff_st_model_2012.RDS"))
+write_rds(comm.diff.2012.st, here::here(save.dir, "comm_diff_st_model_2012.RDS"))
 
-write_rds(comm.diff.2012.st.summary, file.path(save.dir, "comm_diff_st_model_2012_summary.RDS"))
+write_rds(comm.diff.2012.st.summary, here::here(save.dir, "comm_diff_st_model_2012_summary.RDS"))
 ```
 
   There's only a significant effect of the station:habitat interaction within each site. Well good enough for now; losing too much time as it is with the throwaway-worthy data, and not enough on the really important analyses. Come back later?  
