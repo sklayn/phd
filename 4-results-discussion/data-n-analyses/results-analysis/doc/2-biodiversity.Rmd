@@ -590,7 +590,6 @@ plot.pd.sand <- ggplot(pd.summary.sand.long, aes(x = sp_rank, y = value, colour 
   geom_line() + 
   # apply axis transformations 
   scale_x_log10() +
-  coord_trans(y = "modif_logistic")  + 
   # curve colours and legend 
   scale_colour_manual(values = c("skyblue", "orange"), name = "") + 
   theme(legend.position = "top") + 
@@ -688,7 +687,7 @@ plot(sac.zostera,
      xlab = "Samples", ylab = "Cumulative species richness", 
      ci.type = "polygon", ci.col = "light blue")
 ```
-  Again, about 10 (mayeb a little more) samples seem to be enough to capture most of the biodiversity in the study area (in terms of species richness) - this is where the curve starts to smooth out (slope < 1). In my seagrass dataset, there are 8 samples/station for most (except Ropotamo & Vromos - 4 each, only one sampling) - marginally enough, but should be kept in mind, esp. for those two under-sampled stations.  
+  Again, about 10 (maybe a little more) samples seem to be enough to capture most of the biodiversity in the study area (in terms of species richness) - this is where the curve starts to smooth out (slope < 1). In my seagrass dataset, there are 8 samples/station for most (except Ropotamo & Vromos - 4 each, only one sampling) - marginally enough, but should be kept in mind, esp. for those two under-sampled stations.  
   NB IF this method is applied correctly, since the samples are not independent but in fact represent replicates at each station..   
   
 ##### Species pool  
@@ -999,4 +998,5 @@ rm(pd.summary.zostera.long)
   More or less the same pattern.. Interesting - compared to the partial dominance curves in the sand samples - much less dominance (both curves start at about the same level). There is also more variability - probably because the samples are smaller (taken with a corer) and fewer.  
   
 
-#### Macrozoobenthic communities in Sozopol Bay (2012)  
+#### Macrozoobenthic communities in Sozopol Bay (2012)   
+
