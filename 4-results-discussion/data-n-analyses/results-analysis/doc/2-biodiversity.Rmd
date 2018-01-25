@@ -1,6 +1,6 @@
 ---
 title: "Biodiversity of macrozoobenthic communities - 2"
-date: "2017-01-24"
+date: "2017-01-25"
 output: 
   html_notebook:
     theme: paper
@@ -156,11 +156,28 @@ alpha.div.sand %>%
 ```{r sp_accumulation_curves_sand}
 sac.sand <- specaccum(select(zoo.abnd.sand, -c(station:replicate)))
 
-plot(sac.sand, 
-     xlab = "Samples", ylab = "Cumulative species richness", 
-     ci.type = "polygon", ci.col = "light blue")
+## extract data (temporarily) to plot in ggplot - easier to save afterwards with whatever parameters I want 
+sac.data.sand <- as_data_frame(sac.sand[c("sites", "richness", "sd")])
+
+## plot & save 
+(plot.sac.sand <- ggplot(sac.data.sand) + 
+    geom_line(aes(x = sites, y = richness), colour = "grey40") + 
+    geom_ribbon(aes(x = sites, ymin = richness - sd, ymax = richness + sd), alpha = 0.3, fill = "skyblue") +
+    ## add a line with slope 1 tangent to the accumulation curve - unfortunately, by eye, trial & error..  
+    geom_abline(aes(intercept = 101, slope = 1), colour = "red", lty = 3) +
+    
+    labs(x = "Samples", y = "Cumulative number of species") + 
+    text_size(text.x = rel(1.2), text.y = rel(1.2), title.x = rel(1.05), title.y = rel(1.05))
+)
+
+## save & clean up
+ggsave(here(figures.dir, "sac_sand.png"), 
+       plot.sac.sand, 
+       width = 15, units = "cm", dpi = 300)
+
+rm(sac.data.sand)
 ```
-  About 10 samples seem to be enough to capture most of the biodiversity in the study area (in terms of species richness) - this is where the curve starts to smooth out (slope < 1). In my dataset, there are 9 samples/station - could be considered enough.  
+  About 30 samples seem to be enough to capture most of the biodiversity in the study area (in terms of species richness) - this is where the curve starts to smooth out (slope < 1). In my dataset, there are 54 samples in total - could be considered enough.  
   NB IF this method is applied correctly, since the samples are not independent but in fact represent replicates at each station.  
   
 ##### Species pool  
@@ -691,11 +708,27 @@ alpha.div.zostera %>%
 ```{r sp_accumulation_curves_zostera}
 sac.zostera <- specaccum(select(zoo.abnd.zostera, -c(station:replicate)))
 
-plot(sac.zostera, 
-     xlab = "Samples", ylab = "Cumulative species richness", 
-     ci.type = "polygon", ci.col = "light blue")
+## extract data (temporarily) to plot in ggplot
+sac.data.zostera <- as_data_frame(sac.zostera[c("sites", "richness", "sd")])
+
+## plot & save 
+(plot.sac.zostera <- ggplot(sac.data.zostera) + 
+    geom_line(aes(x = sites, y = richness), colour = "grey40") + 
+    geom_ribbon(aes(x = sites, ymin = richness - sd, ymax = richness + sd), alpha = 0.3, fill = "skyblue") +
+    ## add a line with slope 1 tangent to the accumulation curve - unfortunately, by eye, trial & error..  
+    geom_abline(aes(intercept = 65, slope = 1), colour = "red", lty = 3) +
+    labs(x = "Samples", y = "Cumulative number of species") + 
+    text_size(text.x = rel(1.2), text.y = rel(1.2), title.x = rel(1.05), title.y = rel(1.05))
+)
+
+## save & clean up
+ggsave(here(figures.dir, "sac_zostera.png"), 
+       plot.sac.zostera, 
+       width = 15, units = "cm", dpi = 300)
+
+rm(sac.data.zostera)
 ```
-  Again, about 10 (maybe a little more) samples seem to be enough to capture most of the biodiversity in the study area (in terms of species richness) - this is where the curve starts to smooth out (slope < 1). In my seagrass dataset, there are 8 samples/station for most (except Ropotamo & Vromos - 4 each, only one sampling) - marginally enough, but should be kept in mind, esp. for those two under-sampled stations.  
+  Again, about 20 (maybe a little more) samples seem to be enough to capture most of the biodiversity in the study area (in terms of species richness) - this is where the curve starts to smooth out (slope < 1). In my seagrass dataset, there are 32 samples in total - let's say that's about enough..  
   NB IF this method is applied correctly, since the samples are not independent but in fact represent replicates at each station..   
   
 ##### Species pool  
