@@ -1,6 +1,6 @@
 ---
 title: "Biodiversity of macrozoobenthic communities - 2"
-date: "2017-01-25"
+date: "2018-01-25"
 output: 
   html_notebook:
     theme: paper
@@ -332,7 +332,7 @@ plot.dplus.sand <- ggplot(s.l.dplus.sand, aes(x = S, y = Dplus, color = station)
                      labels = paste0("S", as.numeric(unique(s.l.dplus.sand$station)))) +
   geom_point(alpha = 0.75, size = 2) +
   xlim(0, 100) + 
-  ylab("Delta+") + 
+  labs(x = "Number of species", y = expression(paste(Delta, "+"))) + 
   text_size(text.x = rel(1.2), text.y = rel(1.2), legend.text = rel(1.1), title.x = rel(1.1), title.y = rel(1.1), legend.title = rel(1.1))
   
 ## add confidence/tolerance lines
@@ -350,6 +350,7 @@ plot.lambda.sand <- ggplot(s.l.dplus.sand, aes(x = S, y = Lambda, color = statio
                       labels = paste0("S", as.numeric(unique(s.l.dplus.sand$station)))) +
   geom_point(alpha = 0.75, size = 2) +
   xlim(0, 100) + 
+  labs(x = "Number of species", y = expression(paste(Lambda, "+"))) +
   text_size(text.x = rel(1.2), text.y = rel(1.2), legend.text = rel(1.1), title.x = rel(1.1), title.y = rel(1.1), legend.title = rel(1.1))
 
 ## add the confidence/tolerance intervals
@@ -776,7 +777,7 @@ plot.dplus.zostera <- ggplot(s.l.dplus.zostera, aes(x = S, y = Dplus, color = st
                      labels = paste0("Z", as.numeric(unique(s.l.dplus.zostera$station)))) +
   geom_point(alpha = 0.85, size = 2) +
   xlim(0, 100) + 
-  ylab("Delta+") + 
+  labs(x = "Number of species", y = expression(paste(Delta, "+"))) + 
   text_size(text.x = rel(1.2), text.y = rel(1.2), legend.text = rel(1.1), title.x = rel(1.1), title.y = rel(1.1), legend.title = rel(1.1))
   
 ## add confidence/tolerance lines
@@ -794,6 +795,7 @@ plot.lambda.zostera <- ggplot(s.l.dplus.zostera, aes(x = S, y = Lambda, color = 
                       labels = paste0("Z", as.numeric(unique(s.l.dplus.zostera$station)))) +
   geom_point(alpha = 0.85, size = 2) +
   xlim(0, 100) + 
+  labs(x = "Number of species", y = expression(paste(Lambda, "+"))) +
   text_size(text.x = rel(1.2), text.y = rel(1.2), legend.text = rel(1.1), title.x = rel(1.1), title.y = rel(1.1), legend.title = rel(1.1))
 
 ## add the confidence/tolerance intervals
@@ -1183,7 +1185,7 @@ plot.dplus.2012 <- ggplot(s.l.dplus.2012, aes(x = S, y = Dplus, color = station)
                      labels = c("K1", "K2", "R1", "R2", "G1", "G2")) +
   geom_point(alpha = 0.85, size = 2) +
   xlim(0, 100) + 
-  ylab("Delta+") + 
+  labs(x = "Number of species", y = expression(paste(Delta, "+"))) + 
   facet_wrap(~habitat, labeller = as_labeller(c("S" = "sand", "Z" = "Zostera"))) + 
   text_size(text.x = rel(1.2), text.y = rel(1.2), legend.text = rel(1.1), strip.x = rel(1.1), title.x = rel(1.1), title.y = rel(1.1), legend.title = rel(1.1))
   
@@ -1204,6 +1206,7 @@ plot.lambda.2012 <- ggplot(s.l.dplus.2012, aes(x = S, y = Lambda, color = statio
                       labels = c("K1", "K2", "R1", "R2", "G1", "G2")) +
   geom_point(alpha = 0.85, size = 2) +
   xlim(0, 100) + 
+  labs(x = "Number of species", y = expression(paste(Lambda, "+"))) +
   facet_wrap(~habitat, labeller = as_labeller(c("S" = "sand", "Z" = "Zostera"))) + 
   text_size(text.x = rel(1.2), text.y = rel(1.2), legend.text = rel(1.1), strip.x = rel(1.1), title.x = rel(1.1), title.y = rel(1.1), legend.title = rel(1.1))
 
