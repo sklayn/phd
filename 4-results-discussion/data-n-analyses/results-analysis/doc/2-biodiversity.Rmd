@@ -512,16 +512,26 @@ ggplot(aver.weighted.div.profiles.sand,
   
   We'll plot W, because there are too many stations & replicates and the curves will be unreadable.   
 ```{r plot_w_sand}
-ggplot(abc.sand[[2]], aes(x = station, y = w, colour = factor(year))) + 
+plot.w.sand <- ggplot(abc.sand[[2]], aes(x = station, y = w, colour = factor(year))) + 
   geom_boxplot() + 
+  scale_color_viridis(option = "viridis", begin = 0.5, discrete = TRUE, name = "") +
   scale_x_discrete(name = "Station", 
                    labels = paste0("S", as.numeric(unique(abc.sand[[2]]$station)))) + 
   ylab("W") + 
-  theme(legend.title = element_blank()) +
   geom_hline(yintercept = 0)
+
+## modify text size a little 
+(plot.w.sand <- plot.w.sand + text_size(text.x = rel(1.2), text.y = rel(1.2), legend.text = rel(1), title.x = rel(1.1), title.y = rel(1.1))
+)
+
+## and save this.. 
+ggsave(here::here(figures.dir, "w_sand.png"), 
+       plot.w.sand, 
+       width = 15, units = "cm", dpi = 300)
+  
 ```
 
-  W > 0 for all samples => the biomass curve is above the abundance curve, so none of the stations/replicates can be considered terribly disturbed. The closer to 0 the statistic gets, the closer the 2 curves are; here, S5-Agalina comes closest, but still not too close. Nowhere is there complete dominance of one species in the biomass, perfectly even distribution of the abundance among species (W = 1, or tending towards it), nor the opposite (W = -1). In short, the structure of the communities is more or less even and normal, with variations characteristic of macrozoobenthic samples/communities. 
+  W > 0 for all samples => the biomass curve is above the abundance curve, so none of the stations/replicates can be considered terribly disturbed. Still, W is pretty close to 0 (< 0.5 for all stations/years). The closer to 0 the statistic gets, the closer the 2 curves are; here, S5-Agalina comes closest, but still not too close. Nowhere is there complete dominance of one species in the biomass, perfectly even distribution of the abundance among species (W = 1, or tending towards it), nor the opposite (W = -1). In short, the structure of the communities is more or less even and normal, with variations characteristic of macrozoobenthic samples/communities. 
   For S1, S2, S5, S6, W decreases somewhat between 2013-2014. There were less samples in 2014, but still, there might be some disturbance -> perhaps due to the heavy rains in the summer of 2014, esp. for S5-6 which were sampled immediately afterwards (although not really enough time for the communities to react, in my opinion - but will keep in mind just in case).  
   
   Let's plot the summary ABC curves - per station and year. 2 rows (for the 2 years) + 6 columns (stations) in the plot - will put it in landscape format in the text.  
@@ -593,6 +603,20 @@ rm(abc.summary.sand.long)
 ```
   General conclusions still the same: overall, biomass curve above abundance curve everywhere; slightly worse condition of the communities in 2014 (curves closer to one another for more stations); no change at some stations (S3-Akin, S4-Sozopol, S6-Paraskeva). Otherwise, results seem to follow gradient more or less - curves closer to one another at inner stations, wider apart at outer ones; exception - S5-Agalina - arguably the worst - but again, probably naturally "stressed" - no major pressure sources nearby..   
   
+  Finally, make a combined plot of W and ABC to use in the text; there are already a million plots so I need to conserve space as much as possible.. 
+```{r plot_composite_abc_w_sand}
+(plot.abc.w.combined.sand <- cowplot::plot_grid(plot.summary.abc.sand,
+                                                plot.w.sand + theme(legend.position = "top"), 
+                                                labels = c("A", "B"), ncol = 2, rel_widths = c(2,1))
+)
+
+## save & clean up
+cowplot::save_plot(here::here(figures.dir, "abc_w_combined_sand.png"), 
+                   plot.abc.w.combined.sand,
+                   base_width = 10, base_height = 6, dpi = 300)
+
+```
+
 ###### **Partial dominance curves**  
   Used in order to avoid problems of over-dominance of species affecting the curves and their interpretation. Partial dominance curves compute the dominance of the second ranked species over the remainder, ignoring the first-ranked species, and so on with the remaining species. Thus, earlier values do not affect later points on the curve. Partial dominance ABC curves for undisturbed macrobenthic communities have the biomass curve over the abundance curve (mostly) throughout its length. The abundance curve is smoother; the biomass curve shows a slight and steady decline before its inevitable final rise. Under polluted conditions, there is still a change in position of partial dominance curves, and the abundance curve is much more "ragged": the implication is that the disturbance is affecting the whole suite of species in the community (Clarke & Warwick 2001).  
 ```{r partial_dominance_sand}
@@ -924,16 +948,26 @@ ggplot(aver.weighted.div.profiles.zostera,
   
   We'll plot W, because there are too many stations & replicates and the curves will be unreadable.   
 ```{r plot_w_zostera}
-ggplot(abc.zostera[[2]], aes(x = station, y = w, colour = factor(year))) + 
+plot.w.zostera <- ggplot(abc.zostera[[2]], aes(x = station, y = w, colour = factor(year))) + 
   geom_boxplot() + 
+  scale_color_viridis(option = "viridis", begin = 0.5, discrete = TRUE, name = "") +
   scale_x_discrete(name = "Station", 
                    labels = paste0("Z", as.numeric(unique(abc.zostera[[2]]$station)))) + 
   ylab("W") + 
-  theme(legend.title = element_blank()) +
   geom_hline(yintercept = 0)
+
+## modify text size a little 
+(plot.w.zostera <- plot.w.zostera + text_size(text.x = rel(1.2), text.y = rel(1.2), legend.text = rel(1), title.x = rel(1.1), title.y = rel(1.1))
+)
+
+## and save this.. 
+ggsave(here::here(figures.dir, "w_zostera.png"), 
+       plot.w.zostera, 
+       width = 15, units = "cm", dpi = 300)
+  
 ```
 
-  W > 0 for most samples except Vromos => the biomass curve is above the abundance curve, so none of the stations/replicates can be considered terribly disturbed. The mean W for Z3-Vromos is still above 0, but some of the samples are below => the curves are close together, suggesting disturbance. Not really very surprising, because 1) Vromos was close to an untreated sewage water source, and 2) there are less samples than for the other stations. Again, there is no evidence for complete dominance of one species in the biomass, perfectly even distribution of the abundance among species (W = 1, or tending towards it), nor the opposite (W = -1). In short, the structure of the communities is more or less even and normal, with variations characteristic of macrozoobenthic samples/communities. 
+  W > 0 for most samples except Vromos => the biomass curve is above the abundance curve, so none of the stations/replicates can be considered terribly disturbed. The W values are closer to 0 than for the sand communities = the ABC curves in the seagrasses are even closer together. The mean W for Z3-Vromos is still above 0, but some of the samples are below => the curves are close together, suggesting disturbance. Not really very surprising, because 1) Vromos was close to an untreated sewage water source, and 2) there are less samples than for the other stations. Again, there is no evidence for complete dominance of one species in the biomass, perfectly even distribution of the abundance among species (W = 1, or tending towards it), nor the opposite (W = -1). In short, the structure of the communities is more or less even and normal, with variations characteristic of macrozoobenthic samples/communities. 
   For Z2 & Z4, W decreases somewhat between 2013-2014. There might be some disturbance -> perhaps due to the heavy rains in the summer of 2014 - something to keep in mind just in case (again, prob. not enough time for the communities to display a reaction).  
   
   Plot the summary ABC curves - per station and year. 2 rows (for the 2 years) + 5 columns (stations) in the plot - will put it in landscape format in the text.  
@@ -994,10 +1028,25 @@ ggsave(here::here(figures.dir, "summary_abc_zostera.png"),
 
 rm(abc.summary.zostera.long)
 ```
-  Overall, the biomass curve is above the abundance curve almost everywhere, with some exceptions: Z3-Vromos - as suggested by W; Z4-Gradina in 2014. The curves otherwise are very close together - indicative of a slight disturbance. Very characteristic of seagrass communities - appear disturbed because of the high natural organic loading (-> tolerant r-strategist species present even in the most pristine conditions). Must be taken into account when applying biotic indices - they will most likely function incorrectly!   
+  Overall, the biomass curve is above the abundance curve almost everywhere, with some exceptions: Z3-Vromos - as suggested by W; Z4-Gradina in 2014. The curves otherwise are very close together - indicative of a slight disturbance. Very characteristic of seagrass communities - appear disturbed because of the high natural organic loading (-> tolerant r-strategist species present even in the most pristine conditions). Must be taken into account when applying biotic indices - they will most likely function incorrectly!  
+  Z4 in 2014 - worse condition - similar to Z3 -> could be because of heavy rains on 2014-07-15/16 (samples from Z4 taken later than those at the other stations, on 2014-07-18 - after the rains). Not sure if relevant, though - how fast can the communities react? Was it enough of a disturbance?   
   Results do not follow the pressure gradient at all - the curves at all stations are close to one another.  
   Of course, another contributing factor could be insufficient replication which might hide dominance patterns...  
   
+  Make a combined plot of W and ABC in the seagrasses. 
+```{r plot_composite_abc_w_zostera}
+(plot.abc.w.combined.zostera <- cowplot::plot_grid(plot.summary.abc.zostera,
+                                                plot.w.zostera + theme(legend.position = "top"), 
+                                                labels = c("A", "B"), ncol = 2, rel_widths = c(2,1))
+)
+
+## save & clean up
+cowplot::save_plot(here::here(figures.dir, "abc_w_combined_zostera.png"), 
+                   plot.abc.w.combined.zostera,
+                   base_width = 10, base_height = 6, dpi = 300)
+
+```
+
 ###### **Partial dominance curves**  
 
 ```{r partial_dominance_zostera}
@@ -1259,13 +1308,23 @@ rm(dplus.legend)
   
   We'll plot W, because there are too many stations & replicates and the curves will be unreadable.   
 ```{r plot_w_2012}
-ggplot(abc.2012[[2]], aes(x = station, y = w, colour = factor(habitat))) + 
+plot.w.2012 <- ggplot(abc.2012[[2]], aes(x = station, y = w, colour = factor(habitat))) + 
   geom_boxplot() + 
+  scale_color_viridis(option = "viridis", begin = 0.25, discrete = TRUE, name = "", labels = c("sand", "Zostera")) +
   scale_x_discrete(name = "Station", 
                    labels = c("K1", "K2", "R1", "R2", "G1", "G2")) + 
   ylab("W") + 
-  theme(legend.title = element_blank()) +
   geom_hline(yintercept = 0)
+
+## modify text size a little 
+(plot.w.2012 <- plot.w.2012 + text_size(text.x = rel(1.2), text.y = rel(1.2), legend.text = rel(1), title.x = rel(1.1), title.y = rel(1.1))
+)
+
+## and save this.. 
+ggsave(here::here(figures.dir, "w_2012.png"), 
+       plot.w.2012, 
+       width = 15, units = "cm", dpi = 300)
+  
 ```
 
   W > 0 for most samples, but the variability is incredibly high, esp. in sand & for R1 and G2 - hardly surprising; those samples contain the lowest number of species. Just as biased as the previous analysis.  
@@ -1343,6 +1402,21 @@ rm(abc.summary.2012.long)
                                                 station, habitat)
 )
 ```
+
+  Make a combined plot of W and ABC in the Sozopol Bay habitats. 
+```{r plot_composite_abc_w_2012}
+(plot.abc.w.combined.2012 <- cowplot::plot_grid(plot.summary.abc.2012,
+                                                plot.w.2012 + theme(legend.position = "top"), 
+                                                labels = c("A", "B"), ncol = 2, rel_widths = c(2,1))
+)
+
+## save & clean up
+cowplot::save_plot(here::here(figures.dir, "abc_w_combined_2012.png"), 
+                   plot.abc.w.combined.2012,
+                   base_width = 10, base_height = 6, dpi = 300)
+
+```
+
 
 ```{r plot_partial_dominance_2012}
 ## reshape the data as before..
