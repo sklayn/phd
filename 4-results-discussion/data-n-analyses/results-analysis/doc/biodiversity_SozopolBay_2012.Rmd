@@ -1,0 +1,644 @@
+---
+title: "Biodiversity of macrozoobenthic communities in Sozopol Bay"
+subtitle: "Preliminary experiment - 2012"
+date: "2018-01-29"
+output: 
+  html_notebook:
+    theme: paper
+  
+---
+
+Decided to move all 2012 analyses to their own notebook, even if it's kind of clumsy to jump back and forth, because there are way too many workspace objects otherwise.  
+This notebook depends heavily on functions, objects & workflow developed for the other, primary experiments. It shouldn't be too much of a problem if it is run *after* the other analyses; I'll make an effort to make it as independent as possible.   
+
+***  
+Setup.  
+```{r setup, include = FALSE}
+library(knitr)
+knit_hooks$set(small.mar = function(before, options, envir) {
+    if (before) par(mar = c(2, 2, .1, 2))  # smaller margin on top
+})
+
+## set the working directory to one up (all notebooks - kept in their own subdirectory within the project directory).
+opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+
+## set knitr options for knitting code into the report.
+opts_chunk$set(cache = TRUE, # save results so that code blocks aren't re-run unless code changes
+               autodep = TRUE, # ..or unless a relevant earlier code block changed
+               cache.comments = FALSE, # don't re-run if the only thing that changed was the comments
+               highlight = TRUE, 
+               small.mar = TRUE)
+```
+
+Define the working subdirectories.
+```{r workspace_setup}
+## print the working directory, just to be on the safe side
+paste("You are here: ", getwd())
+
+data.dir <- "data"    # input data files
+functions.dir <- "R"  # functions & scripts
+save.dir <- "output"  # clean data, output from models & more complex calculations
+figures.dir <- "figs" # plots & figures 
+```
+Import the necessary libraries.  
+```{r import_packages, message = FALSE}
+library(here)
+library(vegan)
+library(tidyverse)
+library(viridis)
+```
+Import functions.
+```{r import_custom_functions}
+source(here(functions.dir, "import_data.R"))
+```
+
+Organize some commonly-used ggplot2 modifications into a more convenient (and less repetitive) format.
+```{r custom_ggplot_settings_helpers}
+## ggplot settings & things that I keep reusing
+# ggplot_theme <- list(
+#   theme_bw(),
+#   theme(element_text(family = "Times"))
+# )
+## always use black-and-white theme
+theme_set(theme_bw())
+
+## helper to adjust ggplot text size & avoid repetitions 
+text_size <- function(text.x = NULL,
+                      text.y = NULL,
+                      title.x = NULL,
+                      title.y = NULL,
+                      legend.text = NULL,
+                      legend.title = NULL, 
+                      strip.x = NULL, 
+                      strip.y = NULL) {
+  theme(axis.text.x = element_text(size = text.x),
+        axis.text.y = element_text(size = text.y),
+        axis.title.x = element_text(size = title.x),
+        axis.title.y = element_text(size = title.y),
+        legend.text = element_text(size = legend.text), 
+        legend.title = element_text(size = legend.title), 
+        strip.text.x = element_text(size = strip.x), 
+        strip.text.y = element_text(size = strip.y)
+        )
+  }
+```
+***  
+#### Macrozoobenthic communities in the seagrass and sand bottoms of Sozopol Bay (2012)  
+For this experiment, 3 seagrass sites in Sozpol Bay were chosen (Konski, Ribka, Gradina), with 2 stations within each (total = 6 stations).  
+At each station, 4 samples were taken within the seagrass bed, and another 4 - outside it, in the bare sand bottom.  
+The purpose was to compare the macrobenthic community composition & structure at the level of the sites, as well as between sites, in the 2 types of habitat (sand and seagrass).   
+
+Import the zoobenthic abundance & biomass data. 
+```{r abundance_data_2012_import, message = FALSE}
+## import & check the abundance data. Dimensions should be 48 x 205 (5 metadata + 200 species columns); all species columns should be numeric.
+(zoo.abnd.2012 <- import_zoo_data(data.dir = data.dir,
+                                  zoo.data = "zoo_abnd_2012_orig.csv", 
+                                  meta.labels = c("station", "month", "year", "habitat", "replicate")))
+```
+  
+Convert the month and year back to numeric, then arrange the data frame - by station (first converting to factor), then year and month, then habitat. In this experiment, there were 2 habitats - sand and seagrass.
+```{r clean_abundance_data_2012}
+(zoo.abnd.2012 <- zoo.abnd.2012 %>% 
+   mutate(year = as.numeric(year), 
+          month = as.numeric(month), 
+          station = factor(station, levels = c("Konski1", "Konski2", "Ribka1", "Ribka2", "Gradina1", "Gradina2"))) %>%
+   arrange(habitat, station)
+)
+```
+Add the site & arrange.  
+```{r clean_abundance_data_2_2012}
+(zoo.abnd.2012 <- zoo.abnd.2012 %>% 
+   # match 0+ characters at the beginning of the given string which are not digits - because the names of the stations here consist of site + station number.
+   mutate(site = str_extract(station, "[^\\d]+")) %>%
+   mutate(site = factor(site, levels = c("Konski", "Ribka", "Gradina"))) %>%
+  # rearrange to place site at the beginning of the data frame
+  select(site, everything()) %>%
+  arrange(habitat, site, station)
+)
+```
+
+Now on to the biomass! 
+```{r biomass_data_2012_import, message = FALSE}
+## import & check out the biomass data. 
+(zoo.biomass.2012 <- import_zoo_data(data.dir = data.dir,
+                                     zoo.data = "zoo_biomass_2012_orig.csv",
+                                     meta.labels = c("station", "month", "year", "habitat", "replicate")))
+# same expected structure as the abundance 
+```
+
+```{r clean_biomass_data_2012}
+(zoo.biomass.2012 <- zoo.biomass.2012 %>% 
+   mutate(year = as.numeric(year),
+          month = as.numeric(month), 
+          station = factor(station, levels = c("Konski1", "Konski2", "Ribka1", "Ribka2", "Gradina1", "Gradina2"))) %>%
+   arrange(habitat, station))
+```
+  
+```{r clean_biomass_data_2_2012}
+(zoo.biomass.2012 <- zoo.biomass.2012 %>% 
+   # match 0+ characters at the beginning of the given string which are not digits - because the names of the stations here consist of site + station number.
+   mutate(site = str_extract(station, "[^\\d]+")) %>%
+   mutate(site = factor(site, levels = c("Konski", "Ribka", "Gradina"))) %>%
+  # rearrange to place site at the beginning of the data frame
+  select(site, everything()) %>%
+  arrange(habitat, site, station)
+)
+```
+
+Great! To be on the safe side, save the cleaned abundance & biomass data frames.
+```{r save_clean_data_2012}
+write_csv(zoo.abnd.2012, 
+          path = here::here(save.dir, "abnd_2012_orig_clean.csv"))
+write_csv(zoo.biomass.2012, 
+          path = here::here(save.dir, "biomass_2012_orig_clean.csv"))
+```
+  
+Remove the species that are absent from the current dataset. 
+```{r clean_data_2012_2}
+(zoo.abnd.2012 <- zoo.abnd.2012 %>% 
+  gather(key = species, value = sp_count, -c(site:replicate)) %>% 
+  group_by(species) %>% 
+  filter(sp_count > 0) %>%
+  spread(species, sp_count, fill = 0) %>%
+  arrange(habitat, site, station))
+
+(zoo.biomass.2012 <- zoo.biomass.2012 %>% 
+  gather(key = species, value = sp_biomass, -c(site:replicate)) %>% 
+  group_by(species) %>% 
+  filter(sp_biomass > 0) %>%
+  spread(species, sp_biomass, fill = 0) %>% 
+  arrange(habitat, site, station))
+```
+  
+Ready to proceed with the community structure & composition analyses! 
+  
+1. Summary statistics for the community structure & composition  
+Careful with the multilplication factor when going to ind.m^-2^ & g.m^-2^: all macrobenthic communities in 2012 were sampled with corers!  
+The idea of the experiment was to compare seagrass and adjacent bare sand communities; all samples were collected in 2012. Therefore, the two types of habitat will be summarized separately, and will be compared.  
+
+  + the **average abundance** for the **seagrass communities** is `r format(round(mean(filter(zoo.abnd.2012, habitat == "Z") %>% select(-c(site:replicate)) %>% rowSums) * (1/0.0078), 0), scientific = FALSE)` ind.m^-2^, with standard deviation `r format(round(sd(filter(zoo.abnd.2012, habitat == "Z") %>% select(-c(site:replicate)) %>% rowSums) * (1/0.0078), 0), scientific = FALSE)`.
+  + the **minimum abundance** for the **seagrass communities** is `r format(round(min(filter(zoo.abnd.2012, habitat == "Z") %>% select(-c(site:replicate)) %>% rowSums) * (1/0.0078), 0), scientific = FALSE)` ind.m^-2^, in sample `r paste(unite(zoo.abnd.2012 %>% filter(row_number() == which.min(filter(zoo.abnd.2012, habitat == "Z") %>% select(-c(site:replicate)) %>% rowSums)), "new", c(station, replicate)) %>% select(new))`.
+  + the **maximum abundance** for the **seagrass communities** is `r format(round(max(filter(zoo.abnd.2012, habitat == "Z") %>% select(-c(site:replicate)) %>% rowSums) * (1/0.0078), 0), scientific = FALSE)` ind.m^-2^, in sample `r paste(unite(zoo.abnd.2012 %>% filter(row_number() == which.max(filter(zoo.abnd.2012, habitat == "Z") %>% select(-c(site:replicate)) %>% rowSums)), "new", c(station, replicate)) %>% select(new))`.
+  
+  + the **average biomass** for the **seagrass communities** is `r round(mean(filter(zoo.biomass.2012, habitat == "Z") %>% select(-c(site:replicate)) %>% rowSums) * (1/0.0078), 2)` g.m^-2^, with standard deviation `r round(sd(filter(zoo.biomass.2012, habitat == "Z") %>% select(-c(site:replicate)) %>% rowSums) * (1/0.0078), 2)`.
+  + the **minimum biomass** for the **seagrass communities** is `r round(min(filter(zoo.biomass.2012, habitat == "Z") %>% select(-c(site:replicate)) %>% rowSums) * (1/0.0078), 2)` g.m^-2^, in sample `r paste(unite(zoo.biomass.2012 %>% filter(row_number() == which.min(filter(zoo.biomass.2012, habitat == "Z") %>% select(-c(site:replicate)) %>% rowSums)), "new", c(station, replicate)) %>% select(new))`.
+  + the **maximum biomass** for the **seagrass communities** is `r round(max(filter(zoo.biomass.2012, habitat == "Z") %>% select(-c(site:replicate)) %>% rowSums) * (1/0.0078), 2)` g.m^-2^, in sample `r paste(unite(zoo.biomass.2012 %>% filter(row_number() == which.max(filter(zoo.biomass.2012, habitat == "Z") %>% select(-c(site:replicate)) %>% rowSums)), "new", c(station, replicate)) %>% select(new))`.
+  
+  + the **average abundance** for the **sand communities** is `r format(round(mean(filter(zoo.abnd.2012, habitat == "S") %>% select(-c(site:replicate)) %>% rowSums) * (1/0.0078), 0), scientific = FALSE)` ind.m^-2^, with standard deviation `r format(round(sd(filter(zoo.abnd.2012, habitat == "S") %>% select(-c(site:replicate)) %>% rowSums) * (1/0.0078), 0), scientific = FALSE)`.
+  + the **minimum abundance** for the **sand communities** is `r format(round(min(filter(zoo.abnd.2012, habitat == "S") %>% select(-c(site:replicate)) %>% rowSums) * (1/0.0078), 0), scientific = FALSE)` ind.m^-2^, in sample `r paste(unite(zoo.abnd.2012 %>% filter(row_number() == which.min(filter(zoo.abnd.2012, habitat == "S") %>% select(-c(site:replicate)) %>% rowSums)), "new", c(station, replicate)) %>% select(new))`.
+  + the **maximum abundance** for the **sand communities** is `r format(round(max(filter(zoo.abnd.2012, habitat == "S") %>% select(-c(site:replicate)) %>% rowSums) * (1/0.0078), 0), scientific = FALSE)` ind.m^-2^, in sample `r paste(unite(zoo.abnd.2012 %>% filter(row_number() == which.max(filter(zoo.abnd.2012, habitat == "S") %>% select(-c(site:replicate)) %>% rowSums)), "new", c(station, replicate)) %>% select(new))`.
+  
+  + the **average biomass** for the **sand communities** is `r round(mean(filter(zoo.biomass.2012, habitat == "S") %>% select(-c(site:replicate)) %>% rowSums) * (1/0.0078), 2)` g.m^-2^, with standard deviation `r round(sd(filter(zoo.biomass.2012, habitat == "S") %>% select(-c(site:replicate)) %>% rowSums) * (1/0.0078), 2)`.
+  + the **minimum biomass** for the **sand communities** is `r round(min(filter(zoo.biomass.2012, habitat == "S") %>% select(-c(site:replicate)) %>% rowSums) * (1/0.0078), 2)` g.m^-2^, in sample `r paste(unite(zoo.biomass.2012 %>% filter(row_number() == which.min(filter(zoo.biomass.2012, habitat == "S") %>% select(-c(site:replicate)) %>% rowSums)), "new", c(station, replicate)) %>% select(new))`.
+  + the **maximum biomass** for the **sand communities** is `r round(max(filter(zoo.biomass.2012, habitat == "S") %>% select(-c(site:replicate)) %>% rowSums) * (1/0.0078), 2)` g.m^-2^, in sample `r paste(unite(zoo.biomass.2012 %>% filter(row_number() == which.max(filter(zoo.biomass.2012, habitat == "S") %>% select(-c(site:replicate)) %>% rowSums)), "new", c(station, replicate)) %>% select(new))`.  
+  
+  + there are `r ncol(select(zoo.abnd.2012, -c(site:replicate)))` taxa overall. Let's check them out to see which are identifed to species level. Unfortunately, this has to be done by counting manually the ones that are not actually species.
+```{r count_number_taxa_2012}
+zoo.abnd.2012 %>% select(-c(site:replicate)) %>% names
+```
+Wow, a whole lot of them are only identified to family level.. Goes to show what I knew about macroinvertebrate taxonomy then, which is zilch. I most likely intended to go back at some point and identify them, but never got round to it, and then destroyed them while measuring the biomass.  
+In any case, the 2012 dataset should be regarded as very preliminary, with a really low confidence level, and all conclusions based on it should only be tentative. It will not be included in the other seagrass analyses despite the similar sampling strategy and methods, because due to the low species richness it biases the whole process (e.g. it might be concluded that seagrasses in Sozopol Bay were in a worse ecological state in 2012, which then improved markedly in 2013-2014, but this is not the case - the real variables that improved in that time were my sorting skills and knowledge of taxonomy).   
+  
+In the **seagrasses** in Sozopol Bay, there were `r zoo.abnd.2012 %>% filter(habitat == "Z") %>% gather(key = species, value = sp_count, -c(site:replicate)) %>% group_by(species) %>% filter(sp_count > 0) %>% count(species) %>% nrow` taxa overall in 2012.  
+In the **sands** in Sozopol Bay, there were `r zoo.abnd.2012 %>% filter(habitat == "S") %>% gather(key = species, value = sp_count, -c(site:replicate)) %>% group_by(species) %>% filter(sp_count > 0) %>% count(species) %>% nrow` taxa overall in 2012.  
+  
+Let's compare the taxa between seagrass and sand communities in Sozopol Bay. 
+```{r common_taxa_sand_zostera_2012}
+## all taxa found in seagrasses 
+taxa.zostera.2012 <- unique(zoo.abnd.2012 %>% 
+  filter(habitat == "Z") %>% 
+  gather(key = species, value = sp_count, -c(site:replicate)) %>% 
+  group_by(species) %>% 
+  filter(sp_count > 0) %>% 
+  select(species) %>%
+  ungroup()
+  )
+
+## all taxa found in sand
+taxa.sand.2012 <- unique(zoo.abnd.2012 %>% 
+  filter(habitat == "S") %>% 
+  gather(key = species, value = sp_count, -c(site:replicate)) %>% 
+  group_by(species) %>% 
+  filter(sp_count > 0) %>% 
+  select(species) %>%
+  ungroup()
+)
+```
+There are `r length(taxa.zostera.2012$species[which(taxa.sand.2012$species %in% taxa.zostera.2012$species)])` taxa found in both sand and seagrass in 2012. Let's see them:
+```{r common_taxa_sand_zostera_2}
+# we're looking them up in this order, because there are less taxa in sand than in seagrass in 2012
+taxa.zostera.2012$species[which(taxa.sand.2012$species %in% taxa.zostera.2012$species)]
+```
+The taxa found **only in sand** are:
+```{r taxa_sand_only_2012}
+setdiff(taxa.sand.2012, taxa.zostera.2012)$species
+```
+The taxa found **only in seagrass** are: 
+```{r taxa_zostera_only_2012}
+setdiff(taxa.zostera.2012, taxa.sand.2012)$species
+```
+  + the **average number of taxa** in **seagrass** is `r round(mean(specnumber(filter(zoo.abnd.2012, habitat == "Z") %>% select(-c(site:replicate)))), 0)`, with standard deviation `r round(sd(specnumber(filter(zoo.abnd.2012, habitat == "Z") %>% select(-c(site:replicate)))), 0)`.
+  + the **minimum number of taxa** in **seagrass** is `r min(specnumber(filter(zoo.abnd.2012, habitat == "Z") %>% select(-c(site:replicate))))`, in sample `r paste(unite(zoo.abnd.2012 %>% filter(row_number() == which.min(filter(zoo.abnd.2012, habitat == "Z") %>% select(-c(site:replicate)) %>% specnumber)), "new", c(station, replicate)) %>% select(new))`. 
+  + the **maximum number of taxa** in **seagrass** is `r max(specnumber(filter(zoo.abnd.2012, habitat == "Z") %>% select(-c(site:replicate))))`, in sample `r paste(unite(zoo.abnd.2012 %>% filter(row_number() == which.max(filter(zoo.abnd.2012, habitat == "Z") %>% select(-c(site:replicate)) %>% specnumber)), "new", c(station, replicate)) %>% select(new))`.  
+  
+  + the **average number of taxa** in **sand** is `r round(mean(specnumber(filter(zoo.abnd.2012, habitat == "S") %>% select(-c(site:replicate)))), 0)`, with standard deviation `r round(sd(specnumber(filter(zoo.abnd.2012, habitat == "S") %>% select(-c(site:replicate)))), 0)`.
+  + the **minimum number of taxa** in **sand** is `r min(specnumber(filter(zoo.abnd.2012, habitat == "S") %>% select(-c(site:replicate))))`, in sample `r paste(unite(zoo.abnd.2012 %>% filter(row_number() == which.min(filter(zoo.abnd.2012, habitat == "S") %>% select(-c(site:replicate)) %>% specnumber)), "new", c(station, replicate)) %>% select(new))`. 
+  + the **maximum number of taxa** in **sand** is `r max(specnumber(filter(zoo.abnd.2012, habitat == "S") %>% select(-c(site:replicate))))`, in sample `r paste(unite(zoo.abnd.2012 %>% filter(row_number() == which.max(filter(zoo.abnd.2012, habitat == "S") %>% select(-c(site:replicate)) %>% specnumber)), "new", c(station, replicate)) %>% select(new))`.  
+
+
+   
+  The **total number of taxa per station** in **seagrass** is:
+```{r summarize_nb_taxa_2012_by_habitat_st_1}
+specnumber(filter(zoo.abnd.2012, habitat == "Z") %>% select(-c(site:replicate)), groups = filter(zoo.abnd.2012, habitat == "Z")$station)
+```
+  The **total number of taxa per station** in **sand** is:
+```{r summarize_nb_taxa_2012_by_habitat_st_2}
+specnumber(filter(zoo.abnd.2012, habitat == "S") %>% select(-c(station:replicate)), groups = filter(zoo.abnd.2012, habitat == "S")$station)
+```
+
+  Again, we're going to transform the two data frames (abundance and biomass) to long format, which is more convenient.   
+```{r transform_data_frames_2012_long}
+zoo.abnd.2012.long <- zoo.abnd.2012 %>%
+  gather(key = species, value = sp_count, -c(station:replicate))
+
+zoo.biomass.2012.long <- zoo.biomass.2012 %>%
+  gather(key = species, value = sp_biomass, -c(station:replicate))
+```
+  
+  The **summarized number of taxa** by station and year is: 
+```{r summarize_nb_taxa_2012_by_station_year}
+zoo.abnd.2012.long %>%
+  group_by(habitat, station, replicate) %>%
+  transmute(total_nb_taxa = specnumber(sp_count)) %>%
+  distinct(station, habitat, total_nb_taxa) %>%
+  group_by(station, habitat) %>% 
+  # rounded to the nearest integer, because there is no such thing as half a species 
+  summarise(mean_nb_taxa = round(mean(total_nb_taxa)), 
+            sd_nb_taxa = round(sd(total_nb_taxa)), 
+            nb_replicates = n()) %>%
+  arrange(habitat, station)
+```
+
+  The **summarized abundance** by station and year is: 
+```{r summarize_abundance_2012_by_station_year}
+summarize_zoo_data(zoo.abnd.2012.long, value.col = sp_count, per.m2 = 1/0.0078, round.to = 0)
+```
+  
+  The **summarized biomass** by station and year is: 
+```{r summarize_biomass_2012_by_station_year}
+summarize_zoo_data(zoo.biomass.2012.long, value.col = sp_biomass, per.m2 = 1/0.0078, round.to = 2)
+```
+<br>  
+  2. Taxonomic composition and structure  
+  Leave only the taxa which were present in the 2012 samples (abundance > 0 in at least one sample).
+```{r subset_taxonomic_data_2012}
+current.taxa.2012 <- zoo.taxonomy %>%
+  filter(species %in% names(zoo.abnd.2012))
+```
+  
+  Add in the more commonly used larger taxonomic groups (Polychaeta, Mollusca, Crustacea, and Varia).
+```{r assign_taxonomic_groups_2012}
+current.taxa.2012 <- current.taxa.2012 %>%
+  mutate(group = case_when(
+    phylum == "Mollusca" ~ "Mollusca", 
+    phylum == "Annelida" & class == "Polychaeta" ~ "Polychaeta", 
+    phylum == "Arthropoda" & subclass %in% c("Eumalacostraca", "Thecostraca") ~ "Crustacea", 
+    TRUE ~ "Varia"
+  ))
+```
+  Explore the taxonomic composition of the community: number of taxa per phylum/class, etc.
+```{r explore_taxonomic_structure_2012}
+## add the taxonomic classification to the 2 subsets of taxa per habitat
+taxa.zostera.2012 <- left_join(taxa.zostera.2012, current.taxa.2012)
+taxa.sand.2012 <- left_join(taxa.sand.2012, current.taxa.2012)
+
+## number of taxa per class & habitat
+# in seagrass
+taxa.zostera.2012 %>%
+  count(class, sort = TRUE) %>%
+  ggplot(mapping = aes(x = reorder(class, n), y = n)) + 
+    geom_bar(stat = "identity", fill = "light green") + 
+    coord_flip() + 
+    labs(title = "Per class - seagrass", x = "", y = "Number of taxa") +
+    theme_bw()
+
+# in sand
+taxa.sand.2012 %>%
+  count(class, sort = TRUE) %>%
+  ggplot(mapping = aes(x = reorder(class, n), y = n)) + 
+    geom_bar(stat = "identity", fill = "light blue") + 
+    coord_flip() + 
+    labs(title = "Per class - sand", x = "", y = "Number of taxa") +
+    theme_bw()
+
+## number of taxa per phylum & habitat
+# in seagrass
+taxa.zostera.2012 %>%
+  count(phylum, sort = TRUE) %>%
+  ggplot(mapping = aes(x = reorder(phylum, n), y = n)) + 
+    geom_bar(stat = "identity", fill = "light green") + 
+    coord_flip() + 
+    labs(title = "Per phylum - seagrass", x = "", y = "Number of taxa") +
+    theme_bw()
+
+# in sand
+taxa.sand.2012 %>%
+  count(phylum, sort = TRUE) %>%
+  ggplot(mapping = aes(x = reorder(phylum, n), y = n)) + 
+    geom_bar(stat = "identity", fill = "light blue") + 
+    coord_flip() + 
+    labs(title = "Per phylum - sand", x = "", y = "Number of taxa") +
+    theme_bw()
+```
+  
+  Count the number of species by taxonomic group and habitat.
+```{r number_taxa_by_tax_group_habitat_2012}
+## in seagrass
+taxa.zostera.2012 %>%
+  count(group)
+
+## in sand
+taxa.sand.2012 %>%
+  count(group)
+```
+
+  Now plot the number of taxa per (common) taxonomic group, and save as file.
+```{r plot_number_taxa_by_taxonomic_groups_2012}
+nb.taxa.by.gr.habitat.2012 <- left_join(zoo.abnd.2012.long, current.taxa.2012) %>%
+  group_by(habitat) %>%
+  filter(sp_count > 0) %>%
+  distinct(species, group) %>%
+  count(group)
+
+(plot.nb.taxa.by.gr.hab.2012 <- ggplot(nb.taxa.by.gr.habitat.2012, mapping = aes(x = reorder(group, n), y = n, fill = habitat)) + 
+    geom_bar(stat = "identity", position = "dodge") + 
+    scale_fill_manual(values=c("tan1", "light green"), name = "", labels = c("sand", "Zostera")) + 
+    coord_flip() + 
+    labs(x = "", y = "Number of taxa") +
+    theme(axis.text.x = element_text(size = rel(1.3)), 
+          axis.text.y = element_text(size = rel(1.3))) +
+    theme_bw()
+)
+
+ggsave(here::here(figures.dir, "nb_taxa_by_tax_group_2012.png"),
+       plot.nb.taxa.by.gr.hab.2012,
+       dpi = 300)
+```
+
+  In the **seagrass** in Sozopol Bay (2012):  
+    + **Crustacea** are represented by `r nrow(taxa.zostera.2012 %>% group_by(group) %>% count(family) %>% filter(group == "Crustacea"))` families.   
+    + **Polychaeta** are represented by `r nrow(taxa.zostera.2012 %>% group_by(group) %>% count(family) %>% filter(group == "Polychaeta"))` families.   
+    + **Mollusca** are represented by `r nrow(taxa.zostera.2012 %>% group_by(group) %>% count(family) %>% filter(group == "Mollusca"))` families.  
+  
+  The families with the highest number of species are:
+```{r breakdown_nb_taxa_families_2012_zostera}
+## in seagrass
+lapply(setdiff(unique(taxa.zostera.2012$group), "Varia"), 
+       function(x) {
+         taxa.zostera.2012 %>%
+           group_by(group) %>%
+           count(family) %>%
+           filter(group == x) %>%
+           arrange(desc(n))
+       })
+```
+
+   In the **sands** in Sozopol Bay (2012):  
+   + **Crustacea** are represented by `r nrow(taxa.sand.2012 %>% group_by(group) %>% count(family) %>% filter(group == "Crustacea"))` families.   
+   + **Polychaeta** are represented by `r nrow(taxa.sand.2012 %>% group_by(group) %>% count(family) %>% filter(group == "Polychaeta"))` families.   
+   + **Mollusca** are represented by `r nrow(taxa.sand.2012 %>% group_by(group) %>% count(family) %>% filter(group == "Mollusca"))` families.  
+  
+  The families with the highest number of species are:
+```{r breakdown_nb_taxa_families_2012_sand}
+## in sand
+lapply(setdiff(unique(taxa.sand.2012$group), "Varia"), 
+       function(x) {
+         taxa.sand.2012 %>%
+           group_by(group) %>%
+           count(family) %>%
+           filter(group == x) %>%
+           arrange(desc(n))
+       })
+```
+  Now let's calculate the contribution of each taxonomic group to the **overall community composition by abundance**.
+```{r tax_group_abnd_contribution_overall_2012}
+zoo.abnd.2012.long %>%
+  summarize_tax_group_contr(current.taxa.2012, 
+                            key.col = "species", 
+                            value.col = sp_count, 
+                            habitat, group) %>%
+  arrange(habitat, desc(proportion))
+```
+  Now calculate and plot the **contribution of the taxonomic groups to the abundance by station and year** in both habitats in Sozopol Bay in 2012. 
+```{r tax_group_abnd_contrib_st_yr_2012}
+tax.props.st.yr.2012 <- zoo.abnd.2012.long %>% 
+  summarize_tax_group_contr(current.taxa.2012, 
+                            key.col = "species", 
+                            value.col = sp_count, 
+                            habitat, station, group) %>%
+  arrange(habitat, station)
+
+(plot.tax.props.st.yr.2012 <- plot_tax_props(tax.props.st.yr.2012, x.labels = c("K1", "K2", "R1", "R2", "G1", "G2"), col.palette = "viridis") + 
+    # change the strip labels
+    facet_wrap(~habitat, nrow = 2, labeller = as_labeller(c("S" = "sand", "Z" = "Zostera"))) +
+    text_size(text.x = rel(1.3), text.y = rel(1.3), title.x = rel(1.3), legend.text = rel(1.3), strip.x = rel(1.3))
+)
+
+## save as file
+ggsave(here::here(figures.dir, "tax_gr_props_st_yr_2012.png"),
+       plot.tax.props.st.yr.2012,
+       dpi = 300)
+```
+  
+    
+  Check and plot the species which contribute the most to the abundance at each habitat & station.
+```{r sp_highest_contrib_abnd_2012}
+top20.counts.2012.st <- get_top_sp(zoo.abnd.2012, nb.sp = 20)
+
+plot.most.abnd.sp.2012 <- plot_top_n(top20.counts.2012.st, 
+                                     aes(x = species, y = log_y_min(sp_count), 
+                                         colour = station), 
+                                     labs.legend = c("K1", "K2", "R1", "R2", "G1", "G2"), 
+                                     lab.y = "Abundance (log(y/min + 1))", 
+                                     palette = "Set2"
+                                     )
+
+(plot.most.abnd.sp.2012 <- plot.most.abnd.sp.2012  + 
+    facet_wrap(~habitat, ncol = 2, labeller = as_labeller(c("S" = "sand", "Z" = "Zostera"))) +
+    text_size(text.x = rel(1.1), title.x = rel(1.1), strip.x = rel(1.1), text.y = rel(1), legend.text = rel(0.9), legend.title = rel(0.9)) +
+    theme(legend.position = "top", legend.box.spacing = unit(0.01, "cm"), legend.direction = "horizontal") +
+    guides(colour = guide_legend(nrow = 1)) +
+    scale_x_discrete(name = "", limits = rev(levels(top20.counts.2012.st$species))) 
+)
+
+## save as file
+ggsave(here::here(figures.dir, "most_abnd_sp_st_2012.png"), 
+       plot.most.abnd.sp.2012, 
+       dpi = 300, width = 15, units = "cm")
+```
+  
+  Now let's calculate the same way the **overall community composition by biomass** in both habitat types in Sozopol Bay (2012).
+```{r tax_group_biomass_contrib_overall_2012}
+zoo.biomass.2012.long %>% 
+  summarize_tax_group_contr(current.taxa.2012, 
+                            key.col = "species", 
+                            value.col = sp_biomass, 
+                            habitat, group) %>%
+  arrange(habitat, desc(proportion))
+```
+  
+  Then calculate and plot the  **contribution of the taxonomic groups to the biomass by station and year** in Sozopol Bay. 
+```{r tax_group_biomass_contribution_st_yr_2012}
+tax.props.biomass.st.yr.2012 <- zoo.biomass.2012.long %>% 
+  summarize_tax_group_contr(current.taxa.2012, 
+                            key.col = "species", 
+                            value.col = sp_biomass, 
+                            habitat, station, group) %>%
+  arrange(habitat, station)
+
+# plot this
+(plot.tax.props.biomass.st.yr.2012 <- plot_tax_props(tax.props.biomass.st.yr.2012, x.labels = c("K1", "K2", "R1", "R2", "G1", "G2")) +
+    facet_wrap(~habitat, nrow = 2, labeller = as_labeller(c("S" = "sand", "Z" = "Zostera"))) + 
+    text_size(text.x = rel(1.3), text.y = rel(1.3), title.x = rel(1.3), legend.text = rel(1.3), strip.x = rel(1.3))
+)
+
+## save as file
+ggsave(here::here(figures.dir, "tax_gr_props_biomass_st_yr_2012.png"), 
+       plot.tax.props.biomass.st.yr.2012, 
+       dpi = 300)
+```
+  
+  Combine the proportions of the abundance and the biomass in one single plot. 
+```{r composite_plot_tax_gr_props_2012}
+## combine the proportional abundance and biomass tibbles into a single common (long) one
+tax.props.2012.all <- full_join(tax.props.st.yr.2012, 
+                                tax.props.biomass.st.yr.2012, 
+                                by = c("habitat", "station", "group")) %>%
+  select(-starts_with("total")) %>% 
+  gather(key = variable, value = proportion, -habitat, -station, -group) %>%
+  ungroup() %>%
+  # fix a little the variables that will serve for faceting the plot, to avoid re-labeling later 
+  mutate(variable = case_when(variable == "proportion.x" ~ "Abundance", 
+                              variable == "proportion.y" ~ "Biomass"), 
+         habitat = case_when(habitat == "S" ~ "sand", 
+                             habitat == "Z" ~ "Zostera"))
+
+
+(plot.composite.tax.gr.props.2012 <- plot_tax_props(tax.props.2012.all, x.labels = c("K1", "K2", "R1", "R2", "G1", "G2")) + 
+    facet_grid(habitat ~ variable) + 
+    theme(legend.position = "top", legend.key.size = unit(0.5, "cm")) +
+    text_size(text.x = rel(1.2), text.y = rel(1), title.x = rel(1.2), legend.text = rel(1), strip.x = rel(1.2), strip.y = rel(1.2))
+)
+
+ggsave(here::here(figures.dir, "tax_gr_props_2012_composite.png"),
+       plot.composite.tax.gr.props.2012,       
+       dpi = 300, width = 15, units = "cm")
+```
+    
+  Check and plot the species which contribute the most to the biomass at each habitat & station.
+```{r sp_highest_contrib_biomass_2012}
+## calculate the total biomass counts by species, then select the 20 with the highest biomass
+top20.biomass.2012.st <- get_top_sp(zoo.biomass.2012, nb.sp = 20)
+
+## plot them
+plot.highest.biomass.sp.2012 <- plot_top_n(top20.biomass.2012.st, 
+                                     aes(x = species, y = log_y_min(sp_count), 
+                                         colour = station), 
+                                     labs.legend = c("K1", "K2", "R1", "R2", "G1", "G2"), 
+                                     lab.y = "Biomass (log(y/min + 1))",
+                                     palette = "Set2"
+                                     )
+
+(plot.highest.biomass.sp.2012 <- plot.highest.biomass.sp.2012  +
+    facet_wrap(~habitat, ncol = 2, labeller = as_labeller(c("S" = "sand", "Z" = "Zostera"))) + 
+    text_size(text.x = rel(1.2), strip.x = rel(1.1), text.y = rel(1), legend.text = rel(0.9)) +
+    theme(legend.position = "top", legend.box.spacing = unit(0.01, "cm"), legend.direction = "horizontal") +
+    guides(colour = guide_legend(nrow = 1)) +
+    scale_x_discrete(name = "", limits = rev(levels(top20.biomass.2012.st$species))) 
+)
+  
+## save as file
+ggsave(here::here(figures.dir, "highest_biomass_sp_st_2012.png"), 
+       plot.highest.biomass.sp.2012, 
+       dpi = 300, width = 15, units = "cm")
+```
+  
+3. Site-level comparison of macrobenthic community composition & structure - seagrass/sand, Sozopol Bay, 2012    
+
+  On second thought, for 2012, a more useful approach would be to 1) test whether there are differences in community composition between the pairs of stations at each of the 3 sites, in sand/seagrass - hopefully no; 2) find the top-contributing species to the abundance/biomass at the site level. 
+  
+  Add the site to the (long & wide) abundance & biomass datasets.  
+```{r add_site_2012}
+library(stringr)
+
+zoo.abnd.2012.long <- zoo.abnd.2012.long %>%
+  # match 0+ characters at the beginning of the given string which are not digits - because the names of the stations here consist of site + station number.
+  mutate(site = str_extract(station, "[^\\d]+")) %>%
+  # rearrange to place site at the beginning of the data frame
+  select(site, everything())
+
+zoo.biomass.2012.long <- zoo.biomass.2012.long %>%
+  mutate(site = str_extract(station, "[^\\d]+")) %>%
+  select(site, everything())
+```
+  
+  Check if the community composition differs between sites (using package mvabund for fitting GLMs).
+```{r b/n-site_diff_community_composition_2012}
+library(mvabund)
+
+## convert the abundance tibble to matrix
+zoo.abnd.2012.mat <- mvabund(zoo.abnd.2012 %>% arrange(habitat) %>% select(-c(station:replicate)))
+
+## get the sites & habitats
+sites.2012 <- (zoo.abnd.2012 %>%
+  mutate(site = str_extract(station, "[^\\d]+")) %>%
+  arrange(habitat))$site
+
+habitats.2012 <- sort(zoo.abnd.2012$habitat)
+
+## check the mean-variance relationship in the dataset - for some reason RStudio doesn't want to plot this today - sth to do with graphical device size.
+meanvar.plot(zoo.abnd.2012.mat)
+```
+  Fit the model & check the fit.  
+```{r b/n-site_diff_2012_model}
+## fit the model: do site + habitat influence community composition? 
+comm.diff.2012.mod <- manyglm(zoo.abnd.2012.mat ~ sites.2012 * habitats.2012, family = "negative.binomial")
+
+## plot resiudals to check model fit
+plot(comm.diff.2012.mod)
+
+## check significance of results 
+comm.diff.2012.mod.summary <- anova(comm.diff.2012.mod, p.uni = "adjusted")
+comm.diff.2012.mod.summary
+```
+  OK, there is a highly significant site, habitat & site:habitat effect on community composition & structure in Sozopol Bay in 2012.  
+  Also check for differences between stations within each site; if there aren't any, then that's grounds enough to summarize the abundance, biomass,.. at the site level only.  
+```{r b/n-station_diff_2012_model}
+comm.diff.2012.st <- manyglm(zoo.abnd.2012.mat ~ stations.2012 * habitats.2012, famiily = "negative.binomial")
+
+plot(comm.diff.2012.st)
+
+comm.diff.2012.st.summary <- anova(comm.diff.2012.st, p.uni = "adjusted", block = sites.2012)
+comm.diff.2012.st.summary
+```
+  NB Save the models & summaries as R data objects, because they take way too much time to repeat.
+```{r save_models_2012}
+## community difference between sites & habitats
+write_rds(comm.diff.2012.mod, here::here(save.dir, "comm_diff_model_2012.RDS"))
+
+write_rds(comm.diff.2012.mod.summary, here::here(save.dir, "comm_diff_model_2012_summary.RDS"))
+
+## community difference between stations & habitats within each site
+write_rds(comm.diff.2012.st, here::here(save.dir, "comm_diff_st_model_2012.RDS"))
+
+write_rds(comm.diff.2012.st.summary, here::here(save.dir, "comm_diff_st_model_2012_summary.RDS"))
+```
+
+  There's only a significant effect of the station:habitat interaction within each site. Well good enough for now; losing too much time as it is with the throwaway-worthy data, and not enough on the really important analyses.  
+  
+  Will go back and repeat all summaries, etc. at the *site level*, and put this quick analysis at the beginning of the 2012 section in the text to justify doing this. I'll still keep the graphs, tables,.. with the analyses at the station level as they are heere to show my reasoning.  
+  All the 2012 community structure & biodiversity analyses will be moved to a separate notebook, because this is getting too long, and the workspace is filling up with objects.
+  
+  
+
+
