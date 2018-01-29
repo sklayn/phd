@@ -37,17 +37,16 @@ functions.dir <- "R"  # functions & scripts
 save.dir <- "output"  # clean data, output from models & more complex calculations
 figures.dir <- "figs" # plots & figures 
 ```
-  Import functions.
-```{r import_custom_functions}
-source(file.path(functions.dir, "alpha_diversity.R"))
-```
-  
   Import the necessary libraries.  
 ```{r import_packages, message = FALSE}
 library(here)
 library(vegan)
 library(tidyverse)
 library(viridis)
+```
+  Import functions.
+```{r import_custom_functions}
+source(here(functions.dir, "alpha_diversity.R"))
 ```
   Organize some commonly-used ggplot2 modifications into a more convenient (and less repetitive) format.
 ```{r custom_ggplot_settings_helpers}

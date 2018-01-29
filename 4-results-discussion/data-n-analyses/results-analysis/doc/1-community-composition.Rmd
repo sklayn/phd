@@ -217,20 +217,22 @@ zoo.abnd.sand.long %>%
 ```{r summarize_abundance_sand_by_station_year}
 ## small helper function to summarize abundance/biomass. NB hardcoded grouping variables! (ok, because it's only meant to simplify code a little, not really be portable or reusable anyplace else).
 
-summarize_zoo_data <- function(zoo.data, value.col, per.m2, round.to = 0) {
+summarize_zoo_data <- function(zoo.data, value.col, per.m2, round.to = 0, ...) {
   # zoo.data - long data frame to be summarized
   # value.col - name of column containing the values we're summarizing
   # per.m2 - multiplication factor, to get abundance/biomass per m2 
   # round - should the output be rounded?  
+  # ... - grouping variables (unquoted)
   value.col <- enquo(value.col)
   mean_name <- paste0(quo_name(value.col), "_mean")
   sd_name <- paste0(quo_name(value.col), "_sd")
+  group.cols <- enquo(...)
   
   zoo.data %>%
-    group_by(habitat, station, year, month, replicate) %>%
+    group_by(!!!group.cols, month, replicate) %>%
     transmute(total := sum(!!value.col) * per.m2) %>%
-    distinct(habitat, station, year, total) %>%
-    group_by(habitat, station, year) %>%
+    distinct(!!!group.cols, total) %>%
+    group_by(!!!group.cols) %>%
     summarise(!!mean_name := round(mean(total), round.to), 
               !!sd_name := round(sd(total), round.to), 
               nb_replicates = n())
@@ -384,8 +386,7 @@ plot_tax_props <- function(tax.props.data, x.labels = NULL, col.palette = "virid
              stat = "identity", position = "stack", inherit.aes = TRUE) +
     scale_fill_viridis(option = col.palette, discrete = TRUE, name = "") +
     scale_x_discrete(labels = x.labs) + 
-    labs(x = "Station", y = "%") + 
-    theme_bw()
+    labs(x = "Station", y = "%")
 }
 
 (plot.tax.props.st.yr.sand <- plot_tax_props(tax.props.st.yr.sand, x.labels = "S",col.palette = "viridis") +
