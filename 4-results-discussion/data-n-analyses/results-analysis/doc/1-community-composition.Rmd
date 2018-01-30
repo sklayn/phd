@@ -438,8 +438,7 @@ plot_top_n <- function(top.n.sp.data, mapping, labs.legend, lab.y, palette) {
     geom_point(size = 2.5, alpha = 0.75) + # make points larger & partially transparent
     scale_color_brewer(palette = palette,  labels = labs.legend) + 
     ylab(lab.y) + 
-    coord_flip() +
-    theme_bw()
+    coord_flip()
 }
 
 plot.most.abnd.sp.sand <- plot_top_n(top20.counts.sand.st, 

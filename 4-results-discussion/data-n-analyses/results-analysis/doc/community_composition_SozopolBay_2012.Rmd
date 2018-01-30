@@ -1,15 +1,16 @@
 ---
-title: "Biodiversity of macrozoobenthic communities in Sozopol Bay"
+title: "Community structure and composition of macrozoobenthic communities in Sozopol Bay"
 subtitle: "Preliminary experiment - 2012"
-date: "2018-01-29"
+date: "2018-01-30"
 output: 
   html_notebook:
     theme: paper
   
 ---
 
-Decided to move all 2012 analyses to their own notebook, even if it's kind of clumsy to jump back and forth, because there are way too many workspace objects otherwise.  
+Decided to move all 2012 community composition analyses to their own notebook, even if it's kind of clumsy to jump back and forth, because there are way too many workspace objects otherwise.  
 This notebook depends heavily on functions, objects & workflow developed for the other, primary experiments. It shouldn't be too much of a problem if it is run **after** the other analyses; I'll make an effort to make it as independent as possible.   
+The rest of the biodiversity analyses will be in the corresponding notebooks together with the primary stuff.    
 
 ***  
 Setup.  
@@ -80,7 +81,12 @@ text_size <- function(text.x = NULL,
         strip.text.x = element_text(size = strip.x), 
         strip.text.y = element_text(size = strip.y)
         )
-  }
+}
+
+# log y/min + 1 transform - useful for species counts/biomass data visualization
+log_y_min <- function(y) {
+  log(y / min(y[y > 0]) + 1)
+}
 ```
 ***  
 #### Macrozoobenthic communities in the seagrass and sand bottoms of Sozopol Bay (2012)  
@@ -258,16 +264,16 @@ setdiff(taxa.zostera.2012, taxa.sand.2012)$species
 
 **Summary statistics by station & habitat**  
   The **total number of taxa per station** in **seagrass** is:
-```{r summarize_nb_taxa_2012_by_habitat_st_1}
+```{r summarize_nb_taxa_2012_by_habitat_st_zostera}
 specnumber(filter(zoo.abnd.2012, habitat == "Z") %>% select(-c(site:replicate)), groups = filter(zoo.abnd.2012, habitat == "Z")$station)
 ```
   The **total number of taxa per station** in **sand** is:
-```{r summarize_nb_taxa_2012_by_habitat_st_2}
+```{r summarize_nb_taxa_2012_by_habitat_st_sand}
 specnumber(filter(zoo.abnd.2012, habitat == "S") %>% select(-c(site:replicate)), groups = filter(zoo.abnd.2012, habitat == "S")$station)
 ```
 
-  The **summarized number of taxa** by station and year is: 
-```{r summarize_nb_taxa_2012_by_station_year}
+  The **summarized number of taxa** by station and habitat is: 
+```{r summarize_nb_taxa_2012_by_station_habitat}
 zoo.abnd.2012.long %>%
   group_by(habitat, station, replicate) %>%
   transmute(total_nb_taxa = specnumber(sp_count)) %>%
@@ -281,7 +287,7 @@ zoo.abnd.2012.long %>%
 ```
 
   The **summarized abundance** by station and year is: 
-```{r summarize_abundance_2012_by_station_year}
+```{r summarize_abundance_2012_by_station_habitat}
 ## will do it interactively, because it's easier to switch the grouping factors (not so obvious with a function)
 zoo.abnd.2012.long %>% 
   group_by(habitat, site, station, replicate) %>%
@@ -306,7 +312,7 @@ zoo.abnd.2012.long %>%
 ```
   
   The **summarized biomass** by station and year is: 
-```{r summarize_biomass_2012_by_station_year}
+```{r summarize_biomass_2012_by_station_habitat}
 zoo.biomass.2012.long %>% 
   group_by(habitat, site, station, replicate) %>%
   transmute(total = sum(sp_biomass) * 1/0.0078) %>%
@@ -318,58 +324,6 @@ zoo.biomass.2012.long %>%
 
 ```
 <br>  
-**Summary statistics by site & habitat**  
-  The **total number of taxa per site** in **seagrass** is:
-```{r summarize_nb_taxa_2012_by_habitat_site_1}
-specnumber(filter(zoo.abnd.2012, habitat == "Z") %>% select(-c(site:replicate)), groups = filter(zoo.abnd.2012, habitat == "Z")$site)
-```
-  The **total number of taxa per site** in **sand** is:
-```{r summarize_nb_taxa_2012_by_habitat_site_2}
-specnumber(filter(zoo.abnd.2012, habitat == "S") %>% select(-c(site:replicate)), groups = filter(zoo.abnd.2012, habitat == "S")$site)
-```
-
-  The **summarized number of taxa** by site and year is: 
-```{r summarize_nb_taxa_2012_by_site_year}
-zoo.abnd.2012.long %>%
-  group_by(habitat, site, station, replicate) %>%
-  transmute(total_nb_taxa = specnumber(sp_count)) %>%
-  distinct(site, habitat, total_nb_taxa) %>%
-  group_by(site, habitat) %>% 
-  # rounded to the nearest integer, because there is no such thing as half a species 
-  summarise(mean_nb_taxa = round(mean(total_nb_taxa)), 
-            sd_nb_taxa = round(sd(total_nb_taxa)), 
-            nb_replicates = n()) %>%
-  arrange(habitat, site)
-```
-
-  The **summarized abundance** by site and year is: 
-```{r summarize_abundance_2012_by_site_year}
-## will do it interactively, because it's easier to switch the grouping factors (not so obvious with a function)
-zoo.abnd.2012.long %>% 
-  group_by(habitat, site, station, replicate) %>%
-  transmute(total = sum(sp_count) * 1/0.0078) %>%
-  distinct(site, habitat, total) %>%
-  group_by(habitat, site) %>%
-  summarise(sp_count_mean = round(mean(total), 0), 
-            sp_count_sd = round(sd(total), 0), 
-            nb_replicates = n())
-  
-```
-  
-  The **summarized biomass** by site and year is: 
-```{r summarize_biomass_2012_by_site_year}
-zoo.biomass.2012.long %>% 
-  group_by(habitat, site, station, replicate) %>%
-  transmute(total = sum(sp_biomass) * 1/0.0078) %>%
-  distinct(habitat, site, total) %>%
-  group_by(habitat, site) %>%
-  summarise(sp_biomass_mean = round(mean(total), 2), 
-            sp_biomass_sd = round(sd(total), 2), 
-            nb_replicates = n())
-
-```
-<br>  
-
 
 ###### **Taxonomic composition and structure**  
   Leave only the taxa which were present in the 2012 samples (abundance > 0 in at least one sample).
@@ -560,52 +514,19 @@ ggsave(here::here(figures.dir, "tax_gr_props_st_hab_2012.png"),
        plot.tax.props.st.hab.2012,
        dpi = 300)
 ```
-  
-...and the **contribution of the taxonomic groups to the abundance by site & habitat**: 
-```{r tax_group_abnd_contrib_site_hab_2012}
-tax.props.site.hab.2012 <- zoo.abnd.2012.long %>% 
-  summarize_tax_group_contr(current.taxa.2012, 
-                            key.col = "species", 
-                            value.col = sp_count, 
-                            habitat, site, group) %>%
-  arrange(habitat, site)
-
-(plot.tax.props.site.hab.2012 <- ggplot(tax.props.site.hab.2012) + 
-    geom_bar(mapping = aes(x = site,
-                           y = proportion * 100, 
-                           fill = group),
-             color = "black", size = 0.15, 
-             stat = "identity", position = "stack", inherit.aes = TRUE) +
-    scale_fill_viridis(option = "viridis", discrete = TRUE, name = "") +
-    # scale_x_discrete(labels = c("Konski", "Ribka", "Gradina")) +
-    labs(x = "Station", y = "%") + 
-    # change the strip labels
-    facet_wrap(~habitat, nrow = 2, labeller = as_labeller(c("S" = "sand", "Z" = "Zostera"))) +
-    text_size(text.x = rel(1.3), text.y = rel(1.3), title.x = rel(1.3), legend.text = rel(1.3), strip.x = rel(1.3))
-)
-
-## save as file
-ggsave(here::here(figures.dir, "tax_gr_props_site_hab_2012.png"),
-       plot.tax.props.site.hab.2012,
-       dpi = 300)
-
-```
-
-FIX FROM HERE!!! 
 
   Check and plot the species which contribute the most to the abundance at each habitat & station.
 ```{r sp_highest_contrib_abnd_st_2012}
 ## helper function to get the top n species with the highest abundance/biomass overall
-get_top_sp <- function(zoo.data.long, species.col, value.col, nb.sp = 20, ...) {
+get_top_sp <- function(zoo.data.long, species.col, value.col, nb.sp = 20) {
   # zoo.data - count/biomass data - long format!
   # species.col - name of column containing the species
   # value.col - name of column containing the variable (count, biomass..)
   # nb.sp - number of top-contributing species to select
-  # ... - grouping variables for summary
 
+  # get the columns containing the data
   value_col <- enquo(value.col)
   sp_col <- enquo(species.col)
-  grouping_vars <- quos(...)
   
   # find the top n species in the dataset
   top.n <- zoo.data.long %>%
@@ -614,27 +535,26 @@ get_top_sp <- function(zoo.data.long, species.col, value.col, nb.sp = 20, ...) {
     arrange(desc(total_count)) %>%
     top_n(nb.sp)
   
-  # subset their actual abundance/biomass at each station from the original (wide) dataset (to keep the order; I'm too lazy to figure out how to best rearrange the long data itself)
-  top.n.st <- zoo.data.long %>%
-    filter(!!sp_col %in% top.n %>% select(!!sp_col)) %>%
-    select(!!!grouping_vars, !!sp_col) 
-
-  return(top.n.st)
+  return(top.n)
 }
 
+top20.sp.2012 <- get_top_sp(zoo.abnd.2012.long, species.col = species, value.col = sp_count, nb.sp = 20)
 
-top20.counts.2012.st <- get_top_sp(zoo.abnd.2012.long, nb.sp = 20, species.col = species, value.col = sp_count, habitat, station)
+## subset the species' actual abundance at each station from the original (wide) dataset (to keep the order; I'm too lazy to figure out how to best rearrange the long data itself)
+top20.counts.2012.st <- zoo.abnd.2012 %>%
+  select(habitat, station, top20.sp.2012$species) %>%
+  gather(key = species, value = sp_count, -c(station, habitat)) %>%
+  mutate(species = factor(species, levels = unique(species))) # convert species to factor to keep this order for plotting
 
-
-plot.most.abnd.sp.2012 <- plot_top_n(top20.counts.2012.st, 
-                                     aes(x = species, y = log_y_min(sp_count), 
-                                         colour = station), 
-                                     labs.legend = c("K1", "K2", "R1", "R2", "G1", "G2"), 
-                                     lab.y = "Abundance (log(y/min + 1))", 
-                                     palette = "Set2"
-                                     )
-
-(plot.most.abnd.sp.2012 <- plot.most.abnd.sp.2012  + 
+## plot them
+plot.most.abnd.sp.2012 <- ggplot(top20.counts.2012.st, mapping = aes(x = species, y = log_y_min(sp_count), colour = station)) +
+  geom_point(size = 2.5, alpha = 0.75) + # make points larger & partially transparent
+  scale_color_brewer(palette = "Set2",  labels = c("K1", "K2", "R1", "R2", "G1", "G2")) + 
+  ylab("Abundance (log(y/min + 1)") + 
+  coord_flip()
+  
+## some additional tweaks
+(plot.most.abnd.sp.2012 <- plot.most.abnd.sp.2012 + 
     facet_wrap(~habitat, ncol = 2, labeller = as_labeller(c("S" = "sand", "Z" = "Zostera"))) +
     text_size(text.x = rel(1.1), title.x = rel(1.1), strip.x = rel(1.1), text.y = rel(1), legend.text = rel(0.9), legend.title = rel(0.9)) +
     theme(legend.position = "top", legend.box.spacing = unit(0.01, "cm"), legend.direction = "horizontal") +
@@ -647,7 +567,7 @@ ggsave(here::here(figures.dir, "most_abnd_sp_st_2012.png"),
        plot.most.abnd.sp.2012, 
        dpi = 300, width = 15, units = "cm")
 ```
-  
+
   Now let's calculate the same way the **overall community composition by biomass** in both habitat types in Sozopol Bay (2012).
 ```{r tax_group_biomass_contrib_overall_2012}
 zoo.biomass.2012.long %>% 
@@ -658,9 +578,9 @@ zoo.biomass.2012.long %>%
   arrange(habitat, desc(proportion))
 ```
   
-  Then calculate and plot the  **contribution of the taxonomic groups to the biomass by station and year** in Sozopol Bay. 
-```{r tax_group_biomass_contribution_st_yr_2012}
-tax.props.biomass.st.yr.2012 <- zoo.biomass.2012.long %>% 
+  Then calculate and plot the  **contribution of the taxonomic groups to the biomass by station and habitat** in Sozopol Bay. 
+```{r tax_group_biomass_contribution_st_hab_2012}
+tax.props.biomass.st.hab.2012 <- zoo.biomass.2012.long %>% 
   summarize_tax_group_contr(current.taxa.2012, 
                             key.col = "species", 
                             value.col = sp_biomass, 
@@ -668,23 +588,33 @@ tax.props.biomass.st.yr.2012 <- zoo.biomass.2012.long %>%
   arrange(habitat, station)
 
 # plot this
-(plot.tax.props.biomass.st.yr.2012 <- plot_tax_props(tax.props.biomass.st.yr.2012, x.labels = c("K1", "K2", "R1", "R2", "G1", "G2")) +
-    facet_wrap(~habitat, nrow = 2, labeller = as_labeller(c("S" = "sand", "Z" = "Zostera"))) + 
+(plot.tax.props.biomass.st.hab.2012 <- ggplot(tax.props.biomass.st.hab.2012) + 
+    geom_bar(mapping = aes(x = station,
+                           y = proportion * 100, 
+                           fill = group),
+             color = "black", size = 0.15, 
+             stat = "identity", position = "stack", inherit.aes = TRUE) +
+    scale_fill_viridis(option = "viridis", discrete = TRUE, name = "") +
+    scale_x_discrete(labels = c("K1", "K2", "R1", "R2", "G1", "G2")) + 
+    labs(x = "Station", y = "%") + 
+    # change the strip labels
+    facet_wrap(~habitat, nrow = 2, labeller = as_labeller(c("S" = "sand", "Z" = "Zostera"))) +
     text_size(text.x = rel(1.3), text.y = rel(1.3), title.x = rel(1.3), legend.text = rel(1.3), strip.x = rel(1.3))
 )
 
 ## save as file
-ggsave(here::here(figures.dir, "tax_gr_props_biomass_st_yr_2012.png"), 
-       plot.tax.props.biomass.st.yr.2012, 
+ggsave(here::here(figures.dir, "tax_gr_props_biomass_st_hab_2012.png"),
+       plot.tax.props.biomass.st.hab.2012,
        dpi = 300)
+
 ```
-  
-  Combine the proportions of the abundance and the biomass in one single plot. 
-```{r composite_plot_tax_gr_props_2012}
+
+  Combine the proportions of the abundance and the biomass **by station** in one single plot. 
+```{r composite_plot_tax_gr_props_st_2012}
 ## combine the proportional abundance and biomass tibbles into a single common (long) one
-tax.props.2012.all <- full_join(tax.props.st.yr.2012, 
-                                tax.props.biomass.st.yr.2012, 
-                                by = c("habitat", "station", "group")) %>%
+tax.props.2012.st.all <- full_join(tax.props.st.hab.2012, 
+                                   tax.props.biomass.st.hab.2012,
+                                   by = c("habitat", "station", "group")) %>%
   select(-starts_with("total")) %>% 
   gather(key = variable, value = proportion, -habitat, -station, -group) %>%
   ungroup() %>%
@@ -695,62 +625,77 @@ tax.props.2012.all <- full_join(tax.props.st.yr.2012,
                              habitat == "Z" ~ "Zostera"))
 
 
-(plot.composite.tax.gr.props.2012 <- plot_tax_props(tax.props.2012.all, x.labels = c("K1", "K2", "R1", "R2", "G1", "G2")) + 
+(plot.composite.tax.gr.props.2012.st <- ggplot(tax.props.2012.st.all) + 
+    geom_bar(mapping = aes(x = station,
+                           y = proportion * 100, 
+                           fill = group),
+             color = "black", size = 0.15, 
+             stat = "identity", position = "stack", inherit.aes = TRUE) +
+    scale_fill_viridis(option = "viridis", discrete = TRUE, name = "") +
+    scale_x_discrete(labels = c("K1", "K2", "R1", "R2", "G1", "G2")) +
     facet_grid(habitat ~ variable) + 
+    labs(x = "Station", y = "%") + 
     theme(legend.position = "top", legend.key.size = unit(0.5, "cm")) +
     text_size(text.x = rel(1.2), text.y = rel(1), title.x = rel(1.2), legend.text = rel(1), strip.x = rel(1.2), strip.y = rel(1.2))
-)
-
-ggsave(here::here(figures.dir, "tax_gr_props_2012_composite.png"),
-       plot.composite.tax.gr.props.2012,       
+)    
+    
+ggsave(here::here(figures.dir, "tax_gr_props_2012_st_composite.png"),
+       plot.composite.tax.gr.props.2012.st,       
        dpi = 300, width = 15, units = "cm")
 ```
-    
+
   Check and plot the species which contribute the most to the biomass at each habitat & station.
-```{r sp_highest_contrib_biomass_2012}
+```{r sp_highest_contrib_biomass_st_2012}
 ## calculate the total biomass counts by species, then select the 20 with the highest biomass
-top20.biomass.2012.st <- get_top_sp(zoo.biomass.2012, nb.sp = 20)
+top20.sp.biomass.2012 <- get_top_sp(zoo.biomass.2012.long, species.col = species, value.col = sp_biomass, nb.sp = 20)
+
+## subset the species' actual biomass at each station from the original (wide) dataset 
+top20.biomass.2012.st <- zoo.biomass.2012 %>%
+  select(habitat, station, top20.sp.biomass.2012$species) %>%
+  gather(key = species, value = sp_biomass, -c(station, habitat)) %>%
+  mutate(species = factor(species, levels = unique(species))) # convert species to factor to keep this order for plotting
 
 ## plot them
-plot.highest.biomass.sp.2012 <- plot_top_n(top20.biomass.2012.st, 
-                                     aes(x = species, y = log_y_min(sp_count), 
-                                         colour = station), 
-                                     labs.legend = c("K1", "K2", "R1", "R2", "G1", "G2"), 
-                                     lab.y = "Biomass (log(y/min + 1))",
-                                     palette = "Set2"
-                                     )
-
-(plot.highest.biomass.sp.2012 <- plot.highest.biomass.sp.2012  +
-    facet_wrap(~habitat, ncol = 2, labeller = as_labeller(c("S" = "sand", "Z" = "Zostera"))) + 
-    text_size(text.x = rel(1.2), strip.x = rel(1.1), text.y = rel(1), legend.text = rel(0.9)) +
+plot.highest.biomass.sp.st.2012 <- ggplot(top20.biomass.2012.st, mapping = aes(x = species, y = log_y_min(sp_biomass), colour = station)) +
+  geom_point(size = 2.5, alpha = 0.75) + # make points larger & partially transparent
+  scale_color_brewer(palette = "Set2",  labels = c("K1", "K2", "R1", "R2", "G1", "G2")) + 
+  ylab("Biomass (log(y/min + 1)") + 
+  coord_flip()
+  
+## some additional tweaks
+(plot.highest.biomass.sp.st.2012 <- plot.highest.biomass.sp.st.2012 + 
+    facet_wrap(~habitat, ncol = 2, labeller = as_labeller(c("S" = "sand", "Z" = "Zostera"))) +
+    text_size(text.x = rel(1.1), title.x = rel(1.1), strip.x = rel(1.1), text.y = rel(1), legend.text = rel(0.9), legend.title = rel(0.9)) +
     theme(legend.position = "top", legend.box.spacing = unit(0.01, "cm"), legend.direction = "horizontal") +
     guides(colour = guide_legend(nrow = 1)) +
     scale_x_discrete(name = "", limits = rev(levels(top20.biomass.2012.st$species))) 
 )
-  
+
 ## save as file
 ggsave(here::here(figures.dir, "highest_biomass_sp_st_2012.png"), 
-       plot.highest.biomass.sp.2012, 
+       plot.highest.biomass.sp.st.2012, 
        dpi = 300, width = 15, units = "cm")
+
 ```
-  
-3. Site-level comparison of macrobenthic community composition & structure - seagrass/sand, Sozopol Bay, 2012    
+<br>
 
-  On second thought, for 2012, a more useful approach would be to 1) test whether there are differences in community composition between the pairs of stations at each of the 3 sites, in sand/seagrass - hopefully no; 2) find the top-contributing species to the abundance/biomass at the site level. 
+###### **Site-level comparison of macrobenthic community composition & structure - seagrass/sand, Sozopol Bay, 2012**    
 
-  Check if the community composition differs between sites (using package mvabund for fitting GLMs).
+  Check if the community composition differs between sites, in sand/seagrass (using package mvabund for fitting GLMs).
 ```{r b/n-site_diff_community_composition_2012}
 library(mvabund)
 
 ## convert the abundance tibble to matrix
-zoo.abnd.2012.mat <- mvabund(zoo.abnd.2012 %>% arrange(habitat) %>% select(-c(station:replicate)))
+zoo.abnd.2012.mat <- mvabund(zoo.abnd.2012 %>% arrange(habitat, site) %>% select(-c(site:replicate)))
 
 ## get the sites & habitats
-sites.2012 <- (zoo.abnd.2012 %>%
-  mutate(site = str_extract(station, "[^\\d]+")) %>%
-  arrange(habitat))$site
+sites.2012 <- zoo.abnd.2012 %>% 
+  arrange(habitat, site) %>%
+  pull(site)
 
-habitats.2012 <- sort(zoo.abnd.2012$habitat)
+habitats.2012 <- zoo.abnd.2012 %>% 
+  arrange(habitat, site) %>%
+  pull(habitat)
 
 ## check the mean-variance relationship in the dataset - for some reason RStudio doesn't want to plot this today - sth to do with graphical device size.
 meanvar.plot(zoo.abnd.2012.mat)
@@ -777,6 +722,9 @@ plot(comm.diff.2012.st)
 comm.diff.2012.st.summary <- anova(comm.diff.2012.st, p.uni = "adjusted", block = sites.2012)
 comm.diff.2012.st.summary
 ```
+  There aren't any statistically significant differences between stations within each site (but there's a significant effect of the station:habitat interaction within each site?). Therefore, we can safely summarize everything appropriate at the **site level**.  
+  I'll leave the previous station-level summaries in the notebook, too, to show my reasoning, but from now on I'll be summarizing the 2012 data by site.  
+  
   NB Save the models & summaries as R data objects, because they take way too much time to repeat.
 ```{r save_models_2012}
 ## community difference between sites & habitats
@@ -790,11 +738,207 @@ write_rds(comm.diff.2012.st, here::here(save.dir, "comm_diff_st_model_2012.RDS")
 write_rds(comm.diff.2012.st.summary, here::here(save.dir, "comm_diff_st_model_2012_summary.RDS"))
 ```
 
-  There's only a significant effect of the station:habitat interaction within each site. Well good enough for now; losing too much time as it is with the throwaway-worthy data, and not enough on the really important analyses.  
+**Summary statistics by site & habitat**  
+  The **total number of taxa per site** in **seagrass** is:
+```{r summarize_nb_taxa_2012_by_habitat_site_zostera}
+specnumber(filter(zoo.abnd.2012, habitat == "Z") %>% select(-c(site:replicate)), groups = filter(zoo.abnd.2012, habitat == "Z")$site)
+```
+  The **total number of taxa per site** in **sand** is:
+```{r summarize_nb_taxa_2012_by_habitat_site_sand}
+specnumber(filter(zoo.abnd.2012, habitat == "S") %>% select(-c(site:replicate)), groups = filter(zoo.abnd.2012, habitat == "S")$site)
+```
+
+  The **summarized number of taxa** by site and habitat is: 
+```{r summarize_nb_taxa_2012_by_site_habitat}
+zoo.abnd.2012.long %>%
+  group_by(habitat, site, station, replicate) %>%
+  transmute(total_nb_taxa = specnumber(sp_count)) %>%
+  distinct(site, habitat, total_nb_taxa) %>%
+  group_by(site, habitat) %>% 
+  # rounded to the nearest integer, because there is no such thing as half a species 
+  summarise(mean_nb_taxa = round(mean(total_nb_taxa)), 
+            sd_nb_taxa = round(sd(total_nb_taxa)), 
+            nb_replicates = n()) %>%
+  arrange(habitat, site)
+```
+
+  The **summarized abundance** by site and habitat is: 
+```{r summarize_abundance_2012_by_site_habitat}
+## will do it interactively, because it's easier to switch the grouping factors (not so obvious with a function)
+zoo.abnd.2012.long %>% 
+  group_by(habitat, site, station, replicate) %>%
+  transmute(total = sum(sp_count) * 1/0.0078) %>%
+  distinct(site, habitat, total) %>%
+  group_by(habitat, site) %>%
+  summarise(sp_count_mean = round(mean(total), 0), 
+            sp_count_sd = round(sd(total), 0), 
+            nb_replicates = n())
   
-  Will go back and repeat all summaries, etc. at the *site level*, and put this quick analysis at the beginning of the 2012 section in the text to justify doing this. I'll still keep the graphs, tables,.. with the analyses at the station level as they are heere to show my reasoning.  
-  All the 2012 community structure & biodiversity analyses will be moved to a separate notebook, because this is getting too long, and the workspace is filling up with objects.
+```
   
+  The **summarized biomass** by site and habitat is: 
+```{r summarize_biomass_2012_by_site_habitat}
+zoo.biomass.2012.long %>% 
+  group_by(habitat, site, station, replicate) %>%
+  transmute(total = sum(sp_biomass) * 1/0.0078) %>%
+  distinct(habitat, site, total) %>%
+  group_by(habitat, site) %>%
+  summarise(sp_biomass_mean = round(mean(total), 2), 
+            sp_biomass_sd = round(sd(total), 2), 
+            nb_replicates = n())
+
+```
+<br>  
+
+The **contribution of the taxonomic groups to the abundance by site & habitat**:  
+```{r tax_group_abnd_contrib_site_hab_2012}
+tax.props.site.hab.2012 <- zoo.abnd.2012.long %>% 
+  summarize_tax_group_contr(current.taxa.2012, 
+                            key.col = "species", 
+                            value.col = sp_count, 
+                            habitat, site, group) %>%
+  arrange(habitat, site)
+
+(plot.tax.props.site.hab.2012 <- ggplot(tax.props.site.hab.2012) + 
+    geom_bar(mapping = aes(x = site,
+                           y = proportion * 100, 
+                           fill = group),
+             color = "black", size = 0.15, 
+             stat = "identity", position = "stack", inherit.aes = TRUE) +
+    scale_fill_viridis(option = "viridis", discrete = TRUE, name = "") +
+    # scale_x_discrete(labels = c("Konski", "Ribka", "Gradina")) +
+    labs(x = "Site", y = "%") + 
+    # change the strip labels
+    facet_wrap(~habitat, nrow = 2, labeller = as_labeller(c("S" = "sand", "Z" = "Zostera"))) +
+    text_size(text.x = rel(1.3), text.y = rel(1.3), title.x = rel(1.2), legend.text = rel(1), strip.x = rel(1.2))
+)
+
+## save as file
+ggsave(here::here(figures.dir, "tax_gr_props_site_hab_2012.png"),
+       plot.tax.props.site.hab.2012,
+       dpi = 300, width = 15, height = 10, units = "cm")
+```
   
+And summarize the species contributing the most to the abundance at the site level: 
+```{r sp_highest_contrib_abnd_site_2012}
+## subset the species' actual abundance at each site from the original (wide) dataset
+top20.counts.2012.site <- zoo.abnd.2012 %>%
+  select(habitat, site, top20.sp.2012$species) %>%
+  gather(key = species, value = sp_count, -c(site, habitat)) %>%
+  mutate(species = factor(species, levels = unique(species))) # convert species to factor to keep this order for plotting
+
+## plot them
+plot.most.abnd.sp.2012.site <- ggplot(top20.counts.2012.site, mapping = aes(x = species, y = log_y_min(sp_count), colour = site)) +
+  geom_point(size = 2.5, alpha = 0.75) + # make points larger & partially transparent
+  scale_color_brewer(palette = "Set2",  labels = c("Konski", "Ribka", "Gradina")) + 
+  ylab("Abundance (log(y/min + 1)") + 
+  coord_flip()
+  
+## some additional tweaks
+(plot.most.abnd.sp.2012.site <- plot.most.abnd.sp.2012.site + 
+    facet_wrap(~habitat, ncol = 2, labeller = as_labeller(c("S" = "sand", "Z" = "Zostera"))) +
+    text_size(text.x = rel(1.1), title.x = rel(1.1), strip.x = rel(1.1), text.y = rel(1), legend.text = rel(0.9), legend.title = rel(0.9)) +
+    theme(legend.position = "top", legend.box.spacing = unit(0.01, "cm"), legend.direction = "horizontal") +
+    guides(colour = guide_legend(nrow = 1)) +
+    scale_x_discrete(name = "", limits = rev(levels(top20.counts.2012.site$species))) 
+)
+
+## save as file
+ggsave(here::here(figures.dir, "most_abnd_sp_site_2012.png"), 
+       plot.most.abnd.sp.2012.site, 
+       dpi = 300, width = 15, units = "cm")
+```
+
+Plot the **contribution of the taxonomic groups to the biomass by site & habitat**: 
+```{r tax_group_biomass_contrib_site_hab_2012}
+tax.props.biomass.site.hab.2012 <- zoo.biomass.2012.long %>% 
+  summarize_tax_group_contr(current.taxa.2012, 
+                            key.col = "species", 
+                            value.col = sp_biomass, 
+                            habitat, site, group) %>%
+  arrange(habitat, site)
+
+(plot.tax.props.biomass.site.hab.2012 <- ggplot(tax.props.biomass.site.hab.2012) + 
+    geom_bar(mapping = aes(x = site,
+                           y = proportion * 100, 
+                           fill = group),
+             color = "black", size = 0.15, 
+             stat = "identity", position = "stack", inherit.aes = TRUE) +
+    scale_fill_viridis(option = "viridis", discrete = TRUE, name = "") +
+    # scale_x_discrete(labels = c("Konski", "Ribka", "Gradina")) +
+    labs(x = "Site", y = "%") + 
+    # change the strip labels
+    facet_wrap(~habitat, nrow = 2, labeller = as_labeller(c("S" = "sand", "Z" = "Zostera"))) +
+    text_size(text.x = rel(1.3), text.y = rel(1.3), title.x = rel(1.2), legend.text = rel(1), strip.x = rel(1.2))
+)
+
+## save as file
+ggsave(here::here(figures.dir, "tax_gr_props_biomass_site_hab_2012.png"),
+       plot.tax.props.biomass.site.hab.2012,
+       dpi = 300, width = 15, height = 10, units = "cm")
+
+```
+
+Composite taxonomic group proportion in the abundance and biomass structure of the **sites**:  
+```{r composite_plot_tax_gr_props_site_2012}
+## combine the proportional abundance and biomass tibbles into a single common (long) one
+tax.props.2012.site.all <- full_join(tax.props.site.hab.2012, 
+                                     tax.props.biomass.site.hab.2012,
+                                     by = c("habitat", "site", "group")) %>%
+  select(-starts_with("total")) %>% 
+  gather(key = variable, value = proportion, -habitat, -site, -group) %>%
+  ungroup() %>%
+  # fix a little the variables that will serve for faceting the plot, to avoid re-labeling later 
+  mutate(variable = case_when(variable == "proportion.x" ~ "Abundance", 
+                              variable == "proportion.y" ~ "Biomass"), 
+         habitat = case_when(habitat == "S" ~ "sand", 
+                             habitat == "Z" ~ "Zostera"))
 
 
+(plot.composite.tax.gr.props.2012.site <- ggplot(tax.props.2012.site.all) + 
+    geom_bar(mapping = aes(x = site,
+                           y = proportion * 100, 
+                           fill = group),
+             color = "black", size = 0.15, 
+             stat = "identity", position = "stack", inherit.aes = TRUE) +
+    scale_fill_viridis(option = "viridis", discrete = TRUE, name = "") +
+    facet_grid(habitat ~ variable) + 
+    labs(x = "Site", y = "%") + 
+    theme(legend.position = "top", legend.key.size = unit(0.5, "cm")) +
+    text_size(text.x = rel(1.2), text.y = rel(1), title.x = rel(1.2), legend.text = rel(1), strip.x = rel(1.2), strip.y = rel(1.2))
+)    
+    
+ggsave(here::here(figures.dir, "tax_gr_props_2012_site_composite.png"),
+       plot.composite.tax.gr.props.2012.site,       
+       dpi = 300, width = 15, height = 10, units = "cm")
+```
+
+Plot the species contributing the most to the biomass at the **site** level: 
+```{r sp_highest_contrib_biomass_site_2012}
+## subset the species' actual biomass at each site from the original (wide) dataset
+top20.biomass.2012.site <- zoo.biomass.2012 %>%
+  select(habitat, site, top20.sp.biomass.2012$species) %>%
+  gather(key = species, value = sp_biomass, -c(site, habitat)) %>%
+  mutate(species = factor(species, levels = unique(species))) # convert species to factor to keep this order for plotting
+
+## plot them
+plot.highest.biomass.sp.2012.site <- ggplot(top20.biomass.2012.site, mapping = aes(x = species, y = log_y_min(sp_biomass), colour = site)) +
+  geom_point(size = 2.5, alpha = 0.75) + # make points larger & partially transparent
+  scale_color_brewer(palette = "Set2",  labels = c("Konski", "Ribka", "Gradina")) + 
+  ylab("Biomass (log(y/min + 1)") + 
+  coord_flip()
+  
+## some additional tweaks
+(plot.highest.biomass.sp.2012.site <- plot.highest.biomass.sp.2012.site + 
+    facet_wrap(~habitat, ncol = 2, labeller = as_labeller(c("S" = "sand", "Z" = "Zostera"))) +
+    text_size(text.x = rel(1.1), title.x = rel(1.1), strip.x = rel(1.1), text.y = rel(1), legend.text = rel(0.9), legend.title = rel(0.9)) +
+    theme(legend.position = "top", legend.box.spacing = unit(0.01, "cm"), legend.direction = "horizontal") +
+    guides(colour = guide_legend(nrow = 1)) +
+    scale_x_discrete(name = "", limits = rev(levels(top20.biomass.2012.site$species))) 
+)
+
+## save as file
+ggsave(here::here(figures.dir, "highest_biomass_sp_site_2012.png"), 
+       plot.highest.biomass.sp.2012.site, 
+       dpi = 300, width = 15, units = "cm")
+```
