@@ -1,7 +1,7 @@
 ---
 title: "Community structure and composition of macrozoobenthic communities in Sozopol Bay"
 subtitle: "Preliminary experiment - 2012"
-date: "2018-01-30"
+date: "2018-01-31"
 output: 
   html_notebook:
     theme: paper
@@ -9,7 +9,7 @@ output:
 ---
 
 Decided to move all 2012 community composition analyses to their own notebook, even if it's kind of clumsy to jump back and forth, because there are way too many workspace objects otherwise.  
-This notebook depends heavily on functions, objects & workflow developed for the other, primary experiments. It shouldn't be too much of a problem if it is run **after** the other analyses; I'll make an effort to make it as independent as possible.   
+This notebook depends heavily on functions, objects & workflow developed for the other, primary experiments. It shouldn't be too much of a problem if it is run **after** the other analyses; I'll make an effort to make it as independent as possible.  
 The rest of the biodiversity analyses will be in the corresponding notebooks together with the primary stuff.    
 
 ***  
@@ -689,31 +689,31 @@ library(mvabund)
 zoo.abnd.2012.mat <- mvabund(zoo.abnd.2012 %>% arrange(habitat, site) %>% select(-c(site:replicate)))
 
 ## get the sites & habitats
-sites.2012 <- zoo.abnd.2012 %>% 
+sites.2012 <- zoo.abnd.2012 %>%
   arrange(habitat, site) %>%
   pull(site)
 
-habitats.2012 <- zoo.abnd.2012 %>% 
+habitats.2012 <- zoo.abnd.2012 %>%
   arrange(habitat, site) %>%
   pull(habitat)
 
 ## check the mean-variance relationship in the dataset - for some reason RStudio doesn't want to plot this today - sth to do with graphical device size.
 meanvar.plot(zoo.abnd.2012.mat)
 ```
-  Fit the model & check the fit.  
+  Fit the model & check the fit.
 ```{r b/n-site_diff_2012_model}
-## fit the model: do site + habitat influence community composition? 
+## fit the model: do site + habitat influence community composition?
 comm.diff.2012.mod <- manyglm(zoo.abnd.2012.mat ~ sites.2012 * habitats.2012, family = "negative.binomial")
 
 ## plot resiudals to check model fit
 plot(comm.diff.2012.mod)
 
-## check significance of results 
+## check significance of results
 comm.diff.2012.mod.summary <- anova(comm.diff.2012.mod, p.uni = "adjusted")
 comm.diff.2012.mod.summary
 ```
-  OK, there is a highly significant site, habitat & site:habitat effect on community composition & structure in Sozopol Bay in 2012.  
-  Also check for differences between stations within each site; if there aren't any, then that's grounds enough to summarize the abundance, biomass,.. at the site level only.  
+  OK, there is a highly significant site, habitat & site:habitat effect on community composition & structure in Sozopol Bay in 2012.
+  Also check for differences between stations within each site; if there aren't any, then that's grounds enough to summarize the abundance, biomass,.. at the site level only.
 ```{r b/n-station_diff_2012_model}
 comm.diff.2012.st <- manyglm(zoo.abnd.2012.mat ~ stations.2012 * habitats.2012, famiily = "negative.binomial")
 
@@ -722,9 +722,9 @@ plot(comm.diff.2012.st)
 comm.diff.2012.st.summary <- anova(comm.diff.2012.st, p.uni = "adjusted", block = sites.2012)
 comm.diff.2012.st.summary
 ```
-  There aren't any statistically significant differences between stations within each site (but there's a significant effect of the station:habitat interaction within each site?). Therefore, we can safely summarize everything appropriate at the **site level**.  
-  I'll leave the previous station-level summaries in the notebook, too, to show my reasoning, but from now on I'll be summarizing the 2012 data by site.  
-  
+  There aren't any statistically significant differences between stations within each site (but there's a significant effect of the station:habitat interaction within each site?). Therefore, we can safely summarize everything appropriate at the **site level**.
+  I'll leave the previous station-level summaries in the notebook, too, to show my reasoning, but from now on I'll be summarizing the 2012 data by site.
+
   NB Save the models & summaries as R data objects, because they take way too much time to repeat.
 ```{r save_models_2012}
 ## community difference between sites & habitats
