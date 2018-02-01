@@ -286,7 +286,7 @@ zoo.abnd.2012.long %>%
   arrange(habitat, station)
 ```
 
-  The **summarized abundance** by station and year is: 
+  The **summarized abundance** by station and habitat is: 
 ```{r summarize_abundance_2012_by_station_habitat}
 ## will do it interactively, because it's easier to switch the grouping factors (not so obvious with a function)
 zoo.abnd.2012.long %>% 
@@ -311,7 +311,7 @@ zoo.abnd.2012.long %>%
 
 ```
   
-  The **summarized biomass** by station and year is: 
+  The **summarized biomass** by station and habitat is: 
 ```{r summarize_biomass_2012_by_station_habitat}
 zoo.biomass.2012.long %>% 
   group_by(habitat, site, station, replicate) %>%
