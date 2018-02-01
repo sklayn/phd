@@ -1,7 +1,7 @@
 ---
 title: "Community structure and composition of macrozoobenthic communities in Sozopol Bay"
 subtitle: "Preliminary experiment - 2012"
-date: "2018-01-31"
+date: "2018-02-01"
 output: 
   html_notebook:
     theme: paper
@@ -806,7 +806,7 @@ tax.props.site.hab.2012 <- zoo.abnd.2012.long %>%
              color = "black", size = 0.15, 
              stat = "identity", position = "stack", inherit.aes = TRUE) +
     scale_fill_viridis(option = "viridis", discrete = TRUE, name = "") +
-    # scale_x_discrete(labels = c("Konski", "Ribka", "Gradina")) +
+    scale_x_discrete(labels = c("K", "R", "G")) +
     labs(x = "Site", y = "%") + 
     # change the strip labels
     facet_wrap(~habitat, nrow = 2, labeller = as_labeller(c("S" = "sand", "Z" = "Zostera"))) +
@@ -830,7 +830,7 @@ top20.counts.2012.site <- zoo.abnd.2012 %>%
 ## plot them
 plot.most.abnd.sp.2012.site <- ggplot(top20.counts.2012.site, mapping = aes(x = species, y = log_y_min(sp_count), colour = site)) +
   geom_point(size = 2.5, alpha = 0.75) + # make points larger & partially transparent
-  scale_color_brewer(palette = "Set2",  labels = c("Konski", "Ribka", "Gradina")) + 
+  scale_color_brewer(palette = "Set2",  labels = c("K", "R", "G")) + 
   ylab("Abundance (log(y/min + 1)") + 
   coord_flip()
   
@@ -865,7 +865,7 @@ tax.props.biomass.site.hab.2012 <- zoo.biomass.2012.long %>%
              color = "black", size = 0.15, 
              stat = "identity", position = "stack", inherit.aes = TRUE) +
     scale_fill_viridis(option = "viridis", discrete = TRUE, name = "") +
-    # scale_x_discrete(labels = c("Konski", "Ribka", "Gradina")) +
+    scale_x_discrete(labels = c("K", "R", "G")) +
     labs(x = "Site", y = "%") + 
     # change the strip labels
     facet_wrap(~habitat, nrow = 2, labeller = as_labeller(c("S" = "sand", "Z" = "Zostera"))) +
@@ -888,11 +888,16 @@ tax.props.2012.site.all <- full_join(tax.props.site.hab.2012,
   select(-starts_with("total")) %>% 
   gather(key = variable, value = proportion, -habitat, -site, -group) %>%
   ungroup() %>%
-  # fix a little the variables that will serve for faceting the plot, to avoid re-labeling later 
+  # fix a little the variables that will serve for faceting & labeling the plot, to avoid re-labeling later 
   mutate(variable = case_when(variable == "proportion.x" ~ "Abundance", 
                               variable == "proportion.y" ~ "Biomass"), 
          habitat = case_when(habitat == "S" ~ "sand", 
-                             habitat == "Z" ~ "Zostera"))
+                             habitat == "Z" ~ "Zostera"), 
+         site = case_when(site == "Konski" ~ "K", 
+                          site == "Ribka" ~ "R", 
+                          site == "Gradina" ~ "G")) %>% 
+  # turn site into factor to preserve order as before 
+  mutate(site = factor(site, levels = c("K", "R", "G")))
 
 
 (plot.composite.tax.gr.props.2012.site <- ggplot(tax.props.2012.site.all) + 
@@ -924,7 +929,7 @@ top20.biomass.2012.site <- zoo.biomass.2012 %>%
 ## plot them
 plot.highest.biomass.sp.2012.site <- ggplot(top20.biomass.2012.site, mapping = aes(x = species, y = log_y_min(sp_biomass), colour = site)) +
   geom_point(size = 2.5, alpha = 0.75) + # make points larger & partially transparent
-  scale_color_brewer(palette = "Set2",  labels = c("Konski", "Ribka", "Gradina")) + 
+  scale_color_brewer(palette = "Set2",  labels = c("K", "R", "G")) + 
   ylab("Biomass (log(y/min + 1)") + 
   coord_flip()
   
