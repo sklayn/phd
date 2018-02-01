@@ -1,6 +1,6 @@
 ---
 title: "Biodiversity of macrozoobenthic communities - 1"
-date: "2018-01-24"
+date: "2018-02-01"
 output:
   html_notebook:
     theme: paper
@@ -885,4 +885,4 @@ ggsave(here::here(figures.dir, "highest_biomass_sp_st_zostera.png"),
   
 ***  
 #### Macrozoobenthic communities in the seagrass and sand bottoms of Sozopol Bay (2012)  
-These analyses have moved to a new home: "biodiversity_SozopolBay_2012.Rmd".  
+These analyses have moved to a new home: "community_composition_SozopolBay_2012.Rmd".  

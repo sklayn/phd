@@ -1,6 +1,6 @@
 ---
 title: "Biodiversity of macrozoobenthic communities - 2"
-date: "2018-01-25"
+date: "2018-02-01"
 output: 
   html_notebook:
     theme: paper
@@ -47,6 +47,7 @@ library(viridis)
   Import functions.
 ```{r import_custom_functions}
 source(here(functions.dir, "alpha_diversity.R"))
+source(here(functions.dir, "graphical_analyses.R"))
 ```
   Organize some commonly-used ggplot2 modifications into a more convenient (and less repetitive) format.
 ```{r custom_ggplot_settings_helpers}
@@ -76,7 +77,12 @@ text_size <- function(text.x = NULL,
         strip.text.x = element_text(size = strip.x), 
         strip.text.y = element_text(size = strip.y)
         )
-  }
+}
+
+## define a custom transformation and its inverse for the y axis of the ABC curves (modified logistic transformation) using the scales package (for ggplot graphics).
+modif_logistic_trans <- function() scales::trans_new("modif_logistic", 
+                                                     function(x) log((1 + x)/(101 - x)), 
+                                                     function(x) exp((1 + x)/(101 - x)))
 ```
 ***
 #### Macrozoobenthic communities in the sandy sediments of Burgas Bay (2013-2014)
@@ -208,10 +214,10 @@ master.tax.list <- read.csv(file = file.path(data.dir, "td_zoo_taxonomy.csv"), h
   Now we'll calculate the **taxonomic distance** for the dataset.
 ```{r tax_distance_sand}
 ## calculate the taxonomic distance for the master species list, using variable step - scaling according to reduction in number of classes when going up in the tax. tree (if almost all genera have only 1 species, it makes no big difference if 2 individuals belong to a different species or a different genus). 
-tax.dist.sand <- taxa2dist(master.tax.list, varstep = TRUE)
+tax.dist.all <- taxa2dist(master.tax.list, varstep = TRUE)
 
 ## calculate the taxonomic distinctness indices for the abundance dataset, and print it to examine (its built-in print method is actually better than mine, after later conversions to tibble, etc.)
-(tax.distinctness.sand <- taxondive(select(zoo.abnd.sand, -c(station:replicate)), tax.dist.sand)
+(tax.distinctness.sand <- taxondive(select(zoo.abnd.sand, -c(station:replicate)), tax.dist.all)
 )
 
 ## get the summary - includes a significance test on Delta+
@@ -450,7 +456,7 @@ plot_div_profiles(div.profiles.sand.long, one.panel = FALSE)
   It's better, however, to calculate **weighted diversity profiles** by including a measure of similarity between species - for instance, taxonomic distance between them. This approach allows for a lot more meaningful ecological and biodiversity comparisons (Leinster & Cobbold, 2012). The weighted diversity profiles are a community's "fingerprint".   
 ```{r weighted_diversity_profiles_sand}
 ## subset the large dist object (taxonomic distance b/n species) from before, to only the currently present species - in a very clumsy, very ugly way
-tax.dist.sand.current <- as.matrix(tax.dist.sand)[which(rownames(as.matrix(tax.dist.sand)) %in% colnames(zoo.abnd.sand)), which(colnames(as.matrix(tax.dist.sand)) %in% colnames(zoo.abnd.sand))]
+tax.dist.sand.current <- as.matrix(tax.dist.all)[which(rownames(as.matrix(tax.dist.all)) %in% colnames(zoo.abnd.sand)), which(colnames(as.matrix(tax.dist.all)) %in% colnames(zoo.abnd.sand))]
 
 
 weighted.div.profiles.sand <- weighted_div_profiles(zoo.abnd.sand %>% select(-c(station:replicate)), 
@@ -556,14 +562,7 @@ ggsave(here::here(figures.dir, "w_sand.png"),
 ```
   All good, let's plot these!   
   Very often, the curves approach a cumulative frequency of 100 % for a large part of their length, esp. in highly dominated communities - often after the first 2-3 top-ranked species, making the forms of the abundance and biomass curves difficult to distinguish. We can transform the y-axis so that the cumulative values are closer to linearity - e.g. using a modified logistic transformation (Clarke & Warwick 2001).  
-```{r ggplot_modif_logistic_transform}
-## define a custom transformation and its inverse for the y axis (modified logistic transformation) using the scales package (for ggplot graphics).
-modif_logistic_trans <- function() scales::trans_new("modif_logistic", 
-                                                     function(x) log((1 + x)/(101 - x)), 
-                                                     function(x) exp((1 + x)/(101 - x)))
-
-```
-
+  
 ```{r plot_summary_abc_sand}
 ## reshape the data for easier plotting - and to have a legend..
 abc.summary.sand.long <- abc.summary.sand[[1]] %>% 
@@ -780,7 +779,7 @@ specpool(select(zoo.abnd.zostera, -c(station:replicate)),
 ## we'll use the same taxonomic distance for the master species list as before
 
 ## calculate the taxonomic distinctness indices for the abundance dataset
-(tax.distinctness.zostera <- taxondive(select(zoo.abnd.zostera, -c(station:replicate)), tax.dist.sand)
+(tax.distinctness.zostera <- taxondive(select(zoo.abnd.zostera, -c(station:replicate)), tax.dist.all)
 )
 
 ## get the summary - includes a significance test on Delta+
@@ -889,7 +888,7 @@ plot_div_profiles(div.profiles.zostera.long, one.panel = FALSE)
   Calculate the **weighted diversity profiles** by including a measure of similarity between species - here, again, the taxonomic distance between them. 
 ```{r weighted_diversity_profiles_zostera}
 ## subset the large dist object (taxonomic distance b/n species) from before, to only the currently present species - in a very clumsy, very ugly way
-tax.dist.zostera.current <- as.matrix(tax.dist.sand)[which(rownames(as.matrix(tax.dist.sand)) %in% colnames(zoo.abnd.zostera)), which(colnames(as.matrix(tax.dist.sand)) %in% colnames(zoo.abnd.zostera))]
+tax.dist.zostera.current <- as.matrix(tax.dist.all)[which(rownames(as.matrix(tax.dist.all)) %in% colnames(zoo.abnd.zostera)), which(colnames(as.matrix(tax.dist.all)) %in% colnames(zoo.abnd.zostera))]
 
 
 weighted.div.profiles.zostera <- weighted_div_profiles(zoo.abnd.zostera %>% select(-c(station:replicate)), 
@@ -1092,7 +1091,7 @@ rm(pd.summary.zostera.long)
 #### Macrozoobenthic communities in seagrass and sand in Sozopol Bay (2012)   
 Import the abundance & biomass data - again, from the cleaned & saved datasets, to avoid (most of) the cleaning steps. 
 ```{r zoo_data_2012_import, message = FALSE, results = FALSE}
-## dimensions should be 48 x 205 (5 metadata + 200 species columns); all species columns should be numeric.
+## dimensions should be 48 x 206 (6 metadata + 200 species columns); all species columns should be numeric.
 zoo.abnd.2012 <- read_csv(here::here(save.dir, "abnd_2012_orig_clean.csv"))
 
 ## same for biomass; same expected structure as the abundance
@@ -1101,37 +1100,39 @@ zoo.biomass.2012 <- read_csv(here::here(save.dir, "biomass_2012_orig_clean.csv")
   Convert columns to the proper type, arrange the datasets by habitat & station, etc.
 ```{r clean_zoo_data_2012, results = FALSE}
 zoo.abnd.2012 <- zoo.abnd.2012 %>% 
-  mutate(station = factor(station, levels = c("Konski1", "Konski2", "Ribka1", "Ribka2", "Gradina1", "Gradina2"))) %>%
-  arrange(habitat, station)
+  mutate(station = factor(station, levels = c("Konski1", "Konski2", "Ribka1", "Ribka2", "Gradina1", "Gradina2")), 
+         site = factor(site, levels = c("Konski", "Ribka", "Gradina"))) %>%
+  arrange(habitat, site, station)
 
 zoo.biomass.2012 <- zoo.biomass.2012 %>% 
-  mutate(station = factor(station, levels = c("Konski1", "Konski2", "Ribka1", "Ribka2", "Gradina1", "Gradina2"))) %>%
-  arrange(habitat, station)
+  mutate(station = factor(station, levels = c("Konski1", "Konski2", "Ribka1", "Ribka2", "Gradina1", "Gradina2")), 
+         site = factor(site, levels = c("Konski", "Ribka", "Gradina"))) %>%
+  arrange(habitat, site, station)
 ```
   Remove all species not present in the datasets (= all-0 columns). 
 ```{r clean_zoo_data_2012_2, results = FALSE}
-## result should have dimensions 48 x 63 (58 species + 5 metadata columns) 
+## result should have dimensions 48 x 64 (58 species + 6 metadata columns) 
 zoo.abnd.2012 <- zoo.abnd.2012 %>% 
-  gather(key = species, value = sp_count, -c(station:replicate)) %>% 
+  gather(key = species, value = sp_count, -c(site:replicate)) %>% 
   group_by(species) %>% 
   filter(sp_count > 0) %>%
   spread(species, sp_count, fill = 0) %>%
-  arrange(habitat, station)
+  arrange(habitat, site, station)
 
 zoo.biomass.2012 <- zoo.biomass.2012 %>% 
-  gather(key = species, value = sp_biomass, -c(station:replicate)) %>% 
+  gather(key = species, value = sp_biomass, -c(site:replicate)) %>% 
   group_by(species) %>% 
   filter(sp_biomass > 0) %>%
   spread(species, sp_biomass, fill = 0) %>%
-  arrange(habitat, station)
+  arrange(habitat, site, station)
 ```
   Transform to long format.  
 ```{r zoo_data_long_2012}
 zoo.abnd.2012.long <- zoo.abnd.2012 %>% 
-  gather(key = species, value = sp_count, -c(station:replicate))
+  gather(key = species, value = sp_count, -c(site:replicate))
 
 zoo.biomass.2012.long <- zoo.biomass.2012 %>% 
-  gather(key = species, value = sp_biomass, -c(station:replicate))
+  gather(key = species, value = sp_biomass, -c(site:replicate))
 ```
 
 ##### Alpha diversity indices  
@@ -1139,34 +1140,35 @@ zoo.biomass.2012.long <- zoo.biomass.2012 %>%
 ```{r alpha_diversity_2012}
 ## uses custom function for convenience - has to be imported first! 
 alpha.div.2012 <- zoo.abnd.2012 %>%
-  select(-c(station:replicate)) %>%
+  select(-c(site:replicate)) %>%
   alpha_diversity()
 
 ## add the metadata columns (row order is not changed, so possible) 
-(alpha.div.2012 <- bind_cols(zoo.abnd.2012 %>% select(station:replicate), alpha.div.2012)
+(alpha.div.2012 <- bind_cols(zoo.abnd.2012 %>% select(site:replicate), alpha.div.2012)
 )
 ```
-  Summarize these diversity indices by station & habitat.
+  Summarize these diversity indices by site & habitat.
 ```{r summarize_alpha_diversity_2012}
 ## STILL haven't learned how to use the functions from package sjPlot for printing pretty (and easy!) tables...   
 alpha.div.2012 %>% 
-  group_by(station, habitat) %>%
+  group_by(site, habitat) %>%
   summarise(h_mean = mean(shannon_h), h_sd = sd(shannon_h), 
-            j_mean = mean(evenness_j), j_sd = sd(evenness_j),
-            h_eff_mean = mean(h_effective), h_eff_sd = sd(h_effective)
+            j_mean = mean(evenness_j, na.rm = TRUE), j_sd = sd(evenness_j, na.rm = TRUE),
+            h_eff_mean = mean(h_effective), h_eff_sd = sd(h_effective), 
+            nb_replicates = n()
             ) %>% 
-  arrange(habitat, station)
+  arrange(habitat, site)
 ```
   
   2. Species accumulation curves   
 ```{r sp_accumulation_curves_2012}
-sac.2012 <- specaccum(select(zoo.abnd.2012, -c(station:replicate)))
+sac.2012 <- specaccum(select(zoo.abnd.2012, -c(site:replicate)))
 
 plot(sac.2012, 
      xlab = "Samples", ylab = "Cumulative species richness", 
      ci.type = "polygon", ci.col = "light blue")
 ```
-  Again, about 10 (maybe a little more) samples seem to be enough to capture most of the biodiversity in the study area (in terms of species richness) - this is where the curve starts to smooth out (slope < 1). In reality, there are 4 samples/station & habitat - clearly not enough. Also supported by the horrifying species richness values (sometimes only 1 species??). I'm putting it down as a result of my learning the taxonomy, methods etc.  
+  Again, about 10 (maybe a little more) samples seem to be enough to capture most of the biodiversity in the study area (in terms of species richness) - this is where the curve starts to smooth out (slope < 1). In reality, there are 4 samples/station & habitat, or 8 samples/site & habitat - clearly not enough. Also supported by the horrifying species richness values (sometimes only 1 species??). I'm putting it down as a result of my learning the taxonomy, methods etc.  
   I'm going to go through the motions of analyzing this dataset in the same way as the previous 2, but I'm not going to trust the results very much.  
   
 ##### Species pool  
@@ -1174,37 +1176,37 @@ plot(sac.2012,
   First - in the different habitats in Sozopol Bay.  
 ```{r sp_pool_habitat_2012}
 ## this function is based on incidences in sample sites - presence/absence data; gives a single estimate for a collection of sample sites
-specpool(select(zoo.abnd.2012, -c(station:replicate)), 
+specpool(select(zoo.abnd.2012, -c(site:replicate)), 
          pool = zoo.abnd.2012$habitat, 
          smallsample = TRUE)
 
 ## this function is quantitative - based on abundances on single sample site
-estimateR(select(zoo.abnd.2012, -c(station:replicate)))
+estimateR(select(zoo.abnd.2012, -c(site:replicate)))
 ```
   In the sandy sediments in Sozopol Bay, 69 % of the species pool are captured based on the most severe measure (second-order jacknife), and 87.5 % - based on the most forgiving measure (bootstrap).   
   In the seagrasses in Sozopol Bay, 72 % of the species pool are captured based on the most severe measure (second-order jacknife), and 90 % - based on the most forgiving measure (bootstrap).   
   
-  In reality, the two habitats were not really distinct - the sand samples were taken too close to the seagrass meadows, in the case of Gradina - in unvegetated patches INSIDE the meadows, so I'm not sure if a distinction is possible from this data.     
+  In reality, the two habitats were not really distinct - the sand samples were taken too close to the seagrass meadows, in the case of Gradina - in unvegetated patches INSIDE the meadows, so I'm not sure if a distinction is possible/meaningful from this data.     
   
-  Then - at the different stations.   
-```{r sp_pool_station_2012}
+  Then - at the different sites.   
+```{r sp_pool_site_2012}
 ## this function is based on incidences in sample sites - presence/absence data; gives a single estimate for a collection of sample sites
-specpool(select(zoo.abnd.2012, -c(station:replicate)), 
-         pool = zoo.abnd.2012$station, 
+specpool(select(zoo.abnd.2012, -c(site:replicate)), 
+         pool = zoo.abnd.2012$site, 
          smallsample = TRUE)
 
 ## this function is quantitative - based on abundances on single sample site
-estimateR(select(zoo.abnd.2012, -c(station:replicate)))
+estimateR(select(zoo.abnd.2012, -c(site:replicate)))
 ```
   
   Let's do one final estimate of the whole Sozopol Bay - all samples pooled.  
 ```{r sp_pool_all_2012}
 ## this function is based on incidences in sample sites - presence/absence data; gives a single estimate for a collection of sample sites
-specpool(select(zoo.abnd.2012, -c(station:replicate)), 
+specpool(select(zoo.abnd.2012, -c(site:replicate)), 
          smallsample = TRUE)
 
 ```
-  When all stations/habitats pooled, 83 % of the species pool are estimated to be captured by this dataset based on 2nd order jacknife (the most severe measure), and 90 % - based on Chao & bootstrap - the most tolerant measures.
+  When all sites/habitats are pooled, 83 % of the species pool are estimated to be captured by this dataset based on 2nd order jacknife (the most severe measure), and 90 % - based on Chao & bootstrap - the most tolerant measures. While this *looks* fine, I don't quite believe it - especially given the later samplings at Gradina, where the species richness is never < 25 in any one sample..    
   
 ##### Taxonomic distance & diversity  
   Calculate the **taxonomic distance** for the zoobenthic communities in Sozopol Bay in 2012. Again, this cannot be considered relevant / meaningful, since there are samples containing a single species which ought to be excluded altogether from all further analysis...    
@@ -1212,7 +1214,7 @@ specpool(select(zoo.abnd.2012, -c(station:replicate)),
 ## we'll use the same taxonomic distance for the master species list as before
 
 ## calculate the taxonomic distinctness indices for the abundance dataset
-(tax.distinctness.2012 <- taxondive(select(zoo.abnd.2012, -c(station:replicate)), tax.dist.sand)
+(tax.distinctness.2012 <- taxondive(select(zoo.abnd.2012, -c(site:replicate)), tax.dist.all)
 )
 
 ## get the summary - includes a significance test on Delta+
@@ -1225,12 +1227,12 @@ summary(tax.distinctness.2012)
 s.l.dplus.2012 <- bind_cols(S = tax.distinctness.2012$Species,
                             Dplus = tax.distinctness.2012$Dplus,
                             Lambda = tax.distinctness.2012$Lambda,
-                            station = zoo.abnd.2012$station, 
+                            site = zoo.abnd.2012$site, 
                             habitat = zoo.abnd.2012$habitat)
 
-plot.dplus.2012 <- ggplot(s.l.dplus.2012, aes(x = S, y = Dplus, color = station)) +
+plot.dplus.2012 <- ggplot(s.l.dplus.2012, aes(x = S, y = Dplus, color = site)) +
   scale_color_brewer(palette = "Set2", 
-                     labels = c("K1", "K2", "R1", "R2", "G1", "G2")) +
+                     labels = c("K", "R", "G")) +
   geom_point(alpha = 0.85, size = 2) +
   xlim(0, 100) + 
   labs(x = "Number of species", y = expression(paste(Delta, "+"))) + 
@@ -1245,13 +1247,13 @@ plot.dplus.2012 <- ggplot(s.l.dplus.2012, aes(x = S, y = Dplus, color = station)
 )
 
 ```
-  Again, there are too few species in the samples for this to be a meaningful analysis. Many of the samples would have a disturbed community structure if the results could be trusted - esp. G1-2 in seagrass, and also somewhat in sand. Overall, K1-2 which have the highest species richness in both sand and in seagrass are the closest to the average expected Delta+.  
+  Again, there are too few species in the samples for this to be a meaningful analysis. Many of the samples would have a disturbed community structure if the results could be trusted - esp. G in seagrass, and also somewhat in sand. Overall, K samples which have the highest species richness in both sand and in seagrass are the closest to the average expected Delta+.  
   
   Now plot the observed Lambda values, with the theoretical (simulated) confidence intervals.  
 ```{r plot_lambda_2012}
-plot.lambda.2012 <- ggplot(s.l.dplus.2012, aes(x = S, y = Lambda, color = station)) +
+plot.lambda.2012 <- ggplot(s.l.dplus.2012, aes(x = S, y = Lambda, color = site)) +
   scale_color_brewer(palette = "Set2",
-                      labels = c("K1", "K2", "R1", "R2", "G1", "G2")) +
+                      labels = c("K", "R", "G")) +
   geom_point(alpha = 0.85, size = 2) +
   xlim(0, 100) + 
   labs(x = "Number of species", y = expression(paste(Lambda, "+"))) +
@@ -1266,7 +1268,8 @@ plot.lambda.2012 <- ggplot(s.l.dplus.2012, aes(x = S, y = Lambda, color = statio
 )
 
 ```
-  Same story here: very high variability between samples, mostly very low values of Lambda - because the few species that are present are of similar taxonomic groups. K1-2 are again the closest to the expected average values.  
+  Same story here: very high variability between samples, mostly very low values of Lambda - because the few species that are present are of similar taxonomic groups. Site K is again the closest to the expected average values.  
+  
 ```{r plot_composite_dplus_lambda_2012}
 ## combine the 2 previous plots on one graph. They share a legend, so we'll jump through some (neccessary) hoops to put it at the bottom 
 
@@ -1299,19 +1302,19 @@ rm(dplus.legend)
 ```{r abc_2012}
 (abc.2012 <- abc(zoo.abnd.2012.long, zoo.biomass.2012.long, 
                  abnd.val = sp_count, biomass.val = sp_biomass, 
-                 station, habitat, replicate)
+                 site, station, habitat, replicate)
 )
 ## result is a list: 1) grouped df containing the curves (long), 2) summarized df with the W statistic per replicate - the distance between the 2 curves  
 
 ```
   
-  We'll plot W, because there are too many stations & replicates and the curves will be unreadable.   
+  We'll plot W, because there are too many sites & replicates and the curves will be unreadable.   
 ```{r plot_w_2012}
-plot.w.2012 <- ggplot(abc.2012[[2]], aes(x = station, y = w, colour = factor(habitat))) + 
+plot.w.2012 <- ggplot(abc.2012[[2]], aes(x = site, y = w, colour = factor(habitat))) + 
   geom_boxplot() + 
   scale_color_viridis(option = "viridis", begin = 0.25, discrete = TRUE, name = "", labels = c("sand", "Zostera")) +
-  scale_x_discrete(name = "Station", 
-                   labels = c("K1", "K2", "R1", "R2", "G1", "G2")) + 
+  scale_x_discrete(name = "Site", 
+                   labels = c("K", "R", "G")) + 
   ylab("W") + 
   geom_hline(yintercept = 0)
 
@@ -1326,18 +1329,18 @@ ggsave(here::here(figures.dir, "w_2012.png"),
   
 ```
 
-  W > 0 for most samples, but the variability is incredibly high, esp. in sand & for R1 and G2 - hardly surprising; those samples contain the lowest number of species. Just as biased as the previous analysis.  
+  W > 0 for most samples, but the variability is incredibly high, esp. at site G (+ an incredible difference between sand and seagrass there) - hardly surprising; those samples contain the lowest number of species. Just as biased as the previous analysis.  
   
-  Plot the summary ABC curves - per station and habitat. 2 rows (for the 2 years) + 6 columns (stations) in the plot.  
+  Plot the summary ABC curves - per site and habitat. 2 rows (for the 2 years) + 3 columns (sites) in the plot.  
 ```{r summarize_abnd_biomass_2012}
 ## summarize the abundance and biomass data per year (average)  
 (summary.abnd.2012 <- zoo.abnd.2012.long %>%
-   group_by(station, habitat, species) %>%
+   group_by(site, habitat, species) %>%
    summarize(mean_count = mean(sp_count))
 )
 
 (summary.biomass.2012 <- zoo.biomass.2012.long %>%
-   group_by(station, habitat, species) %>%
+   group_by(site, habitat, species) %>%
    summarize(mean_biomass = mean(sp_biomass))
 )
 ```
@@ -1345,20 +1348,20 @@ ggsave(here::here(figures.dir, "w_2012.png"),
 ```{r summary_abc_2012}
 (abc.summary.2012 <- abc(summary.abnd.2012, summary.biomass.2012, 
                          abnd.val = mean_count, biomass.val = mean_biomass, 
-                         station, habitat)
+                         site, habitat)
 )
 ```
   Plot them!   
 ```{r plot_summary_abc_2012}
 ## reshape the data for easier plotting - and to have a legend..
 abc.summary.2012.long <- abc.summary.2012[[1]] %>% 
-  gather(key = variable, value = value, -c(station:sp_rank)) %>%
+  gather(key = variable, value = value, -c(site:sp_rank)) %>%
   mutate(variable = case_when(variable == "cum_abnd" ~ "abundance", 
                               variable == "cum_biomass" ~ "biomass"))
 
 ## make named character vectors for the custom station & habitat labels   
-stations.2012 <- c("K1", "K2", "R1", "R2", "G1", "G2")
-names(stations.2012) <- as.character(unique(abc.summary.2012[[1]]$station))
+sites.2012 <- c("K", "R", "G")
+names(sites.2012) <- as.character(unique(abc.summary.2012[[1]]$site))
 
 habitats.2012 <- c("sand", "Zostera")
 names(habitats.2012) <- unique(abc.summary.2012[[1]]$habitat)
@@ -1374,8 +1377,8 @@ plot.summary.abc.2012 <- ggplot(abc.summary.2012.long,
   scale_colour_manual(values = c("skyblue", "orange"), name = "") + 
   theme(legend.position = "top") + 
   # facets & labels
-  facet_grid(habitat ~ station, 
-             labeller = labeller(station = as_labeller(stations.2012),
+  facet_grid(habitat ~ site, 
+             labeller = labeller(site = as_labeller(sites.2012),
                                  habitat = as_labeller(habitats.2012))) + 
   labs(x = "Species rank (log)", y = "Cumulative %")
 
@@ -1390,17 +1393,7 @@ ggsave(here::here(figures.dir, "summary_abc_2012.png"),
 
 rm(abc.summary.2012.long)
 ```
-  Spectacularly bad.. For what it's worth - all the seagrass samples have curves situated close together and sometimes crossing - indicative of slight disturbance, or would be if the underlying data were any good. The sand samples show more or less the same pattern - slight disturbance.
-
-###### **Partial dominance curves**  
-
-```{r partial_dominance_2012}
-## will be calculated directly on the summarized abundance/biomass data
-(pd.summary.2012 <- partial_dominance_curves(summary.abnd.2012, summary.biomass.2012, 
-                                                abnd.val = mean_count, biomass.val = mean_biomass, 
-                                                station, habitat)
-)
-```
+  Spectacularly bad.. For what it's worth - all the seagrass samples have curves situated close together and sometimes crossing - indicative of slight disturbance, or would be if the underlying data were any good. The sand samples show more or less the same pattern - slight disturbance; site G has the widest distance between curves - but also, let's not forget, the largest bias because some samples contain only 1-2 species..
 
   Make a combined plot of W and ABC in the Sozopol Bay habitats. 
 ```{r plot_composite_abc_w_2012}
@@ -1417,10 +1410,21 @@ cowplot::save_plot(here::here(figures.dir, "abc_w_combined_2012.png"),
 ```
 
 
+
+###### **Partial dominance curves**  
+
+```{r partial_dominance_2012}
+## will be calculated directly on the summarized abundance/biomass data
+(pd.summary.2012 <- partial_dominance_curves(summary.abnd.2012, summary.biomass.2012, 
+                                                abnd.val = mean_count, biomass.val = mean_biomass, 
+                                                site, habitat)
+)
+```
+
 ```{r plot_partial_dominance_2012}
 ## reshape the data as before..
 pd.summary.2012.long <- pd.summary.2012 %>% 
-  gather(key = variable, value = value, -c(station:sp_rank)) %>%
+  gather(key = variable, value = value, -c(site:sp_rank)) %>%
   mutate(variable = case_when(variable == "partial_abnd" ~ "abundance", 
                               variable == "partial_biomass" ~ "biomass"))
 
@@ -1433,8 +1437,8 @@ plot.pd.2012 <- ggplot(pd.summary.2012.long, aes(x = sp_rank, y = value, colour 
   scale_colour_manual(values = c("skyblue", "orange"), name = "") + 
   theme(legend.position = "top") + 
   # facets & labels
-  facet_grid(habitat ~ station, 
-             labeller = labeller(station = as_labeller(stations.2012), 
+  facet_grid(habitat ~ site, 
+             labeller = labeller(station = as_labeller(sites.2012), 
                                  habitat = as_labeller(habitats.2012))) + 
   labs(x = "Species rank (log)", y = "%")
 
@@ -1449,7 +1453,8 @@ ggsave(here::here(figures.dir, "summary_pd_2012.png"),
 
 rm(pd.summary.2012.long)
 ```
-  Very ragged curves, because very few species per sample. The successive removal of the dominants from the calculation makes the incredibly low number of species really obvious, esp. in the sand samples from Ribka and Gradina (the curves are shortish and jump all over the place). Only the samples from Konski somehat resemble the expected shape of partial dominance curves.  
+  Very ragged curves, because very few species per sample. The successive removal of the dominants from the calculation makes the incredibly low number of species really obvious, esp. in the sand samples from Ribka and Gradina (the curves are shortish and jump all over the place). Only the samples from Konski somewhat resemble the expected shape of partial dominance curves - because they have more species.. - therefore only they are remotely interpretable. Again, slightly disturbed communities at site K (curves close & sometimes crossing); but no heavy disturbance overall.  
+  
   
   **All things considered, for the 2012 samples, again it might be best to summarise at the site level (see mvabund model output in the Community composition notebook). That way, the variability & really, really low species richness might be compensated a little.**  
   
