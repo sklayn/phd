@@ -1,0 +1,194 @@
+---
+title: "Environmental parameters"
+date: "2018-02-06"
+output: 
+  html_notebook:
+    theme: paper
+---
+  
+Setup!  
+```{r setup, include = FALSE}
+library(knitr)
+
+knit_hooks$set(small.mar = function(before, options, envir) {
+    if (before) par(mar = c(2, 2, .1, 2))  # smaller margin on top
+})
+
+## set the working directory to one up (all notebooks - kept in their own subdirectory within the project directory).
+opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+
+## set knitr options for knitting code into the report.
+opts_chunk$set(cache = TRUE, # save results so that code blocks aren't re-run unless code changes
+               autodep = TRUE, # ..or unless a relevant earlier code block changed
+               cache.comments = FALSE, # don't re-run if the only thing that changed was the comments
+               highlight = TRUE, 
+               small.mar = TRUE)
+```
+Define the working subdirectories.  
+```{r workspace_setup}
+## print the working directory, just to be on the safe side
+paste("You are here: ", getwd())
+
+data.dir <- "data"    # input data files
+functions.dir <- "R"  # functions & scripts
+save.dir <- "output"  # clean data, output from models & more complex calculations
+figures.dir <- "figs" # plots & figures 
+```
+Import libraries.  
+```{r import_packages, results = FALSE}
+library(here) # painless relative paths to subdurectories, etc.
+#library(mice) # explore missing values 
+library(tidyverse) # data manipulation, cleaning, aggregation
+library(sjPlot) # exporting publication-quality tables to .doc files, etc.
+library(viridis) # smart & pretty colour schemes
+```
+
+Organize some commonly-used ggplot2 modifications into a more convenient (and less repetitive) format.  
+```{r custom_ggplot_settings_helpers}
+## ggplot settings & things that I keep reusing
+# ggplot_theme <- list(
+#   theme_bw(),
+#   theme(element_text(family = "Times"))
+# )
+
+## always use black-and-white theme
+theme_set(theme_bw())
+
+## helper to adjust ggplot text size & avoid repetitions 
+text_size <- function(text.x = NULL,
+                      text.y = NULL,
+                      title.x = NULL,
+                      title.y = NULL,
+                      legend.text = NULL,
+                      legend.title = NULL, 
+                      strip.x = NULL, 
+                      strip.y = NULL) {
+  theme(axis.text.x = element_text(size = text.x),
+        axis.text.y = element_text(size = text.y),
+        axis.title.x = element_text(size = title.x),
+        axis.title.y = element_text(size = title.y),
+        legend.text = element_text(size = legend.text), 
+        legend.title = element_text(size = legend.title), 
+        strip.text.x = element_text(size = strip.x), 
+        strip.text.y = element_text(size = strip.y)
+        )
+}
+
+```
+***  
+Environmental parameters that were measured in parallel with the zoobenthic sampling during the study:   
+* water column nutrients, chl-a, suspended matter  
+* water clarity (Secchi depth)  
+* O2 concentrations (profiles every 1 m to the bottom) - but only occasionally, so just a momentary snapshot and shouldn't really be considered significant/meaningful.  
+* sediment parameters - grain size & distribution, total organic matter content, heavy metals (again only occasionally).   
+Since (most) stations were selected because there were previous monitoring stations at the same/nearby locations, there is fairly long-term data on nutrient concentrations, chl-a, suspended matter, water clarity at least. This is a good thing, because opportunistic samplings of these parameters, which vary strongly even daily, and very much so seasonally, cannot reveal the real patterns (e.g. higher eutrophication levels at some stations, such as those hypothesized here for the inner Burgas Bay stations).   
+Therefore, the long-term data (averaged) will be used in the analyses wherever possible (and available), to try to determine the effects of this pressure on the macrobenthic communities.   
+```{r import_environmental_data}
+## water column parameters
+(water.params <- read_csv(here(data.dir, "water_column_LT_all.csv"))
+)
+
+## sediment parameters 
+
+
+```
+  
+Looks fine. 
+  
+Let's clean it up a bit..  
+To have more data for my stations, I'll add to them the data from some other nearby stations in Burgas Bay (and Sozopol Bay): Atia -> Akin; Maslen nos -> Paraskeva.
+```{r data_cleaning_1}
+envir.params <- envir.params %>% 
+  mutate(station = recode(station, "Atia" = "Akin", "Maslen nos" = "Paraskeva"))
+```
+<br>
+
+#### Explore the pattern(s) of the missing data     
+##### Missing data in the water column parameters    
+```{r missing_values_water_column_all_1}
+### check the distribution of NAs in the water column parameters
+## first, for the whole dataset (long-term, as it may be)
+as_tibble(mice::md.pattern(envir.params))
+```
+```{r missing_values_water_column_all_2, results = FALSE, fig.show = "asis"}
+## a more visual way of displaying the same NAs (package VIM)
+VIM::aggr(envir.params, 
+          col = c("blue", "red"),
+          numbers = TRUE,
+          sortVars = TRUE,
+          labels = names(envir.params),
+          cex.axis = 0.7, gap = 3)
+
+```
+There are some; mostly for the Secchi depth, which wasn't systematically measured.   
+
+We'll do the same for the missing values only during the study period (2012-2014).
+```{r missing_values_water_column_study, results = FALSE, fig.show = "asis"}
+envir.params %>%
+  filter(year == 2012 | year == 2013 | year == 2014) %>%
+  VIM::aggr(col = c("blue", "red"),
+          numbers = TRUE,
+          sortVars = TRUE,
+          labels = names(envir.params),
+          cex.axis = 0.7, gap = 3)
+
+```
+Looks like the Secchi depth is the major offender here, too, but all other water column parameters are complete.   
+
+##### Missing data in the sediment parameters 
+
+
+
+
+<!-- #### Summarise the environmental data      -->
+<!-- ##### Water column parameters (long-term) -->
+<!-- Aggregate the long-term data by station, month and year (= mean). -->
+<!-- ```{r data_aggregation_station-year-month} -->
+<!-- ## summary by station, year and month (-> over the different depths) -->
+<!-- envir.params.summary <- envir.params %>% -->
+<!--   group_by(station, year, month) %>% -->
+<!--   select(-(year:depth)) %>% -->
+<!--   summarise_all(funs(mean, sd, min, max), na.rm = TRUE) -->
+<!-- ``` -->
+
+<!-- Another level of aggregation: long-term averages (such as they are), by station. This will then be exported as a table, formatted from within R, to be included in the relevant thesis appendix. -->
+<!-- ```{r data_aggregation_station} -->
+<!-- ## then once again, for the whole period (-> over the different stations) -->
+<!-- envir.params.summary.by.st <- envir.params.summary %>%  -->
+<!--   group_by(station) %>% -->
+<!--   select(ends_with("mean")) %>% -->
+<!--   summarise_all(funs(mean, sd, min, max), na.rm = TRUE) %>% -->
+<!--   # round all numbers to the 2nd decimal place -->
+<!--   mutate_if(is.numeric, round, 2) %>% -->
+<!--   # rename all columns, dropping the "_mean" -->
+<!--   rename_all(funs(stringr::str_replace_all(., "_mean", ""))) %>% -->
+<!--   # reorder columns (clumsily) -->
+<!--   select(station,  -->
+<!--          starts_with("Ntot"), -->
+<!--          starts_with("Ninorg"), -->
+<!--          starts_with("NH4"), -->
+<!--          starts_with("NO3"), -->
+<!--          starts_with("PO4"), -->
+<!--          starts_with("chl.a"), -->
+<!--          starts_with("seston"), -->
+<!--          starts_with("secchi") -->
+<!--          ) -->
+
+<!-- ## reorder by station - custom order (sand, seagrass, 2012) -->
+<!-- # make a vector to use for ordering (don't want to convert station to factor) -->
+<!-- new.order <- c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva",  -->
+<!--                "Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo", -->
+<!--                "Konski", "Ribka") -->
+<!-- envir.params.summary.by.st <- envir.params.summary.by.st %>% -->
+<!--     slice(match(new.order, station)) -->
+
+<!-- ## print the table prettily using package sjPlot -->
+<!-- sjt.df(envir.params.summary.by.st,  -->
+<!--        describe = FALSE,  -->
+<!--        altr.row.col = TRUE,  -->
+<!--        show.rownames = FALSE, -->
+<!--        hide.progress = TRUE, -->
+<!--        file = file.path(save.dir, "envir-params-summary.odt")) -->
+
+<!-- ``` -->
+
