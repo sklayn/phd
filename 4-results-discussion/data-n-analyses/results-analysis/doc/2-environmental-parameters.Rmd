@@ -1,6 +1,6 @@
 ---
 title: "Environmental parameters"
-date: "2018-02-06"
+date: "2018-02-12"
 output: 
   html_notebook:
     theme: paper
@@ -76,67 +76,121 @@ text_size <- function(text.x = NULL,
 
 ```
 ***  
-Environmental parameters that were measured in parallel with the zoobenthic sampling during the study:   
+Environmental parameters that were measured in parallel with the zoobenthic sampling during the study (& other studies, which I might use if I decide it is possible):   
 * water column nutrients, chl-a, suspended matter  
 * water clarity (Secchi depth)  
 * O2 concentrations (profiles every 1 m to the bottom) - but only occasionally, so just a momentary snapshot and shouldn't really be considered significant/meaningful.  
-* sediment parameters - grain size & distribution, total organic matter content, heavy metals (again only occasionally).   
-Since (most) stations were selected because there were previous monitoring stations at the same/nearby locations, there is fairly long-term data on nutrient concentrations, chl-a, suspended matter, water clarity at least. This is a good thing, because opportunistic samplings of these parameters, which vary strongly even daily, and very much so seasonally, cannot reveal the real patterns (e.g. higher eutrophication levels at some stations, such as those hypothesized here for the inner Burgas Bay stations).   
+* sediment parameters - grain size & fraction proportions, total organic matter content (%), heavy metals (again only occasionally).   
+Since (most) stations were selected because there were old monitoring stations at the same/nearby locations, there is fairly long-term data on nutrient concentrations, chl-a, suspended matter, water clarity at least. This is a good thing, because opportunistic samplings of these parameters, which vary strongly even daily, and very much so seasonally, cannot reveal the real patterns (e.g. higher eutrophication levels at some stations, such as those hypothesized here for the inner Burgas Bay stations).   
 Therefore, the long-term data (averaged) will be used in the analyses wherever possible (and available), to try to determine the effects of this pressure on the macrobenthic communities.   
+
+All of these datasets need to be cleaned and/or processed before use in the analyses.  
 ```{r import_environmental_data}
 ## water column parameters
 (water.params <- read_csv(here(data.dir, "water_column_LT_all.csv"))
 )
 
-## sediment parameters 
+## seagrass parameters
+(seagrass.params <- read_csv(here(data.dir, "zostera_raw_shoots_biomass.csv"))
+)
 
+## sediment parameters & heavy metals
+(sediment.params <- read_csv(here(data.dir, "sediments.csv"))
+)
+
+## oxygen in water
+(oxygen <- read_csv(here(data.dir, "oxygen_all.csv"))
+)
 
 ```
   
-Looks fine. 
+Looks fine. Let's get cleaning, then!  
   
-Let's clean it up a bit..  
+####  Data cleaning & processing  
+##### Water column parameters  
 To have more data for my stations, I'll add to them the data from some other nearby stations in Burgas Bay (and Sozopol Bay): Atia -> Akin; Maslen nos -> Paraskeva.
-```{r data_cleaning_1}
-envir.params <- envir.params %>% 
+```{r water_params_cleaning}
+water.params <- water.params %>% 
   mutate(station = recode(station, "Atia" = "Akin", "Maslen nos" = "Paraskeva"))
 ```
-<br>
 
-#### Explore the pattern(s) of the missing data     
-##### Missing data in the water column parameters    
-```{r missing_values_water_column_all_1}
+Check the missing data in the water column parameters.    
+```{r missing_data_water_column_1}
 ### check the distribution of NAs in the water column parameters
 ## first, for the whole dataset (long-term, as it may be)
-as_tibble(mice::md.pattern(envir.params))
+as_tibble(mice::md.pattern(water.params))
 ```
-```{r missing_values_water_column_all_2, results = FALSE, fig.show = "asis"}
+Display them more visually.  
+```{r missing_data_water_column_2, results = FALSE, fig.show = "asis"}
 ## a more visual way of displaying the same NAs (package VIM)
-VIM::aggr(envir.params, 
+VIM::aggr(water.params, 
           col = c("blue", "red"),
           numbers = TRUE,
           sortVars = TRUE,
-          labels = names(envir.params),
+          labels = names(water.params),
           cex.axis = 0.7, gap = 3)
 
 ```
 There are some; mostly for the Secchi depth, which wasn't systematically measured.   
 
 We'll do the same for the missing values only during the study period (2012-2014).
-```{r missing_values_water_column_study, results = FALSE, fig.show = "asis"}
-envir.params %>%
+```{r missing_data_water_column_study, results = FALSE, fig.show = "asis"}
+water.params %>%
   filter(year == 2012 | year == 2013 | year == 2014) %>%
   VIM::aggr(col = c("blue", "red"),
           numbers = TRUE,
           sortVars = TRUE,
-          labels = names(envir.params),
+          labels = names(water.params),
           cex.axis = 0.7, gap = 3)
 
 ```
 Looks like the Secchi depth is the major offender here, too, but all other water column parameters are complete.   
 
-##### Missing data in the sediment parameters 
 
+
+
+##### Seagrass parameters  
+These are shoot counts for all seagrass species at the study sites, above-ground wet biomass (leaves), and below-ground biomass (roots & rhizomes). They could be important for the zoobenthic communities - e.g. denser seagrass meadows might provide more refuges against predation, etc.  
+These are the raw counts / weights, which will be extrapolated to shoots.m^-2^ and g.m^-2^.  
+```{r seagrass_params_cleaning}
+### fix the station names
+(seagrass.params <- seagrass.params %>% 
+  ## separate the horrifying sample ID for 2013 into its component parts (station + replicate) and keep only the station
+  separate(sampleID, into = "station", sep = "_", extra = "drop") %>% 
+  ## remove the whitespace in the middle of the 2012 samples to be consistent with the zoobenthic datasets 
+  mutate(station = gsub(pattern = " ", replacement = "", x = station)) %>% 
+  ## recode the 2014 station names (in their raw form, they contain a reference to the GPS point - to distinguish them from the 2013 stations)
+  mutate(station = recode(station, "Gradina083" = "Gradina1", "Gradina084" = "Gradina2"))
+)
+```
+
+The raw files for the seagrass parameters were a mess - tons of sheets, copy-pasted subsets everywhere, missing samples without reason given, data filters, cryptic colours and graphs... The result is that in some samples, the shoot counts and the biomasses for the different seagrass species do not match/were missing. The extent of this was especially ridiculous in the 2013 dataset.     
+To deal with that, several assumptions were made:  
+* shoot count is primary: if there is no shoot count for a seagrass species for a particular sample/replicate, but there are biomass values, first I checked if other replicates from the same station had the reverse problem (shoot count with no biomass); if yes, it was assumed that the replicate number for the biomass was entered wrong and it was moved to the "bare" shoot count.  
+Yes, no one could be sure that this is good practice, but I needed a strategy in order to move on. If somehow the truth is found, I'll be sure to correct the values. I kept a file with the unfixed inconsistencies highlighted, so I can go back easily.  
+If there were no "orphan" shoot counts in the replicates, the biomass values were ignored (replaced with 0).  
+* if a biomass value was 0 in the raw data, it was replaced with 0.01 - the analytical limit of the scale (no such thing as 0 g weight).   
+* where one of the biomasses (above- or below-ground) was missing, it was replaced with 0.01 again.   
+* all other missing values were replaced with 0 - it was assumed they were simply not entered during processing.   
+
+Check for missing values anyway, just in case.   
+```{r missing_data_seagrass, results = FALSE, fig.show = "asis"}
+## a more visual way of displaying the same NAs (package VIM)
+VIM::aggr(seagrass.params, 
+          col = c("blue", "red"),
+          numbers = TRUE,
+          sortVars = TRUE,
+          labels = names(seagrass.params),
+          cex.axis = 0.7, gap = 3)
+
+```
+Yay! After all the possibly-dealbreaking manipulations, there really is no missing data here.  
+
+
+
+
+
+##### Sediment parameters  
 
 
 
