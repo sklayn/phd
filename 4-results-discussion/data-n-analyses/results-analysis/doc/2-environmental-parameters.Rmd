@@ -1,6 +1,6 @@
 ---
 title: "Environmental parameters"
-date: "2018-02-12"
+date: "2018-02-13"
 output: 
   html_notebook:
     theme: paper
@@ -146,12 +146,60 @@ water.params %>%
 ```
 Looks like the Secchi depth is the major offender here, too, but all other water column parameters are complete.   
 
+Now, summarise the water column data.  
+First - by station, month and year (= mean of all depths at each station and point of time).
+```{r summary_water_column_st_yr_mo}
+## average values by station, year and month (-> over the different depths)
+(water.params.summary <- water.params %>%
+  group_by(station, year, month) %>%
+  select(-c(year:depth)) %>%
+  summarise_all(funs(mean), na.rm = TRUE)
+)
 
+```
 
+Then, summarise by station -> get long-term averages over the whole period of data availability (such as it is), and also sd, min and max values. This will then be exported as a table, formatted from within R (hopefully), to be included in the relevant thesis appendix.
+```{r summary_water_column_st_long-term}
+water.params.summary.st.LT <- water.params.summary %>%
+  group_by(station) %>%
+  select(-c(year, month)) %>%
+  summarise_all(funs(mean, sd, min, max), na.rm = TRUE) %>%
+  # round all numbers to the 2nd decimal place
+  mutate_if(is.numeric, round, 2) %>%
+  # reorder columns (clumsily)
+   select(station,
+          starts_with("Ntot"),
+          starts_with("Ninorg"),
+          starts_with("NH4"),
+          starts_with("NO3"),
+          starts_with("PO4"),
+          starts_with("chl_a"),
+          starts_with("seston"),
+          starts_with("secchi")
+          )
+
+## reorder by station - custom order (sand, seagrass, 2012)
+(water.params.summary.st.LT <- water.params.summary.st.LT %>%
+  mutate(station = factor(station, levels = c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva",
+                                              "Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo",
+                                              "Konski", "Ribka"))) %>% 
+  arrange(station)
+)  
+
+```
+NB For Vromos, there are no Secchi depths, so it's impossible to calculate summary statistics (NaN, Inf, -Inf..).  
+
+Unfortunately, I'll transcribe them by hand in the appendix (no time to figure out better ways), which means endless hassle if anything at all changes at some point..   
+
+Save the summary (mean values only) to use directly in the multivariate analyses (avoid repeating all this cleaning). No splitting/rearranging for now.   
+```{r save_water_column_summary_LT}
+write_csv(water.params.summary.st.LT %>% select(station, contains("mean")), 
+          here(save.dir, "water_column_summary_LT.csv"))
+```
 
 ##### Seagrass parameters  
 These are shoot counts for all seagrass species at the study sites, above-ground wet biomass (leaves), and below-ground biomass (roots & rhizomes). They could be important for the zoobenthic communities - e.g. denser seagrass meadows might provide more refuges against predation, etc.  
-These are the raw counts / weights, which will be extrapolated to shoots.m^-2^ and g.m^-2^.  
+These are the raw counts / weights, which will be extrapolated to shoots.m^-2^ and g.m^-2^ by multiplying by 779/10000 (= corer area for seagrass samples).   
 ```{r seagrass_params_cleaning}
 ### fix the station names
 (seagrass.params <- seagrass.params %>% 
@@ -186,63 +234,94 @@ VIM::aggr(seagrass.params,
 ```
 Yay! After all the possibly-dealbreaking manipulations, there really is no missing data here.  
 
+Now summarise the seagrass parameters.  
+With the exception of 2012, there are zoobenthic samples from only 1 station/meadow (number 1 everywhere). Don't know which way of summarising them is correct.. on one hand, no - better to have multiple sites in each meadow to better reflect variability in cover, biomass, etc. - more representative of that particular meadow's characteristics.. On the other hand, my animals - not so mobile - don't exactly care what the cover is at other points in the meadow, so maybe the snapshot closest to their own location will explain the observed zoobenthic community differences better.  
 
+Anyway, I'm keeping all stations from 2012, and the st.1's from the other years.   
+I'm interested in the shoot density and biomass of **all seagrass species** at each station/site, taken together (again, the animals don't particularly care).   
+```{r summary_seagrass_filter_st}
+## first, filter out the st.2's at each sampling location for 2013 & 2014  
+seagrass.params.summary <- seagrass.params %>% 
+  filter(year %in% c(2013, 2014), grepl("1", x = station))
 
+## then add the data for 2012 (from the original tibble)
+(seagrass.params.summary <- bind_rows(seagrass.params.summary, 
+                                     seagrass.params %>% filter(year == 2012))
+)
+```
+
+```{r summary_seagrass_all_species}
+(seagrass.params.summary.all <- seagrass.params.summary %>%
+  group_by(station, year, replicate) %>%
+  ## clumsy, but works, and I don't expect to have to do it again anyway
+  transmute(shoot_count = znol_sd_count + zmar_sd_count + zpal_sd_count + pp_sd_count, 
+            ag_biomass_wet = znol_ag_wet + zmar_ag_wet + zpal_ag_wet + pp_ag_wet, 
+            bg_biomass_wet = znol_bg_wet + zmar_bg_wet + zpal_bg_wet + pp_bg_wet)
+)
+```
+Average by station & year (2013-2014), and by site (2012) - 2 separate tibbles.  
+```{r summary_seagrass_2013_2014}
+## mean, sd, min, max
+seagrass.params.summary.2013.2014 <- seagrass.params.summary.all %>% 
+  filter(year %in% c(2013, 2014)) %>%
+  group_by(station, year) %>% 
+  select(-c(station:replicate)) %>%
+  summarise_all(funs(mean, sd, min, max), na.rm = TRUE)
+
+## recalculate - per m2
+seagrass.params.summary.2013.2014 <- seagrass.params.summary.2013.2014 %>% 
+    group_by(station, year) %>%
+    select(-c(station, year)) %>% 
+    mutate_all(funs(. / 779 * 10000)) 
+
+## fix station names & rearrange a little (looks better)
+(seagrass.params.summary.2013.2014 <- seagrass.params.summary.2013.2014 %>% 
+    ungroup() %>%
+    mutate(station = gsub("1", "", x = station)) %>%
+    mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo"))) %>% 
+    arrange(station, year) %>% 
+    select(station, year, contains("shoot"), contains("ag"), contains("bg"))
+)
+```
+Save (only the means per m2) for use in the multivariate analyses.  
+```{r save_seagrass_summary_2013_2014}
+write_csv(seagrass.params.summary.2013.2014 %>% select(station, year, contains("mean")), 
+          here(save.dir, "seagrass_summary_2013_2014.csv"))
+```
+
+Now repeat for the 2012 data, which needs to be aggregated by site this time.  
+```{r summary_seagrass_2012}
+## get the sites
+seagrass.params.summary.2012 <- seagrass.params.summary.all %>% 
+  filter(year %in% c(2012)) %>%
+  # match 0+ characters at the beginning of the given string which are not digits - because the names of the stations here consist of site + station number.
+  mutate(site = str_extract(station, "[^\\d]+")) %>%
+  mutate(site = factor(site, levels = c("Konski", "Ribka", "Gradina"))) %>%
+  select(site, station, year, replicate, everything())
+
+## mean, sd, min, max
+seagrass.params.summary.2012 <- seagrass.params.summary.2012 %>%
+  group_by(site) %>% 
+  select(-c(site:replicate)) %>%
+  summarise_all(funs(mean, sd, min, max), na.rm = TRUE)
+
+## recalculate - per m2
+(seagrass.params.summary.2012 <- seagrass.params.summary.2012 %>% 
+    group_by(site) %>%
+    select(-site) %>% 
+    mutate_all(funs(. / 779 * 10000)) %>% 
+    # rearrange a little
+    select(site, contains("shoot"), contains("ag"), contains("bg"))
+)
+
+```
+Savve this, too (again, means per m2 only). 
+```{r save_seagrass_summary_2012}
+write_csv(seagrass.params.summary.2012 %>% select(site, contains("mean")), 
+          here(save.dir, "seagrass_summary_2012.csv"))
+```
 
 
 ##### Sediment parameters  
 
-
-
-<!-- #### Summarise the environmental data      -->
-<!-- ##### Water column parameters (long-term) -->
-<!-- Aggregate the long-term data by station, month and year (= mean). -->
-<!-- ```{r data_aggregation_station-year-month} -->
-<!-- ## summary by station, year and month (-> over the different depths) -->
-<!-- envir.params.summary <- envir.params %>% -->
-<!--   group_by(station, year, month) %>% -->
-<!--   select(-(year:depth)) %>% -->
-<!--   summarise_all(funs(mean, sd, min, max), na.rm = TRUE) -->
-<!-- ``` -->
-
-<!-- Another level of aggregation: long-term averages (such as they are), by station. This will then be exported as a table, formatted from within R, to be included in the relevant thesis appendix. -->
-<!-- ```{r data_aggregation_station} -->
-<!-- ## then once again, for the whole period (-> over the different stations) -->
-<!-- envir.params.summary.by.st <- envir.params.summary %>%  -->
-<!--   group_by(station) %>% -->
-<!--   select(ends_with("mean")) %>% -->
-<!--   summarise_all(funs(mean, sd, min, max), na.rm = TRUE) %>% -->
-<!--   # round all numbers to the 2nd decimal place -->
-<!--   mutate_if(is.numeric, round, 2) %>% -->
-<!--   # rename all columns, dropping the "_mean" -->
-<!--   rename_all(funs(stringr::str_replace_all(., "_mean", ""))) %>% -->
-<!--   # reorder columns (clumsily) -->
-<!--   select(station,  -->
-<!--          starts_with("Ntot"), -->
-<!--          starts_with("Ninorg"), -->
-<!--          starts_with("NH4"), -->
-<!--          starts_with("NO3"), -->
-<!--          starts_with("PO4"), -->
-<!--          starts_with("chl.a"), -->
-<!--          starts_with("seston"), -->
-<!--          starts_with("secchi") -->
-<!--          ) -->
-
-<!-- ## reorder by station - custom order (sand, seagrass, 2012) -->
-<!-- # make a vector to use for ordering (don't want to convert station to factor) -->
-<!-- new.order <- c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva",  -->
-<!--                "Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo", -->
-<!--                "Konski", "Ribka") -->
-<!-- envir.params.summary.by.st <- envir.params.summary.by.st %>% -->
-<!--     slice(match(new.order, station)) -->
-
-<!-- ## print the table prettily using package sjPlot -->
-<!-- sjt.df(envir.params.summary.by.st,  -->
-<!--        describe = FALSE,  -->
-<!--        altr.row.col = TRUE,  -->
-<!--        show.rownames = FALSE, -->
-<!--        hide.progress = TRUE, -->
-<!--        file = file.path(save.dir, "envir-params-summary.odt")) -->
-
-<!-- ``` -->
 
