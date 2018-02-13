@@ -189,11 +189,80 @@ water.params.summary.st.LT <- water.params.summary %>%
 ```
 NB For Vromos, there are no Secchi depths, so it's impossible to calculate summary statistics (NaN, Inf, -Inf..).  
 
-Unfortunately, I'll transcribe them by hand in the appendix (no time to figure out better ways), which means endless hassle if anything at all changes at some point..   
+Now let's play with the **oxygen data**.  
+The oxygen dataset contains measures of O2 concentrations (mg/L) & saturations (%) in the water column, usually every 1 m from the surface to the bottom, at different stations. This is a complete dataset with all stations ever measured (would be useful for a visualization on a map grid with extrapolated values etc., especially for Sozopol Bay where there were many measures/stations - I might even play with it a little later, for the fun of it). However, for the multivariate analyses I'm only going to keep the data from my stations, and summarize it as the rest of the water column parameters.  
+```{r filter_oxygen}
+## get only the stations I'm interested in
+(oxygen.summary <- oxygen %>% 
+   filter(station %in% c("Konski1", "Konski2", "Ribka2", "Gradina2", "Kraimorie", "Chukalya", "Akin", "Sozopol", "Paraskeva", "Agalina", "Poda3", "Gradina1", "Ropotamo1", "Ropotamo2", "Otmanli1", "Otmanli2", "Poda1", "Poda2"))
+)
+```
+
+Check the NAs.  
+```{r missing_data_oxygen, results = FALSE, fig.show = "asis"}
+oxygen.summary %>%
+  VIM::aggr(col = c("blue", "red"),
+          numbers = TRUE,
+          sortVars = TRUE,
+          labels = names(oxygen.summary),
+          cex.axis = 0.7, gap = 3)
+```
+Most of the oxygen saturations are missing (naturally, they were not recorded at the time - because it's possible to calculate them from the oxygen concentration, the water temperature and techincally, the depth - if my stations weren't so shallow).   
+I don't think I'll bother with calculations, though - I'll just use the concentrations.  
+There are also some missing values in the temperature - I'll just omit those.   
+
+NB These were measured **without correction for seawater** - which it turns out is necessary, but I didn't know at the time. For future reference, READ THE INSTRUMENT'S MANUAL BEFORE DOING ANYTHING NEXT TIME. However, all the values contain the same error - so I'm going to let it slide.. I don't trust the oxygen data anyway, it's only a series of snapshots without decent replication to account for variability.        
+
+Now average the different depths by sampling date & station.  
+```{r average_oxygen_st}
+(oxygen.summary.st <- oxygen.summary %>%
+  select(station:O2, temperature) %>%
+  group_by(station, day, month, year) %>%
+  summarize(O2_mean = mean(O2), 
+            temperature_mean = mean(temperature))
+ )
+```
+
+Now, average for the stations only (all data available, if you can call it long-term) - as for the other water column variables.  
+```{r summary_oxygen_st_long-term}
+## fix the station names first, to match my data & the water column parameters before
+oxygen.summary.st <- oxygen.summary.st %>%
+  ungroup() %>%
+  mutate(station = str_extract(station, "[^\\d]+"))
+
+## summarize everything by station as before - mean, sd, min & max
+oxygen.summary.st.LT <- oxygen.summary.st %>% 
+  group_by(station) %>% 
+  select(-c(station:year)) %>%
+  summarize_all(funs(mean, sd, min, max), na.rm = TRUE)
+
+## add a row for Vromos, where O2 was not measured at all, but I need it to merge with the other water column data
+oxygen.summary.st.LT <- oxygen.summary.st.LT %>% 
+  add_row(station = "Vromos")
+
+## remove double _mean from column names & rearrange
+names(oxygen.summary.st.LT) <- gsub("_mean", "", x = names(oxygen.summary.st.LT))
+
+(oxygen.summary.st.LT <- oxygen.summary.st.LT %>% 
+  mutate(station = factor(station, levels = c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva",
+                                              "Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo",
+                                              "Konski", "Ribka"))) %>% 
+  arrange(station) %>% 
+  select(station, contains("O2"), contains("temp"))
+)
+```
+
+Add the oxygen to the water column summary. 
+```{r add_O2_water_summary}
+(water.params.summary.st.LT <- left_join(water.params.summary.st.LT, oxygen.summary.st.LT, by = "station")
+)
+```
+
+Unfortunately, I'll transcribe these summaries by hand in the appendix (no time to figure out better ways), which means endless hassle if anything at all changes at some point..   
 
 Save the summary (mean values only) to use directly in the multivariate analyses (avoid repeating all this cleaning). No splitting/rearranging for now.   
 ```{r save_water_column_summary_LT}
-write_csv(water.params.summary.st.LT %>% select(station, contains("mean")), 
+write_csv(water.params.summary.st.LT %>% select(station, contains("mean"), O2, temperature), 
           here(save.dir, "water_column_summary_LT.csv"))
 ```
 
@@ -315,12 +384,11 @@ seagrass.params.summary.2012 <- seagrass.params.summary.2012 %>%
 )
 
 ```
-Savve this, too (again, means per m2 only). 
+Save this, too (again, means per m2 only). 
 ```{r save_seagrass_summary_2012}
 write_csv(seagrass.params.summary.2012 %>% select(site, contains("mean")), 
           here(save.dir, "seagrass_summary_2012.csv"))
 ```
-
 
 ##### Sediment parameters  
 
