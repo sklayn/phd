@@ -1,6 +1,6 @@
 ---
 title: "Environmental parameters"
-date: "2018-02-13"
+date: "2018-02-14"
 output: 
   html_notebook:
     theme: paper
@@ -391,5 +391,19 @@ write_csv(seagrass.params.summary.2012 %>% select(site, contains("mean")),
 ```
 
 ##### Sediment parameters  
+These were measured only during the study period; some of them are derived mathematically (sorting coefficient, mean grain size..).  
+Check out the missing values.  
+```{r missing_data_sediments, results = FALSE, fig.show = "asis"}
+VIM::aggr(sediment.params, 
+          col = c("blue", "red"),
+          numbers = TRUE,
+          sortVars = TRUE,
+          labels = names(sediment.params),
+          cex.axis = 0.7, gap = 3)
+```
+As expected, there are lots and lots of them:  
+* the heavy metals were measured only once at every site, and only in 2013-2014 - they are missing everywhere else.  
+* some sediment samples were damaged, and sometimes not taken at all at several of the sand stations in Burgas Bay (+ 1 in Sozopol Bay); however, there is always at least one value/station, so it would be possible to impute the missings.  
+
 
 
