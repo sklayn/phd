@@ -1,6 +1,6 @@
 ---
 title: "Environmental parameters"
-date: "2018-02-14"
+date: "2018-02-15"
 output: 
   html_notebook:
     theme: paper
@@ -39,7 +39,7 @@ Import libraries.
 library(here) # painless relative paths to subdurectories, etc.
 #library(mice) # explore missing values 
 library(tidyverse) # data manipulation, cleaning, aggregation
-library(sjPlot) # exporting publication-quality tables to .doc files, etc.
+#library(sjPlot) # exporting publication-quality tables to .doc files, etc.
 library(viridis) # smart & pretty colour schemes
 ```
 
@@ -403,7 +403,56 @@ VIM::aggr(sediment.params,
 ```
 As expected, there are lots and lots of them:  
 * the heavy metals were measured only once at every site, and only in 2013-2014 - they are missing everywhere else.  
-* some sediment samples were damaged, and sometimes not taken at all at several of the sand stations in Burgas Bay (+ 1 in Sozopol Bay); however, there is always at least one value/station, so it would be possible to impute the missings.  
+* some sediment samples were damaged, and sometimes not taken at all at several of the sand stations in Burgas Bay (+ 1 in Sozopol Bay); however, there is always at least one value/station, so it would be possible to impute the missings - in this case, through **mean value imputation**. While it is possible to use a more sophisticated method (I initially read up on MCMC and tried it with package mice & friends), I don't see much difference, so I'd rather stick with the simpler solution.  
+
+Summarize the sediment parameters - by station and year for sand/seagrass; by site & habitat for 2012. OK I'm not convinced this is meaningful - these are only point measures; what sort of summary is that?  
+```{r summary_sediments_sand}
+(sediment.params.summary.sand <- sediment.params %>% 
+   filter(year %in% c(2013, 2014), habitat == "S") %>%
+   mutate(station = factor(station, levels = c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva"))) %>% 
+   group_by(station, year) %>% 
+   select(-c(station:habitat)) %>%
+   summarise_all(funs(mean, sd, min, max), na.rm = TRUE) %>%
+   arrange(year, station)
+)
+```
 
 
+```{r summary_sediments_seagrass}
+(sediment.params.summary.seagrass <- sediment.params %>% 
+   filter(year %in% c(2013, 2014), habitat == "Z") %>%
+   mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo"))) %>% 
+   group_by(station, year) %>% 
+   select(-c(station:habitat)) %>%
+   summarise_all(funs(mean, sd, min, max), na.rm = TRUE) %>%
+   arrange(year, station)
+)
+
+```
+
+```{r summary_sediments_2012}
+## get the sites, again
+sediment.params.summary.2012 <- sediment.params %>% 
+  filter(year %in% c(2012)) %>%
+  # match 0+ characters at the beginning of the given string which are not digits - because the names of the stations here consist of site + station number.
+  mutate(site = str_extract(station, "[^\\d]+")) %>%
+  mutate(site = factor(site, levels = c("Konski", "Ribka", "Gradina"))) %>%
+  select(site, station, year, habitat, everything(), -c(month, Cu:Ni))
+
+## mean, sd, min, max
+sediment.params.summary.2012 <- sediment.params.summary.2012 %>%
+  group_by(site, habitat) %>% 
+  select(-c(site:habitat)) %>%
+  summarise_all(funs(mean, sd, min, max), na.rm = TRUE)
+
+## rearrange a little
+(sediment.params.summary.2012 <- sediment.params.summary.2012 %>% 
+    arrange(habitat, site) %>% 
+    select(site, habitat, contains("TOM"), contains("grain"), contains("sort"), contains("gravel"), contains("sand"), contains("silt"), contains("moisture"))
+) 
+```
+
+```{r}
+
+```
 
