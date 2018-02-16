@@ -1,6 +1,6 @@
 ---
 title: "Environmental parameters"
-date: "2018-02-15"
+date: "2018-02-16"
 output: 
   html_notebook:
     theme: paper
@@ -451,8 +451,3 @@ sediment.params.summary.2012 <- sediment.params.summary.2012 %>%
     select(site, habitat, contains("TOM"), contains("grain"), contains("sort"), contains("gravel"), contains("sand"), contains("silt"), contains("moisture"))
 ) 
 ```
-
-```{r}
-
-```
-
