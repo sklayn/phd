@@ -1,6 +1,6 @@
 ---
 title: "Environmental parameters"
-date: "2018-02-16"
+date: "2018-02-28"
 output: 
   html_notebook:
     theme: paper
@@ -211,7 +211,7 @@ Most of the oxygen saturations are missing (naturally, they were not recorded at
 I don't think I'll bother with calculations, though - I'll just use the concentrations.  
 There are also some missing values in the temperature - I'll just omit those.   
 
-NB These were measured **without correction for seawater** - which it turns out is necessary, but I didn't know at the time. For future reference, READ THE INSTRUMENT'S MANUAL BEFORE DOING ANYTHING NEXT TIME. However, all the values contain the same error - so I'm going to let it slide.. I don't trust the oxygen data anyway, it's only a series of snapshots without decent replication to account for variability.        
+NB These were measured **without correction for seawater** - which it turns out is necessary, but I didn't know at the time. For future reference, READ THE INSTRUMENT'S MANUAL BEFORE DOING ANYTHING NEXT TIME. However, all the values contain the same error - so I'm going to let it slide.. I don't trust the oxygen data anyway, it's only a series of snapshots without decent replication to account for variability, so it's next to useless.        
 
 Now average the different depths by sampling date & station.  
 ```{r average_oxygen_st}
@@ -284,11 +284,11 @@ These are the raw counts / weights, which will be extrapolated to shoots.m^-2^ a
 The raw files for the seagrass parameters were a mess - tons of sheets, copy-pasted subsets everywhere, missing samples without reason given, data filters, cryptic colours and graphs... The result is that in some samples, the shoot counts and the biomasses for the different seagrass species do not match/were missing. The extent of this was especially ridiculous in the 2013 dataset.     
 To deal with that, several assumptions were made:  
 * shoot count is primary: if there is no shoot count for a seagrass species for a particular sample/replicate, but there are biomass values, first I checked if other replicates from the same station had the reverse problem (shoot count with no biomass); if yes, it was assumed that the replicate number for the biomass was entered wrong and it was moved to the "bare" shoot count.  
-Yes, no one could be sure that this is good practice, but I needed a strategy in order to move on. If somehow the truth is found, I'll be sure to correct the values. I kept a file with the unfixed inconsistencies highlighted, so I can go back easily.  
+Yes, no one could be sure that this is good practice, but I needed a strategy in order to move on. If somehow the truth is found, I'll be sure to correct the values. I kept a file with the unfixed inconsistencies highlighted, so I can go back relatively easily.  
 If there were no "orphan" shoot counts in the replicates, the biomass values were ignored (replaced with 0).  
 * if a biomass value was 0 in the raw data, it was replaced with 0.01 - the analytical limit of the scale (no such thing as 0 g weight).   
 * where one of the biomasses (above- or below-ground) was missing, it was replaced with 0.01 again.   
-* all other missing values were replaced with 0 - it was assumed they were simply not entered during processing.   
+* all other missing values were replaced with 0 - it was assumed they were simply not entered during the data processing.   
 
 Check for missing values anyway, just in case.   
 ```{r missing_data_seagrass, results = FALSE, fig.show = "asis"}
@@ -301,10 +301,10 @@ VIM::aggr(seagrass.params,
           cex.axis = 0.7, gap = 3)
 
 ```
-Yay! After all the possibly-dealbreaking manipulations, there really is no missing data here.  
+Yay! After all the possibly-deal-breaking manipulations, there really is no missing data here.  
 
 Now summarise the seagrass parameters.  
-With the exception of 2012, there are zoobenthic samples from only 1 station/meadow (number 1 everywhere). Don't know which way of summarising them is correct.. on one hand, no - better to have multiple sites in each meadow to better reflect variability in cover, biomass, etc. - more representative of that particular meadow's characteristics.. On the other hand, my animals - not so mobile - don't exactly care what the cover is at other points in the meadow, so maybe the snapshot closest to their own location will explain the observed zoobenthic community differences better.  
+With the exception of 2012, there are zoobenthic samples from only 1 station/meadow (number 1 everywhere). Don't know which way of summarising them is correct.. on one hand, no - better to have multiple sites in each meadow to better reflect variability in cover, biomass, etc. - more representative of that particular meadow's characteristics.. On the other hand, my animals - not so mobile - don't exactly care what the cover is at other points in the meadow, so maybe the snapshot closest to their own location will explain the observed zoobenthic community differences better. Actually, they could care - the species that eat the seagrass, if any; or if they eat particular epiphytes which differ between seagrass species... But that's an experiment for another day.     
 
 Anyway, I'm keeping all stations from 2012, and the st.1's from the other years.   
 I'm interested in the shoot density and biomass of **all seagrass species** at each station/site, taken together (again, the animals don't particularly care).   
