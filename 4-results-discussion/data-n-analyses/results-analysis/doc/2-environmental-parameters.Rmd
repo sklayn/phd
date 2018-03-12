@@ -1,6 +1,6 @@
 ---
 title: "Environmental parameters"
-date: "2018-03-08"
+date: "2018-03-12"
 output: 
   html_notebook:
     theme: paper
@@ -504,3 +504,4 @@ write_csv(sediment.params.imputed.2012,
           here(save.dir, "sediments_imputed_2012.csv"))
 ```
 
+##### LUSI  
