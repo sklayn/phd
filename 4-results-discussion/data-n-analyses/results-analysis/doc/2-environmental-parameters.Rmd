@@ -1,6 +1,6 @@
 ---
 title: "Environmental parameters"
-date: "2018-03-12"
+date: "2018-03-13"
 output: 
   html_notebook:
     theme: paper
@@ -505,3 +505,62 @@ write_csv(sediment.params.imputed.2012,
 ```
 
 ##### LUSI  
+The Land Use Simplified Index (Flo et al. 2011) is an index of anthropogenic pressure according to coastal land use. The calculation is simple, but requires land cover data according to type of land use (Corine Land Cover, in this case - CLC2012), and various corrections.  
+The other significant pressures considered in the modified verison of LUSI (Romero, 2011) are rivers/point sources, harbours and tourism, adjacent water bodies in bad/moderate state or under high anthropogenic pressure.  
+A correction for the shape of the coastline is also applied: this factor influences water residency times and thus the amount of pressure exerted on coastal ecosystems.  
+
+Import the data - land use areas by watersheds.  
+NB HAVE TO OPEN THE WATERSHED SPATIAL DATABASE SOMEHOW, TO DETERMINE WHICH PARTICULAR ONES WERE USED - FOR NOW, I ONLY HAVE THE PDF MAPS FROM THE 2014 PHYTOBENTHOS INTERCALIBRATION.   
+```{r import_land_use_data}
+## land use areas (in the watersheds we are interested in, according to CLC2012) 
+(land.use <- read_csv(here(data.dir, "lusi_land_use_watersheds.csv")))
+
+## corrections for the LUSI calculation 
+(lusi.corrections <- read_csv(here(data.dir, "lusi_corrections_watersheds.csv")))
+
+```
+Calculate the LUSI scores for each watershed (using a custom function, in case I need to repeat the calculations somewhere). LUSI itself will be explicitly calculated, because the function gets too complex and black-boxy.  
+```{r calculate_lusi_scores}
+## import custom function
+source(here(functions.dir, "lusi_scores.R"))
+
+## calculate the scores
+(lusi.scores.watersheds <- lusi_scores(land.use))
+
+```
+
+Good. Now calculate LUSI for our watersheds, applying all necessary corrections.  
+```{r calculate_lusi}
+lusi.scores.watersheds <- left_join(lusi.scores.watersheds, 
+                               lusi.corrections %>% select(-notes_correction), # the notes are not needed for calculations 
+                               by = "watershed")
+
+(lusi.watershed <- lusi.scores.watersheds %>% 
+    mutate(LUSI = rowSums(select(., -c(watershed, coast_correction))) * coast_correction) %>% 
+    select(watershed, LUSI)
+)
+```
+Now let's match the stations to the corresponding watersheds. Again, have to find those and put them on a map in M&M.    
+```{r lusi_watersheds_stations}
+## get the stations from the water parameter summary tibble
+lusi.st <- water.params.summary.st.LT %>% select(station)
+
+## assign the watersheds - again, from the phytobenthos IC - 2014
+(lusi.st <- lusi.st %>% 
+    mutate(watershed = case_when(station %in% c("Konski", "Sozopol", "Agalina") ~ "Agalina_Sozopol", 
+                                 station %in% c("Akin", "Chukalya", "Vromos") ~ "Atia", 
+                                 station %in% c("Poda", "Otmanli", "Kraimorie") ~ "Burgas_Poda_Kraimorie_Otmanli", 
+                                 station %in% c("Ribka", "Gradina") ~ "Gradina", 
+                                 station == "Ropotamo" ~ "Ropotamo_Vatahori", 
+                                 station == "Paraskeva" ~ "MaslenNos_SvParaskeva"))
+)
+
+## add the LUSI values & save
+(lusi.st <- left_join(lusi.st,
+                      lusi.watershed, 
+                      by = "watershed")
+)
+
+write_csv(lusi.st, here(save.dir, "lusi_st.csv"))
+```
+
