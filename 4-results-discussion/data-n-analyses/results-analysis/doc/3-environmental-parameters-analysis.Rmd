@@ -1,0 +1,134 @@
+---
+title: "Environmental parameters - analysis & variable selection"
+date: "2018-03-19"
+output: 
+  html_notebook:
+    theme: paper
+---
+  
+Setup!  
+```{r setup, include = FALSE}
+library(knitr)
+
+knit_hooks$set(small.mar = function(before, options, envir) {
+    if (before) par(mar = c(2, 2, .1, 2))  # smaller margin on top
+})
+
+## set the working directory to one up (all notebooks - kept in their own subdirectory within the project directory).
+opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+
+## set knitr options for knitting code into the report.
+opts_chunk$set(cache = TRUE, # save results so that code blocks aren't re-run unless code changes
+               autodep = TRUE, # ..or unless a relevant earlier code block changed
+               cache.comments = FALSE, # don't re-run if the only thing that changed was the comments
+               highlight = TRUE, 
+               small.mar = TRUE)
+```
+
+Define the working subdirectories.  
+```{r workspace_setup}
+## print the working directory, just to be on the safe side
+paste("You are here: ", getwd())
+
+data.dir <- "data"    # input data files
+functions.dir <- "R"  # functions & scripts
+save.dir <- "output"  # clean data, output from models & more complex calculations
+figures.dir <- "figs" # plots & figures 
+```
+
+Import libraries.  
+```{r import_packages, results = FALSE}
+library(here) # painless relative paths to subdurectories, etc.
+library(tidyverse) # data manipulation, cleaning, aggregation
+library(viridis) # smart & pretty colour schemes
+# library(caret) # variable selection, pruning & other wrapper functions for modeling
+# library(FactoMineR) # PCA 
+# library(factoextra) # visualization & exploration of PCA results
+# library(glmnet) # elastic net variable selection & model fitting 
+```
+
+Organize some commonly-used ggplot2 modifications into a more convenient (and less repetitive) format.  
+```{r custom_ggplot_settings_helpers}
+## ggplot settings & things that I keep reusing
+# ggplot_theme <- list(
+#   theme_bw(),
+#   theme(element_text(family = "Times"))
+# )
+
+## always use black-and-white theme
+theme_set(theme_bw())
+
+## helper to adjust ggplot text size & avoid repetitions 
+text_size <- function(text.x = NULL,
+                      text.y = NULL,
+                      title.x = NULL,
+                      title.y = NULL,
+                      legend.text = NULL,
+                      legend.title = NULL, 
+                      strip.x = NULL, 
+                      strip.y = NULL) {
+  theme(axis.text.x = element_text(size = text.x),
+        axis.text.y = element_text(size = text.y),
+        axis.title.x = element_text(size = title.x),
+        axis.title.y = element_text(size = title.y),
+        legend.text = element_text(size = legend.text), 
+        legend.title = element_text(size = legend.title), 
+        strip.text.x = element_text(size = strip.x), 
+        strip.text.y = element_text(size = strip.y)
+        )
+}
+
+```
+
+***  
+
+This notebook details the analyses & variable selection of the environmental parameters. I'm giving them their own notebook for clarity and simplicity.  
+This is a direct continuation of the cleanup & summarization notebook on environmental parameters; I'm going to import some of the summary tibbles produced there directly from the save folder.    
+Again, the analyses will proceed in 3 separate datasets: 2012, sand (2013-2014), and seagrass (2013-2014).   
+Two lines of analysis will be applied:  
+1) PCA - to see which variables best account for the differences between stations. The "winners" will go on to the multivariate analyses attempting to relate community structure to environment.  
+PCA will be applied on 3 sets of explanatory variables - water column (+ LUSI), sediments (+ seagrass, where relevant), and heavy metals; y = station (and habitat, in the case of sand). Prior to the PCA, some (feeble) variable selection will be performed - mostly to get rid of highly correlated variables.  
+2) Elastic net - another method of variable selection.  
+Again, there will be 3 sets of explanatory variables - as above.  
+y = categorical (station, habitats) - logistic regression with multinomial models & grouped lasso penalty.  
+y = numeric (species abundances) - multi-response Gaussian linear regression with many correlated responses (+ maybe should be applied over a sparse matrix).  
+
+##### Sand stations (Burgas Bay, 2013-2014)  
+Import environmental data.   
+```{r import_water_data_sand}
+## contains the long-term water column parameters, summarized by station. 
+water <- read_csv(here(save.dir, "water_column_summary_LT.csv"))
+
+## filter (manually) to get only the sand 2013-2014 stations
+(water.sand <- water %>% 
+    filter(station %in% c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva"))
+)
+```
+
+Import the sediment data (it also contains the heavy metals).   
+```{r import_sediment_data_sand}
+sediments <- read_csv(here(save.dir, "sediments_imputed_sand.csv"))
+
+## split into sediment parameters sesnu stricto, and heavy metals
+(sediments.sand <- sediments %>% 
+    select(station:year, TOM:silt_clay)
+)  
+
+(heavy.metals.sand <- sediments %>% 
+    select(station:year, Cu:Ni) 
+)
+```
+
+Import LUSI and add it to the water column data, although strictly speaking, it isn't really..  
+```{r import_lusi_sand}
+(lusi <- read_csv(here(save.dir, "lusi_st.csv"))
+)
+
+## we'll match them by station - and we only want the sand stations - the rows of x (the water column data) where there are matching values in y (LUSI) -> e.g. inner join 
+(water.sand <- inner_join(water.sand, 
+                          lusi %>% select(-watershed), 
+                          by = "station")
+)
+```
+
+Now we'll proceed with the variable selection for the PCA.  
