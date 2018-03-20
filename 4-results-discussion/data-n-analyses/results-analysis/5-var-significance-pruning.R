@@ -166,7 +166,7 @@ env.sand.pruned <- select_vars_pruning(env.sand.pruning, group = "group", p.val 
 # losing too much information
 
 # use this function (in Hmisc) to calculate the correlations, because it also gives the p-values
-env.sand.pruned.cors <- rcorr(as.matrix(env.sand.pruned[, sapply(env.sand.pruned, is.numeric)]))
+env.sand.pruned.cors <- Hmisc::rcorr(as.matrix(env.sand.pruned[, sapply(env.sand.pruned, is.numeric)]))
 
 # plot correlation matrix to inspect visually (and save as pdf in case needed later)
 pdf(file = file.path(figs.dir, "explor_corrplot_env-vars-pruned.pdf"), 
