@@ -1,6 +1,6 @@
 ---
 title: "Environmental parameters - analysis & variable selection"
-date: "2018-03-20"
+date: "2018-03-21"
 output: 
   html_notebook:
     theme: paper
@@ -41,10 +41,10 @@ Import libraries.
 library(here) # painless relative paths to subdurectories, etc.
 library(tidyverse) # data manipulation, cleaning, aggregation
 library(viridis) # smart & pretty colour schemes
-# library(caret) # variable selection, pruning & other wrapper functions for modeling
-# library(FactoMineR) # PCA 
-# library(factoextra) # visualization & exploration of PCA results
-# library(glmnet) # elastic net variable selection & model fitting 
+library(caret) # variable selection, pruning & other wrapper functions for modeling
+library(FactoMineR) # PCA 
+library(factoextra) # visualization & exploration of PCA results
+library(glmnet) # elastic net variable selection & model fitting 
 ```
 
 Organize some commonly-used ggplot2 modifications into a more convenient (and less repetitive) format.  
@@ -131,4 +131,26 @@ Import LUSI and add it to the water column data, although strictly speaking, it 
 )
 ```
 
-Now we'll proceed with the variable selection for the PCA.  
+Now we'll proceed with the variable selection for the PCA. For whatever it's worth, I don't think PCA with so few observations can be valid, but hey, all the kids are doing it.    
+We'll just eliminate the most inter-correlated variables using package caret.  
+```{r filter_correlated_sand}
+
+# calculate the correlation matrix (on the numeric variables only)
+water.sand.cors <- cor(water.sand %>% select(-station))
+  
+# find and eliminate the highly correlated variables. NB names = FALSE, to return column index
+highly.cor.vars.water <- findCorrelation(water.sand.cors, cutoff = 0.85)
+
+ugh <- water.sand %>% 
+  select(-station) %>% # otherwise column indices don't match 
+  select(-highly.cor.vars.water)
+
+
+tst.princ <- prcomp(ugh, center = TRUE, scale. = TRUE) 
+
+# check the results
+summary(tst.princ)
+biplot(tst.princ)
+
+```
+
