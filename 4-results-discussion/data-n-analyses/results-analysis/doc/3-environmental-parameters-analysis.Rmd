@@ -1,6 +1,6 @@
 ---
 title: "Environmental parameters - analysis & variable selection"
-date: "2018-03-21"
+date: "2018-04-03"
 output: 
   html_notebook:
     theme: paper
@@ -152,5 +152,6 @@ tst.princ <- prcomp(ugh, center = TRUE, scale. = TRUE)
 summary(tst.princ)
 biplot(tst.princ)
 
+tst.princ$rotation
 ```
 
