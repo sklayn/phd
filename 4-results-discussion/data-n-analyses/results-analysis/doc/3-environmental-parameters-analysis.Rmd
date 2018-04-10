@@ -1,6 +1,6 @@
 ---
 title: "Environmental parameters - analysis & variable selection"
-date: "2018-04-03"
+date: "2018-04-10"
 output: 
   html_notebook:
     theme: paper
@@ -42,8 +42,14 @@ library(here) # painless relative paths to subdurectories, etc.
 library(tidyverse) # data manipulation, cleaning, aggregation
 library(viridis) # smart & pretty colour schemes
 library(caret) # variable selection, pruning & other wrapper functions for modeling
-library(FactoMineR) # PCA 
+
+library(FactoMineR) # PCA
 library(factoextra) # visualization & exploration of PCA results
+
+# if not installed:
+# devtools::install_github("kassambara/factoextra")
+# install.packages("FactoMineR", "factoextra")
+
 library(glmnet) # elastic net variable selection & model fitting 
 ```
 
@@ -130,28 +136,82 @@ Import LUSI and add it to the water column data, although strictly speaking, it 
                           by = "station")
 )
 ```
+The nutrients all decrease towards the outer bay, more or less so, and so do the chl-a and suspended matter; the transparency (Secchi depth) increases - this is the long-term (anthropgenic) eutrophication gradient in Burgas Bay, consistent with previous studies (..) & models.   
 
+Now let's check the correlations between water column parameters. More or less important: LUSI is (significantly) positively correlated with most long-term nutrient concentrations, chl-a and suspended matter, and negatively correlated with Secchi depth, which is good - shows that it's a good indicator of the anthropogenic pressure gradient of Burgas Bay. Could maybe be used as a proxy for all of these in the analyses? As a side note, the fact that it doesn't require the analyses of samples upon water samples is also not too shabby.     
+```{r water_sand_correlations}
+Hmisc::rcorr(as.matrix(water.sand %>% select(-station)), 
+             type = "pearson")
+```
+  
 Now we'll proceed with the variable selection for the PCA. For whatever it's worth, I don't think PCA with so few observations can be valid, but hey, all the kids are doing it.    
 We'll just eliminate the most inter-correlated variables using package caret.  
 ```{r filter_correlated_sand}
-
 # calculate the correlation matrix (on the numeric variables only)
 water.sand.cors <- cor(water.sand %>% select(-station))
   
 # find and eliminate the highly correlated variables. NB names = FALSE, to return column index
-highly.cor.vars.water <- findCorrelation(water.sand.cors, cutoff = 0.85)
+highly.cor.water.sand <- findCorrelation(water.sand.cors, cutoff = 0.85)
 
-ugh <- water.sand %>% 
+water.sand.red <- water.sand %>% 
   select(-station) %>% # otherwise column indices don't match 
-  select(-highly.cor.vars.water)
+  select(-highly.cor.water.sand)
 
 
-tst.princ <- prcomp(ugh, center = TRUE, scale. = TRUE) 
+water.sand.pca <- prcomp(water.sand.red, center = TRUE, scale. = TRUE) 
 
 # check the results
-summary(tst.princ)
-biplot(tst.princ)
+summary(water.sand.pca)
+biplot(water.sand.pca)
+```
 
-tst.princ$rotation
+Unfortunately, this eliminates LUSI, which as we saw is highly correlated with all nutrients, etc. - and I'd like to keep it, to check against macrozoobenthic community structure.  
+However, for the sake of not throwing away hard work, I will go through the motions of visualizing and exploring the PCA results. Procedure uses packages FactoMineR and factoextra.  
+```{r pca_water_sand}
+# scale and center the data (different units), and add back the stations 
+water.sand.red.scaled <- scale(water.sand.red, center = TRUE, scale = TRUE)
+water.sand.red.scaled <- bind_cols(water.sand %>% select(station), 
+                                   as.tibble(water.sand.red.scaled))
+
+## perform PCA with FactoMineR - it's equivalent to the base version, anyway, but the visualization expects a particular structure of the results, so easier to do it this way. 
+water.sand.pca.fin <- PCA(water.sand.red.scaled,
+                          scale.unit = FALSE, 
+                          quali.sup = 1, 
+                          graph = TRUE)
+
+```
+Good enough.. for some reason doesn't show colours nor visualize the results as before - maybe some functions masked? or don't work with this version of ggplot? or other incompatibility, e.g. with rmarkdown/knitr/..?   Will try updating first, and see then.. 
+```{r explore_pca_water_sand_1}
+# 1. Check the variances of the principal components. Amount of variation retained by each PC = eigenvalue. First PC = direction with maximum amount of variation in the dataset.
+water.sand.pca.fin$eig
+
+# 2. Visualize the importance of the PCs (-> scree plot)
+fviz_screeplot(water.sand.pca.fin)
+
+# 3. Plot correlations/loadings of the variables with the PCs = variable loadings. Variables can be plotted as points in the component space using their loadings as coordinates.
+
+# look at variable coordinates
+water.sand.pca.fin$var$coord
+
+# visualize the variables on the factor map. Correlation circle can help visualize the most correlated variables (variables that group together). 
+fviz_pca_var(water.sand.pca.fin)
+
+# 4. Explore the quality of the representation for variables on the factor map 
+# (cos2 = squared loadings for variables = cor * cor = coord * coord). The closer a variable to the circle of correlations, the better its representation on the factor map, and the more important it is to interpret these components. If a variable is perfectly represented by only 2 components, the sum of the cos2 = 1, and the variables will be positioned on the circle of correlations. For some variables - more than 2 components required to perfectly represent the data; then - variables positioned inside circle of correlations. Variables close to the center of the plot - less important for the first components.
+
+# rearrange the data frame successively by PC axes so that it's easier to read and find the variables most correlated with each axis (custom function)
+pca_repres_quality(pca.res = pca.result, choice = "var", param = "cos2")
+
+# plot the variables factor map, and color the vectors according to the amount of correlation to the PCs. Can select the minimum value of cos2 and the PC axes to plot.
+# PC1-PC2
+fviz_pca_var(water.sand.pca.fin, axes = c(1, 2), select.var = list(cos2 = 0.5)) + 
+  scale_color_gradient2(low = "skyblue", mid = "navyblue", high = "red", midpoint = 0.7) +
+  theme_minimal()
+
+# PC1-PC3    
+fviz_pca_var(pca.result, axes = c(1, 3), select.var = list(cos2 = 0.5)) + 
+  scale_color_gradient2(low = "skyblue", mid = "navyblue", high = "red", midpoint = 0.7) +
+  theme_minimal()
+
 ```
 
