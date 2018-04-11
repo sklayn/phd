@@ -1,6 +1,6 @@
 ---
 title: "Environmental parameters - analysis & variable selection"
-date: "2018-04-10"
+date: "2018-04-11"
 output: 
   html_notebook:
     theme: paper
@@ -177,41 +177,142 @@ water.sand.red.scaled <- bind_cols(water.sand %>% select(station),
 water.sand.pca.fin <- PCA(water.sand.red.scaled,
                           scale.unit = FALSE, 
                           quali.sup = 1, 
-                          graph = TRUE)
+                          graph = FALSE)
 
+## display the summary and biplot
+summary(water.sand.pca.fin)
+fviz_pca_biplot(water.sand.pca.fin, axes = c(1, 2), 
+                label = c("var", "ind"), 
+                col.var = "cos2", gradient.cols = c("skyblue", "navyblue", "red"))
 ```
-Good enough.. for some reason doesn't show colours nor visualize the results as before - maybe some functions masked? or don't work with this version of ggplot? or other incompatibility, e.g. with rmarkdown/knitr/..?   Will try updating first, and see then.. 
+The first 2 PCs explain ~73% of the total variance - not too bad.. Add the third, and the proportion of the explained variance becomes nearly 90%.  
+Stations 2 and 6, then 1 and 4 contribute the most to the first PC (Dim.1), nad are best represented on it (cos2). Stations 1, 4, 2 and 3 contribute the most to PC2, and are again best represented on it (see also the supplementary categories table).   
+On a plot of PC1-2, the separation is between stations 1 2 in one end (to the left), and stations 4 and 6 in the other (right); stations 3 and 5 are close  together near the middle (not too well represented).    
+In terms of variables, PC1 can be considered a representation of the eutrophication gradient - highly correlated with Ntotal and chl-a on one side ("pulling" to the left), and with bottom O2 (and total O2) on the other ("pulling" to the right). PC2 represents mainly the temperature ("pulls" down), and to a lesser degree - NO3.  
+
+Good enough, if it's even valid with so few observations, summarized data and all...   
+**Also, I don't like how LUSI got excluded - I think in the end, I might just show the correlation table to demonstrate that LUSI reflects well the eutrophication gradient, then just pass it on to the community structure analyses. Will dramatically reduce the number of variables + the uncertainty associated with only a few discrete samples of highly variable parameters such as nutrients and oxygen.**  
+
+Let's explore the results a bit - just to demonstrate the basic procedure with PCA quality checks & interpretation.   
+1) Check the variances of the principal components. Amount of variation retained by each PC = eigenvalue. First PC = direction with maximum amount of variation in the dataset.  
 ```{r explore_pca_water_sand_1}
-# 1. Check the variances of the principal components. Amount of variation retained by each PC = eigenvalue. First PC = direction with maximum amount of variation in the dataset.
 water.sand.pca.fin$eig
-
-# 2. Visualize the importance of the PCs (-> scree plot)
+```
+2) Visualize the importance of the PCs (-> scree plot).   
+```{r explore_pca_water_sand_2}
 fviz_screeplot(water.sand.pca.fin)
-
-# 3. Plot correlations/loadings of the variables with the PCs = variable loadings. Variables can be plotted as points in the component space using their loadings as coordinates.
-
-# look at variable coordinates
+```
+3) Plot correlations/loadings of the variables with the PCs = variable loadings. Variables can be plotted as points in the component space using their loadings as coordinates.  
+```{r explore_pca_water_sand_3}
+## look at variable coordinates on each PC
 water.sand.pca.fin$var$coord
 
-# visualize the variables on the factor map. Correlation circle can help visualize the most correlated variables (variables that group together). 
-fviz_pca_var(water.sand.pca.fin)
+## visualize the variables on the factor map. Correlation circle can help visualize the most correlated variables (variables that group together). 
+fviz_pca_var(water.sand.pca.fin, col.circle = "grey")
+```
 
-# 4. Explore the quality of the representation for variables on the factor map 
-# (cos2 = squared loadings for variables = cor * cor = coord * coord). The closer a variable to the circle of correlations, the better its representation on the factor map, and the more important it is to interpret these components. If a variable is perfectly represented by only 2 components, the sum of the cos2 = 1, and the variables will be positioned on the circle of correlations. For some variables - more than 2 components required to perfectly represent the data; then - variables positioned inside circle of correlations. Variables close to the center of the plot - less important for the first components.
+4) Explore the quality of the representation for variables on the factor map (cos2 = squared loadings for variables = cor x cor = coord x coord). The closer a variable to the circle of correlations, the better its representation on the factor map, and the more important it is to interpret these components. If a variable is perfectly represented by only 2 components, the sum of the cos2 = 1, and the variables will be positioned on the circle of correlations. For some variables - more than 2 components required to perfectly represent the data; then - variables positioned inside circle of correlations. Variables close to the center of the plot - less important for the first components.  
+```{r explore_pca_water_sand_4}
+## check the variables with highest correlation to the first few PCs
+as_tibble(water.sand.pca.fin$var$cos2, rownames = "var") %>%
+  arrange(desc(Dim.1))
 
-# rearrange the data frame successively by PC axes so that it's easier to read and find the variables most correlated with each axis (custom function)
-pca_repres_quality(pca.res = pca.result, choice = "var", param = "cos2")
-
-# plot the variables factor map, and color the vectors according to the amount of correlation to the PCs. Can select the minimum value of cos2 and the PC axes to plot.
+## plot the variables factor map, and color the vectors according to the amount of correlation to the PCs. Can select the minimum value of cos2 and the PC axes to plot.
 # PC1-PC2
-fviz_pca_var(water.sand.pca.fin, axes = c(1, 2), select.var = list(cos2 = 0.5)) + 
-  scale_color_gradient2(low = "skyblue", mid = "navyblue", high = "red", midpoint = 0.7) +
-  theme_minimal()
+fviz_pca_var(water.sand.pca.fin, axes = c(1, 2), select.var = list(cos2 = 0.5), 
+             col.var = "cos2", gradient.cols = c("skyblue", "navyblue", "red"))
 
-# PC1-PC3    
-fviz_pca_var(pca.result, axes = c(1, 3), select.var = list(cos2 = 0.5)) + 
-  scale_color_gradient2(low = "skyblue", mid = "navyblue", high = "red", midpoint = 0.7) +
-  theme_minimal()
+# PC1-PC3
+fviz_pca_var(water.sand.pca.fin, axes = c(1, 3), select.var = list(cos2 = 0.5), 
+             col.var = "cos2", gradient.cols = c("skyblue", "navyblue", "red"))
+
+```
+
+5) Check the contributions of the variables to the PCs. Variables that are correlated with PC1 and PC2 - the most important in explaining the variability in the dataset.  
+Variables not correlated with any PC or correlated with the last dimensions - low contribution; could be removed to simplify overall analysis.  
+% contribution of a variable in accounting for the variability in a given PC = (variable.cos2 x 100) / (total cos2 of component)  
+```{r explore_pca_water_sand_5}
+as_tibble(water.sand.pca.fin$var$contrib, rownames = "var") %>%
+  arrange(desc(Dim.1))
+```
+
+6) Visualize the most important variables associated with a given PC. The red line on the graph represents the expected average contribution (if all variable contributions were uniform). For a given component, any variable with contribution larger than that cutoff could be considered important.  
+```{r explore_pca_water_sand_6}
+plot_pca_var_contrib <- function(pca.res, choice = c("var", "ind"), axes = c(start : end)) {
+  ## helper for plotting variable/individuals contributions (as bars) to the specified PC axes. 
+  ## Dependencies: factoextra
+  
+  # plot contributions for each axis separately
+  for(i in axes){
+    print(fviz_contrib(pca.res, choice = choice, axes = i))
+  }
+  
+  # plot the overall contributions to the specified axes
+  print(fviz_contrib(pca.res, choice = choice, axes = axes))
+}
+
+
+
+# variable contributions on PC1, PC2 and PC3 (+ all 3 axes together)
+plot_pca_var_contrib(water.sand.pca.fin, 
+                     choice = "var", 
+                     axes = c(1:3))
+
+
+# if there are many variables in the dataset, we can show only the top n contributing variables:
+fviz_contrib(water.sand.pca.fin, choice = "var", axes = 1, top = 5)
+
+```
+
+7) Color variables on the variable factor map according to their contributions - highlights the most important variables in explaining the variations retained  by the PCs.
+```{r explore_pca_water_sand_7}
+fviz_pca_var(water.sand.pca.fin, col.var = "contrib") 
+
+## variable contributions to PC1-2
+fviz_pca_var(water.sand.pca.fin, axes = c(1, 2), col.var = "contrib") 
+##..and to PC1-3
+fviz_pca_var(water.sand.pca.fin, axes = c(1, 3), col.var = "contrib")
+
+```
+
+8) Dimension description - identify the most correlated variables with a given PC -> but only works with more categories (e.g. replicates at the stations, years,..). I'm including it as a reminder that it exists as an option.    
+```{r explore_pca_water_sand_8}
+# dimdesc(water.sand.pca.fin, axes = c(1:5))
+```
+
+9) Explore individuals (= stations/species/..) in the same way as the variables just now.  
+```{r explore_pca_water_sand_9}
+## coordinates of individuals on the PCs
+water.sand.pca.fin$ind$coord
+
+## plot & label by station (can also colour by group - year,..)
+fviz_pca_ind(water.sand.pca.fin, label = c("quali", "ind"))
+
+## quality of representation for individuals on the PCs (cos2)
+as_tibble(water.sand.pca.fin$ind$cos2, rownames = "ind") %>% 
+  arrange(desc(Dim.1))
+
+## correlation of individuals with PC1-2
+fviz_pca_ind(water.sand.pca.fin, axes = c(1, 2), col.ind = "cos2", gradient.cols = c("skyblue", "navyblue", "red")) 
+
+## ...and with PC1-3
+fviz_pca_ind(water.sand.pca.fin, axes = c(1, 3), col.ind = "cos2", gradient.cols = c("skyblue", "navyblue", "red")) 
+
+## contribution of individuals to the PCs
+as_tibble(water.sand.pca.fin$ind$contrib, rownames = "ind") %>% 
+  arrange(desc(Dim.1))
+
+## visualize the most contributing individuals (stations) associated with a given PC
+# PC1-3 + all 3 together (custom function)
+plot_pca_var_contrib(water.sand.pca.fin, 
+                     choice = "ind", 
+                     axes = c(1:3))
+
+## top 3 individuals (stations) contributing to PC1 (for ex.)
+fviz_contrib(water.sand.pca.fin, choice = "ind", axes = 1, top = 3)
+
+## individuals (stations) map colored according to their contribution
+fviz_pca_ind(water.sand.pca.fin, col.ind = "contrib")
 
 ```
 
