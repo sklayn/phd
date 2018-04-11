@@ -181,9 +181,14 @@ water.sand.pca.fin <- PCA(water.sand.red.scaled,
 
 ## display the summary and biplot
 summary(water.sand.pca.fin)
-fviz_pca_biplot(water.sand.pca.fin, axes = c(1, 2), 
-                label = c("var", "ind"), 
-                col.var = "cos2", gradient.cols = c("skyblue", "navyblue", "red"))
+
+(plot.water.sand.pca <- fviz_pca_biplot(water.sand.pca.fin, axes = c(1, 2), 
+                                        label = c("var", "ind"), 
+                                        col.var = "cos2", gradient.cols = c("skyblue", "navyblue", "red"), 
+                                        repel = TRUE)
+)
+
+ggsave(here(figures.dir, "pca_water_sand.png"), plot.water.sand.pca, dpi = 300)
 ```
 The first 2 PCs explain ~73% of the total variance - not too bad.. Add the third, and the proportion of the explained variance becomes nearly 90%.  
 Stations 2 and 6, then 1 and 4 contribute the most to the first PC (Dim.1), nad are best represented on it (cos2). Stations 1, 4, 2 and 3 contribute the most to PC2, and are again best represented on it (see also the supplementary categories table).   
@@ -192,6 +197,11 @@ In terms of variables, PC1 can be considered a representation of the eutrophicat
 
 Good enough, if it's even valid with so few observations, summarized data and all...   
 **Also, I don't like how LUSI got excluded - I think in the end, I might just show the correlation table to demonstrate that LUSI reflects well the eutrophication gradient, then just pass it on to the community structure analyses. Will dramatically reduce the number of variables + the uncertainty associated with only a few discrete samples of highly variable parameters such as nutrients and oxygen.**  
+
+In any case, let's save the PCA result - just in case, to avoid repeating a million times later.  
+```{r save_pca_water_sand}
+write_rds(water.sand.pca.fin, path = here(save.dir, "pca_water_sand.RDS"))
+```
 
 Let's explore the results a bit - just to demonstrate the basic procedure with PCA quality checks & interpretation.   
 1) Check the variances of the principal components. Amount of variation retained by each PC = eigenvalue. First PC = direction with maximum amount of variation in the dataset.  
