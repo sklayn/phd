@@ -347,6 +347,7 @@ sediments.sand.scaled <- bind_cols(sediments.sand %>% select(station),
                                    as.tibble(sediments.sand.scaled))
 
 sediments.sand.pca <- PCA(sediments.sand.scaled, scale.unit = FALSE, quali.sup = 1)
+
 Investigate(sediments.sand.pca, file = "pca_sediments_sand_report.Rmd", document = "html_document", remove.temp = TRUE)
 ```
 
@@ -372,5 +373,111 @@ Kraimorie and Agalina are similar in their sediment chracteristics (larger mean 
 Same for Akin, (Sozopol) and Paraskeva - smaller grain size, predominantly sand.  
 Chukalya is in the middle, but closer to the sandy stations.  
 
-Final try, with the **heavy metals** - although same problem as water column parameters - no variability, just 1 measurement/station.  
+Save the sediment PCA, too, for posterity... 
+```{r save_pca_sediments_sand}
+write_rds(sediments.sand.pca, 
+          here(save.dir, "pca_sediments_sand.RDS"))
+```
+
+
+Heavy metals..?  
+
+
+##### Seagrass stations - Burgas Bay (2013-2014)  
+Now I'll analyze the seagrass stations - mostly focusing on the sediment parameters, because I strongly suspect the same piece of shit will happen if I try with the very much summarized water column variables.  
+
+Filter water column data anyway, in case I decide to do something with it.     
+```{r import_water_data_zostera}
+## filter (manually) to get only the zostera 2013-2014 stations
+(water.zostera <- water %>% 
+    filter(station %in% c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo"))
+)
+```
+
+Import the sediment data (it also contains the heavy metals).   
+```{r import_sediment_data_zostera}
+sediments.zostera <- read_csv(here(save.dir, "sediments_imputed_seagrass.csv"))
+
+## split into sediment parameters sesnu stricto, and heavy metals
+(heavy.metals.zostera <- sediments.zostera %>% 
+    select(station:year, Cu:Ni) 
+)
+
+(sediments.zostera <- sediments.zostera %>% 
+    select(-c(Cu:Ni))
+)  
+```
+
+Add LUSI to the water column data for the seagrass stations.   
+```{r lusi_zostera}
+## match by station - only for the seagrass stations - the rows of x (the water column data) where there are matching values in y (LUSI) -> e.g. inner join 
+(water.zostera <- inner_join(water.zostera, 
+                             lusi %>% select(-watershed), 
+                             by = "station")
+)
+```
+
+Check the correlations here, too, just for the heck of it (correlations with only single values are just as meaningless as PCA)..  
+```{r water_zostera_correlations}
+Hmisc::rcorr(as.matrix(water.zostera %>% select(-station)), 
+             type = "pearson")
+```
+
+Hm, no luck here: no signifcant correlations of LUSI with anything but the bottom O2, which itself is very unreliable. I suppose this difference with the sand stations is due to the fact that the "long-term" water column data for the seagrasses only spans 2013-2014/2015 - it's not even close to the monthly data available for the sand stations over 2009-2011, supplemented with some data from 2013-2014.  
+In essence, the available water column data for the seagrasses doesn't really capture the anthropogenic eutrophication gradient (it's the same Burgas Bay gradient as the sand stations).      
+Could also explain why there are very, very few significant correlations at all...  
+
+OK, let's proceed with the sediment PCA. I'm not even going to bother eliminating highly correlated variables, that's how useless I think this whole exercise is.  
+```{r pca_sediments_zostera}
+# scale and center the data (different units), and add back the stations 
+sediments.zostera.scaled <- scale(sediments.zostera %>% select(-c(station:habitat)), 
+                                  center = TRUE, scale = TRUE)
+
+sediments.zostera.scaled <- bind_cols(sediments.zostera %>% select(station),
+                                      as.tibble(sediments.zostera.scaled))
+
+## convert stations into factor, because for some stations there are more observations than for others, which causes the Investigate function to freak out later
+sediments.zostera.scaled <- sediments.zostera.scaled %>% 
+  mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")))
+
+sediments.zostera.pca <- PCA(sediments.zostera.scaled, scale.unit = FALSE, quali.sup = 1)
+
+Investigate(sediments.zostera.pca, file = "pca_sediments_zostera_report.Rmd", document = "html_document", remove.temp = TRUE)
+```
+
+Report summary: While the amount of variation explained by the first two PCs is significant, the estimation of the right number of axis to interpret suggests to **not interpret the analysis at all**: the amount of inertia of the first axis is not higher than that obtained by the 0.95-quantile of random distributions (54.34% against 54.9%); therefore no axis is carrying real information.  
+I am going to blame this on the singleton values for Vromos and Ropotamo (only sampled once each during the study period).   
+Anyway, because the suggestion is based on a value actually very close to being significant, here's a very cautious, very tentative description of the first two dimensions, the clusters of individuals & the main explanatory variables.  
+
+Dimension 1 opposes individuals such as 8 (Ropotamo - to the right of the graph, characterized by a strongly positive coordinate on the axis) to individuals such as 7 (Gradina - to the left of the graph, characterized by a strongly negative coordinate on the axis).
+The group of individual 8 has high values for the variables mean_grain_size, sorting and gravel (strongest to weakest).  
+The group of individual 7 has:
+- high values for the variable sand.  
+- low values for the variables moisture_content and silt_clay (weakest to strongest).  
+
+Variables sorting, gravel and Ropotamo are highly correlated with this dimension (respective correlation of 0.95, 0.91, 0.91) - could summarize themselves the dimension 1.  
+
+Dimension 2 opposes individuals such as 1, 2 and 3 (Poda - to the top of the graph, characterized by a strongly positive coordinate on the axis) to individuals such as ** and 7 (Gradina - to the bottom of the graph, characterized by a strongly negative coordinate on the axis).
+The group of individuals 1, 2 and 3 has high values for the variables silt_clay and moisture_content (strongest to weakest).  
+The group of individual 7 has:  
+- high values for the variable sand.  
+- low values for the variables moisture_content and silt_clay (weakest to strongest).  
+
+Variables silt_clay and Poda are highly correlated with this dimension (respective correlation of 0.01, 0 - *wow..*). These variables could therefore summarize themselves the dimension 2.  
+
+The classification made on individuals reveals **4 clusters**.  
+Cluster 1 is made of individuals such as 7 (Gradina), with low values for the variable TOM.  
+Cluster 2 is made of individuals (Otmanli - one of the samples) with variables whose values do not differ significantly from the mean.   
+Cluster 3 is made of individuals such as 1, 2 and 3 (Poda, other Otmanli), with high values for the variables silt_clay and moisture_content (strongest to weakest).  
+Cluster 4 is made of individuals such as 8 (Ropotamo), with high values for the variables mean_grain_size, sorting and gravel (strongest to weakest).  
+
+In essence, based on the sediment structure and composition, Ropotamo is very different than the other seagrass stations - has coarser sediments, with more gravel and large mean grain size. The silt-clay and the TOM content are not so high, though - even though it could be expected, with the river mouth right there..   
+Poda (and partially Otmanli) have very large silt-clay contents, which puts them in a group of their own. In passing, the two Otmanli values for the 2 years are very, very different...  
+Gradina and Vromos are similar in sediment composition & structure - low silt-clay, high sand content.  
+
+Also save the seagrass sediment PCA, despite its doubtful usability... 
+```{r save_pca_sediments_zostera}
+write_rds(sediments.zostera.pca, 
+          here(save.dir, "pca_sediments_zostera.RDS"))
+```
 
