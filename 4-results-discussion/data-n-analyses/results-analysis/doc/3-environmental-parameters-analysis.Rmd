@@ -1,6 +1,6 @@
 ---
 title: "Environmental parameters - analysis & variable selection"
-date: "2018-04-12"
+date: "2018-04-13"
 output: 
   html_notebook:
     theme: paper
@@ -212,7 +212,7 @@ write_rds(water.sand.pca.fin, path = here(save.dir, "pca_water_sand.RDS"))
 ```
 
 ***  
-##### Sidebar: PCA result exploration - demonstrated on water parameters on sand stations, 2013-14   
+###### **Sidebar: PCA result exploration - demonstrated on water parameters on sand stations, 2013-14**   
 PCA done like this is meaningless.  
 However, let's explore the results a bit - just to demonstrate the basic procedure with PCA quality checks & interpretation.   
 1) Check the variances of the principal components. Amount of variation retained by each PC = eigenvalue. First PC = direction with maximum amount of variation in the dataset.  
@@ -379,8 +379,13 @@ write_rds(sediments.sand.pca,
           here(save.dir, "pca_sediments_sand.RDS"))
 ```
 
+For the **heavy metals**, I think the wisest would be to calculate the total (new variable, sum of all heavy metals), calculate another variable - ratio of every metal to Fe, which is usually present naturally in the environment, and to keep only Pb and Cd - source - pollution from human activities.    
 
-Heavy metals..?  
+На национално ниво няма изведени стандарти за качество на околната среда за морски седименти, които да се използват за оценка на състоянието по замърсяването на седиментите.
+
+
+###### **Elastic net - sand stations, 2013-14**  
+First, let's throw all parameters together and do stations as a dependent variable. This means the water column parameters will have to be repeated 3 times, and merged with the sediments & heavy metals.   
 
 
 ##### Seagrass stations - Burgas Bay (2013-2014)  
