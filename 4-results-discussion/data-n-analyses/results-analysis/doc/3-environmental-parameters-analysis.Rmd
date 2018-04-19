@@ -1,6 +1,6 @@
 ---
 title: "Environmental parameters - analysis & variable selection"
-date: "2018-04-13"
+date: "2018-04-19"
 output: 
   html_notebook:
     theme: paper
@@ -381,11 +381,100 @@ write_rds(sediments.sand.pca,
 
 For the **heavy metals**, I think the wisest would be to calculate the total (new variable, sum of all heavy metals), calculate another variable - ratio of every metal to Fe, which is usually present naturally in the environment, and to keep only Pb and Cd - source - pollution from human activities.    
 
-На национално ниво няма изведени стандарти за качество на околната среда за морски седименти, които да се използват за оценка на състоянието по замърсяването на седиментите.
+*На национално ниво няма изведени стандарти за качество на околната среда за морски седименти, които да се използват за оценка на състоянието по замърсяването на седиментите.*
 
 
 ###### **Elastic net - sand stations, 2013-14**  
 First, let's throw all parameters together and do stations as a dependent variable. This means the water column parameters will have to be repeated 3 times, and merged with the sediments & heavy metals.   
+
+```{r elastic_net_env_data_preparation_sand}
+envir.en.sand <- left_join(sediments,
+                           water.sand,
+                           by = "station") 
+
+## make station a factor
+(envir.en.sand <- envir.en.sand %>% 
+    mutate(station = factor(station, levels = c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva")))
+)
+```
+
+Despite everything I said before about substituting LUSI for all water column variables, I'm going to throw everything at the model and see how it does.   
+First try: y = station
+```{r elastic_net_stations_sand}
+en.st.sand <- glmnet(x = as.matrix(envir.en.sand %>% select(TOM:LUSI)), 
+                     y = envir.en.sand %>% pull(station), 
+                     family = "multinomial", type.multinomial = "grouped")
+
+plot(en.st.sand, xvar = "lambda", label = TRUE, type.coef = "2norm")
+
+
+cvfit.st.sand <- cv.glmnet(x = as.matrix(envir.en.sand %>% select(TOM:LUSI)), 
+                     y = envir.en.sand %>% pull(station), 
+                     family="multinomial", type.multinomial = "grouped")
+
+plot(cvfit.st.sand)
+
+
+## find the local minima for lambda.
+lambda.lim <- cvfit.st.sand$lambda[which.min(cvfit.st.sand$cvm)]
+
+## now identify the coefficients that correspond to the lambda minimum.
+temp.coefficients.i <- coefficients(en.st.sand, s = lambda.lim)
+
+```
+So, glmnet thinks there are 8 predictors, but has reservations about the validity of < 8 observations per factor level - as it should.   
+Let's check what a more traditional model with these predictors looks like..  
+```{r check_em_model_sand}
+null.model.sand <- lm(as.numeric(envir.en.sand %>% pull(station)) ~ Cu + Pb + Zn + Cd + Fe + Ni + LUSI, data = envir.en.sand)
+
+summary(null.model.sand)
+```
+Yeeees - as expected, this is complete and utter crap...  
+I'll try again with non-summarized data - for the water, this will essentially repeat Mitko's PhD analyses, but what the hell, I have the computing power and I don't care...   
+The raw data come from the enivronmental data cleaning notebook; I'll save them later to avoid repeating these steps, which I just did off the record..   
+Starting with water column crap.  
+```{r en_water_sand}
+## get only the sand stations from the water column dataset
+(water.sand <- water.params.summary %>% 
+   filter(station %in% c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva")) %>% 
+   ungroup() %>%
+   mutate(station = factor(station, levels = c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva")))
+)
+
+## remove row Paraskeva-2015 (the only one where seston is NaN) + variable secchi - has lots of NAs and NaNs which are not handled by glmnet
+(water.sand.sub <- water.sand %>% 
+    filter(!(station == "Paraskeva" & year == 2015)) %>% 
+    select(-secchi)
+)
+
+## perform the elastic net shit
+en.water.st.sand <- glmnet(x = as.matrix(water.sand.sub %>% select(chl_a:seston)), 
+                           y = water.sand.sub %>% pull(station), 
+                           family = "multinomial", type.multinomial = "grouped")
+
+plot(en.water.st.sand, xvar = "lambda", label = TRUE, type.coef = "2norm")
+
+
+cvfit.water.st.sand <- cv.glmnet(x = as.matrix(water.sand.sub %>% select(chl_a:seston)),
+                                 y = water.sand.sub %>% pull(station), 
+                                 family="multinomial", type.multinomial = "grouped")
+
+plot(cvfit.water.st.sand)
+```
+
+All right, this is markedly better - no yelling, no complaints..   
+Let's see which variables are the most important according to the elastic net.  
+```{r}
+coef(en.water.st.sand, s = cvfit.water.st.sand$lambda.min)
+```
+
+```{r}
+summary(glm(as.numeric(station) ~ NO3 + seston, data = water.sand.sub))
+```
+
+
+
+
 
 
 ##### Seagrass stations - Burgas Bay (2013-2014)  
