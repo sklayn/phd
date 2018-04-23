@@ -660,5 +660,5 @@ plot(cvfit.sediments.st.zostera)
 ```
 
 **For seagrass samples, there are too few observations of the environmental parameters for us to be able to apply the elastic net method of variable selection. For that matter, the PCA on these parameters is not really meaningful either, esp. for the sediments.**   
-In this case, I am going to go back and look at the sediment data for the rest of the stations (there were 2 stations in each zostera meadow at each sampling, and there is data for those, too).  
+In this case, I am going to go back and look at the sediment data for the rest of the stations (there were 2 stations in each seagrass meadow at each sampling, and there is data for those, too).  
 
