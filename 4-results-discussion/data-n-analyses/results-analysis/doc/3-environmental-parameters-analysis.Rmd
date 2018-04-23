@@ -1,6 +1,6 @@
 ---
 title: "Environmental parameters - analysis & variable selection"
-date: "2018-04-19"
+date: "2018-04-23"
 output: 
   html_notebook:
     theme: paper
@@ -363,7 +363,7 @@ The group of individuals 1 and 3 (Kraimorie) has:
 The group of individuals 7, 9 and 8 (Akin) has:  
 • high values for the variable sand.  
 • low values for the variables mean_grain_size, sorting, gravel, TOM and moisture_content (weakest to strongest).  
-**The variables mean_grain_size, sorting, sand and Sozopol(?) are highly correlated with this dimension (respective correlation of 0.93, 0.96, 0.93, 0.91). These variables could therefore summarize themselves the dimension 1.**   
+**The variables mean_grain_size, sorting, sand and Sozopol are highly correlated with this dimension (respective correlation of 0.93, 0.96, 0.93, 0.91). These variables could therefore summarize themselves the dimension 1.**   
 All in all, the PCA describes well the differences in sediment composition between stations. The stations form **4 main clusters**:    
 - cluster 1 is made of individuals such as 7, 8 and 9 (Akin), with high values for the variable sand, and low values for the variables TOM, moisture_content, sorting, mean_grain_size and gravel (weakest to strongest).  
 - cluster 2 is made of individuals such as 16 and 18 (Paraskeva), with high values for the variable moisture_content.  
@@ -425,11 +425,11 @@ temp.coefficients.i <- coefficients(en.st.sand, s = lambda.lim)
 So, glmnet thinks there are 8 predictors, but has reservations about the validity of < 8 observations per factor level - as it should.   
 Let's check what a more traditional model with these predictors looks like..  
 ```{r check_em_model_sand}
-null.model.sand <- lm(as.numeric(envir.en.sand %>% pull(station)) ~ Cu + Pb + Zn + Cd + Fe + Ni + LUSI, data = envir.en.sand)
+null.model.sand <- glm(as.numeric(envir.en.sand %>% pull(station)) ~ Cu + Pb + Zn + Cd + Fe + Ni + LUSI, data = envir.en.sand)
 
 summary(null.model.sand)
 ```
-Yeeees - as expected, this is complete and utter crap...  
+Yeeees - as expected, this is complete crap...  essentially a perfect fit, which is NOT possible, sorry.  
 I'll try again with non-summarized data - for the water, this will essentially repeat Mitko's PhD analyses, but what the hell, I have the computing power and I don't care...   
 The raw data come from the enivronmental data cleaning notebook; I'll save them later to avoid repeating these steps, which I just did off the record..   
 Starting with water column crap.  
@@ -464,16 +464,38 @@ plot(cvfit.water.st.sand)
 
 All right, this is markedly better - no yelling, no complaints..   
 Let's see which variables are the most important according to the elastic net.  
-```{r}
+```{r coef_en_water_sand}
 coef(en.water.st.sand, s = cvfit.water.st.sand$lambda.min)
 ```
-
-```{r}
+  
+```{r test_glm_en_water_sand}
 summary(glm(as.numeric(station) ~ NO3 + seston, data = water.sand.sub))
 ```
+OK - let's pretend this is meaningful, and try again with the **sediment parameters minus the heavy metals**.    
+```{r en_sediments_sand}
+en.sediments.st.sand <- glmnet(x = as.matrix(sediments.sand %>% select(TOM:silt_clay)), 
+                           y = sediments.sand %>% pull(station), 
+                           family = "multinomial", type.multinomial = "grouped")
+
+plot(en.sediments.st.sand, xvar = "lambda", label = TRUE, type.coef = "2norm")
 
 
+cvfit.sediments.st.sand <- cv.glmnet(x = as.matrix(sediments.sand %>% select(TOM:silt_clay)),
+                                 y = sediments.sand %>% pull(station), 
+                                 family="multinomial", type.multinomial = "grouped")
 
+plot(cvfit.sediments.st.sand)
+```
+
+Multiple issues: <8 observations per class - doubtful validity of the results; no convergence for lambda after 100000 iterations; solutions for larger lambdas returned (?).  
+However, the algorithm does return something - let's check it out...  It thinks 4 variables best explain the variability between stations.  
+```{r coef_en_sediments_sand}
+coef(en.sediments.st.sand, s = cvfit.sediments.st.sand$lambda.min)
+```
+```{r test_glm_en_sediments_sand}
+summary(glm(as.numeric(as.factor(station)) ~ TOM + moisture_content + gravel + silt_clay, data = sediments.sand))
+```
+Well, despite all reservations, I'm going to try and see how well these do in envfit etc. to explain the variability of the macrozoobenthic communities themselves.      
 
 
 
@@ -574,4 +596,69 @@ Also save the seagrass sediment PCA, despite its doubtful usability...
 write_rds(sediments.zostera.pca, 
           here(save.dir, "pca_sediments_zostera.RDS"))
 ```
+
+
+###### **Elastic net - seagrasses 2013-14.**    
+Learning from the sand stations, I'll try it on the raw (non-summarized) data.  
+Starting with water column crap.  
+```{r en_water_zostera}
+## get only the zostera stations from the water column dataset
+(water.zostera <- water.params.summary %>% 
+   filter(station %in% c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")) %>% 
+   ungroup() %>%
+   mutate(station = factor(station, levels =  c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")))
+)
+
+## perform the elastic net shit, excluding the Secchi depth - too many missing values 
+en.water.st.zostera <- glmnet(x = as.matrix(water.zostera %>% select(chl_a:seston)), 
+                           y = water.zostera %>% pull(station), 
+                           family = "multinomial", type.multinomial = "grouped")
+
+plot(en.water.st.zostera, xvar = "lambda", label = TRUE, type.coef = "2norm")
+
+
+cvfit.water.st.zostera <- cv.glmnet(x = as.matrix(water.zostera %>% select(chl_a:seston)),
+                                 y = water.zostera %>% pull(station), 
+                                 family="multinomial", type.multinomial = "grouped")
+
+plot(cvfit.water.st.zostera)
+```
+
+Again, multiple complaints - see part about sediments in sand stations. Probably come from insufficent replication.  
+
+Let's see which variables are the most important according to the elastic net.  
+```{r coef_en_water_zostera}
+coef(en.water.st.zostera, s = cvfit.water.st.zostera$lambda.min)
+```
+Goody - NO significant variables according to this analysis...   
+Let's try all of them in the model, then.  
+```{r test_glm_en_water_zostera}
+summary(glm(as.numeric(station) ~ chl_a + Ninorg + NH4 + NO3 + Ntotal + PO4 + seston, data = water.zostera))
+```
+So seston again, and at the boundary of significance...   
+
+OK - let's try again with the **sediment parameters minus the heavy metals**.   
+However, for the seagrass stations, this doesn't work, because for Vromos and Ropotamo there is a single observation each - not allowed by the algorithm...  
+```{r en_sediments_zostera}
+## exclude Vromos and Ropotamo, just for the fun of it 
+sediments.zostera.sub <- sediments.zostera %>% 
+  filter(station != "Vromos", station != "Ropotamo") %>% 
+  # make station a factor
+  mutate(station = factor(station, levels = c("Poda", "Otmanli", "Gradina")))
+  
+en.sediments.st.zostera <- glmnet(x = as.matrix(sediments.zostera.sub %>% select(TOM:silt_clay)), 
+                           y = sediments.zostera.sub %>% pull(station), 
+                           family = "multinomial", type.multinomial = "grouped")
+
+plot(en.sediments.st.zostera, xvar = "lambda", label = TRUE, type.coef = "2norm")
+
+cvfit.sediments.st.zostera <- cv.glmnet(x = as.matrix(sediments.zostera.sub %>% select(TOM:silt_clay)),
+                                 y = sediments.zostera.sub %>% pull(station), 
+                                 family="multinomial", type.multinomial = "grouped")
+
+plot(cvfit.sediments.st.zostera)
+```
+
+**For seagrass samples, there are too few observations of the environmental parameters for us to be able to apply the elastic net method of variable selection. For that matter, the PCA on these parameters is not really meaningful either, esp. for the sediments.**   
+In this case, I am going to go back and look at the sediment data for the rest of the stations (there were 2 stations in each zostera meadow at each sampling, and there is data for those, too).  
 
