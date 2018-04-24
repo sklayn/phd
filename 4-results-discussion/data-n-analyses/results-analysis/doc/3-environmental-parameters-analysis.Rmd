@@ -434,8 +434,11 @@ I'll try again with non-summarized data - for the water, this will essentially r
 The raw data come from the enivronmental data cleaning notebook; I'll save them later to avoid repeating these steps, which I just did off the record..   
 Starting with water column crap.  
 ```{r en_water_sand}
+## import water column raw - non-summarized - data. 
+water.all <- read_csv(here(save.dir, "water_column_raw_clean.csv"))
+
 ## get only the sand stations from the water column dataset
-(water.sand <- water.params.summary %>% 
+(water.sand <- water.all %>% 
    filter(station %in% c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva")) %>% 
    ungroup() %>%
    mutate(station = factor(station, levels = c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva")))
@@ -504,14 +507,20 @@ Now I'll analyze the seagrass stations - mostly focusing on the sediment paramet
 
 Filter water column data anyway, in case I decide to do something with it.     
 ```{r import_water_data_zostera}
-## filter (manually) to get only the zostera 2013-2014 stations
+## filter (manually) to get only the zostera 2013-2014 stations - mean data
 (water.zostera <- water %>% 
     filter(station %in% c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo"))
 )
+
+## also filter the non-summarized water column data
+(water.zostera.all <- water.all %>% 
+    filter(station %in% c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo"))
+)
+
 ```
 
-Import the sediment data (it also contains the heavy metals).   
-```{r import_sediment_data_zostera}
+Import the **summarized** sediment data (it also contains the heavy metals).   
+```{r import_summary_sediment_data_zostera}
 sediments.zostera <- read_csv(here(save.dir, "sediments_imputed_seagrass.csv"))
 
 ## split into sediment parameters sesnu stricto, and heavy metals
@@ -602,23 +611,20 @@ write_rds(sediments.zostera.pca,
 Learning from the sand stations, I'll try it on the raw (non-summarized) data.  
 Starting with water column crap.  
 ```{r en_water_zostera}
-## get only the zostera stations from the water column dataset
-(water.zostera <- water.params.summary %>% 
-   filter(station %in% c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")) %>% 
-   ungroup() %>%
-   mutate(station = factor(station, levels =  c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")))
-)
+## transform station to factor
+water.zostera.all <- water.zostera.all %>% 
+  mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")))
 
 ## perform the elastic net shit, excluding the Secchi depth - too many missing values 
-en.water.st.zostera <- glmnet(x = as.matrix(water.zostera %>% select(chl_a:seston)), 
-                           y = water.zostera %>% pull(station), 
+en.water.st.zostera <- glmnet(x = as.matrix(water.zostera.all %>% select(chl_a:seston)), 
+                           y = water.zostera.all %>% pull(station), 
                            family = "multinomial", type.multinomial = "grouped")
 
 plot(en.water.st.zostera, xvar = "lambda", label = TRUE, type.coef = "2norm")
 
 
-cvfit.water.st.zostera <- cv.glmnet(x = as.matrix(water.zostera %>% select(chl_a:seston)),
-                                 y = water.zostera %>% pull(station), 
+cvfit.water.st.zostera <- cv.glmnet(x = as.matrix(water.zostera.all %>% select(chl_a:seston)),
+                                 y = water.zostera.all %>% pull(station), 
                                  family="multinomial", type.multinomial = "grouped")
 
 plot(cvfit.water.st.zostera)
@@ -630,35 +636,75 @@ Let's see which variables are the most important according to the elastic net.
 ```{r coef_en_water_zostera}
 coef(en.water.st.zostera, s = cvfit.water.st.zostera$lambda.min)
 ```
-Goody - NO significant variables according to this analysis...   
-Let's try all of them in the model, then.  
+Goody - seston is the only significant variable according to this analysis... Still, better than before, when there were absolutely none.    
+Let's try the model, then.  
 ```{r test_glm_en_water_zostera}
-summary(glm(as.numeric(station) ~ chl_a + Ninorg + NH4 + NO3 + Ntotal + PO4 + seston, data = water.zostera))
+summary(glm(as.numeric(station) ~ seston, data = water.zostera.all))
 ```
-So seston again, and at the boundary of significance...   
+So seston is not even significant here, and the reduction in deviance is not really significant...  
+Let's try all variables, then, just to see what comes up.  
+```{r test2_glm_en_water_zostera}
+summary(glm(as.numeric(station) ~ chl_a + Ninorg + NH4 + NO3 + Ntotal + PO4 + seston, data = water.zostera.all))
+```
+Seston, at the boundary of significance... Load of shit, all of it.  
 
 OK - let's try again with the **sediment parameters minus the heavy metals**.   
-However, for the seagrass stations, this doesn't work, because for Vromos and Ropotamo there is a single observation each - not allowed by the algorithm...  
+In this case, I am going to go back and look at the sediment data for the rest of the stations (there were 2 stations in each seagrass meadow at each sampling, and there is data for those, too).   
 ```{r en_sediments_zostera}
-## exclude Vromos and Ropotamo, just for the fun of it 
-sediments.zostera.sub <- sediments.zostera %>% 
-  filter(station != "Vromos", station != "Ropotamo") %>% 
-  # make station a factor
-  mutate(station = factor(station, levels = c("Poda", "Otmanli", "Gradina")))
-  
-en.sediments.st.zostera <- glmnet(x = as.matrix(sediments.zostera.sub %>% select(TOM:silt_clay)), 
-                           y = sediments.zostera.sub %>% pull(station), 
+## import the non-summarized sediment data for the zostera stations
+(sediments.zostera.all <- read_csv(here(save.dir, "sediments_seagrass_raw_clean.csv"))
+)  
+
+## make station a factor 
+sediments.zostera.all <- sediments.zostera.all %>% 
+  mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")))
+
+en.sediments.st.zostera <- glmnet(x = as.matrix(sediments.zostera.all %>% select(TOM:silt_clay)), 
+                           y = sediments.zostera.all %>% pull(station), 
                            family = "multinomial", type.multinomial = "grouped")
 
 plot(en.sediments.st.zostera, xvar = "lambda", label = TRUE, type.coef = "2norm")
 
-cvfit.sediments.st.zostera <- cv.glmnet(x = as.matrix(sediments.zostera.sub %>% select(TOM:silt_clay)),
-                                 y = sediments.zostera.sub %>% pull(station), 
+cvfit.sediments.st.zostera <- cv.glmnet(x = as.matrix(sediments.zostera.all %>% select(TOM:silt_clay)),
+                                 y = sediments.zostera.all %>% pull(station), 
                                  family="multinomial", type.multinomial = "grouped")
 
 plot(cvfit.sediments.st.zostera)
 ```
 
-**For seagrass samples, there are too few observations of the environmental parameters for us to be able to apply the elastic net method of variable selection. For that matter, the PCA on these parameters is not really meaningful either, esp. for the sediments.**   
-In this case, I am going to go back and look at the sediment data for the rest of the stations (there were 2 stations in each seagrass meadow at each sampling, and there is data for those, too).  
+It still complains, doesn't want to assess the fit. 
+I'm going to exclude Vromos and Ropotamo (only 2 observations each) and see if that changes anything..  
+```{r en_sediments_zostera_2}
+## filter out Vromos and Ropotamo
+(sediments.zostera.all.sub <- sediments.zostera.all %>% 
+   filter(station != "Ropotamo", station != "Vromos") %>%
+   mutate(station = factor(station, levels = c("Poda", "Otmanli", "Gradina")))
+)
 
+
+en.sediments.st.zostera.2 <- glmnet(x = as.matrix(sediments.zostera.all.sub %>%  select(TOM:silt_clay)), 
+                                    y = sediments.zostera.all.sub %>% pull(station), 
+                                    family = "multinomial", type.multinomial = "grouped")
+
+plot(en.sediments.st.zostera.2, xvar = "lambda", label = TRUE, type.coef = "2norm")
+
+cvfit.sediments.st.zostera.2 <- cv.glmnet(x = as.matrix(sediments.zostera.all.sub %>% select(TOM:silt_clay)),
+                                          y = sediments.zostera.all.sub %>% pull(station), 
+                                          family="multinomial", type.multinomial = "grouped")
+
+plot(cvfit.sediments.st.zostera.2)
+```
+
+Well wouldn't you know it - it works this time (with 3 out of the 5 stations)!  
+Check out to which parameters we owe this immense honor..  
+```{r coef_en_sediments_zostera_2}
+coef(en.sediments.st.zostera.2, s = cvfit.sediments.st.zostera.2$lambda.min)
+```
+OK, not too terrible, all things considered... Let's plug them in a model and see what it says.   
+```{r test_glm_en_sediments_zostera}
+summary(glm(as.numeric(as.factor(station)) ~ TOM + moisture_content + sorting + silt_clay, data = sediments.zostera.all.sub))
+```
+So the moisture content and the silt & clay (maybe the TOM, a little)..  
+
+
+**For seagrass samples, there are too few observations of the environmental parameters for us to be able to apply the elastic net method of variable selection. For that matter, the PCA on these parameters is not really meaningful either, esp. for the sediments.**   

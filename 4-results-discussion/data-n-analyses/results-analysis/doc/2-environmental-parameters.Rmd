@@ -1,6 +1,6 @@
 ---
 title: "Environmental parameters - cleaning & preparation"
-date: "2018-03-19"
+date: "2018-03-24"
 output: 
   html_notebook:
     theme: paper
@@ -157,8 +157,13 @@ First - by station, month and year (= mean of all depths at each station and poi
 )
 
 ```
+OK, we'll save this dataset - in case non-summarized data is needed for some analysis of variance etc. (yes it turns out it is needed, found out the hard way).     
+```{r save_water_column_raw_clean}
+write_csv(water.params.summary, 
+          here(save.dir, "water_column_raw_clean.csv"))
+```
 
-Then, summarise by station -> get long-term averages over the whole period of data availability (such as it is), and also sd, min and max values. This will then be exported as a table, formatted from within R (hopefully), to be included in the relevant thesis appendix.
+Then, summarise by station -> get **long-term averages** over the whole period of data availability (such as it is), and also sd, min and max values. This will then be exported as a table, formatted from within R (hopefully), to be included in the relevant thesis appendix.
 ```{r summary_water_column_st_long-term}
 water.params.summary.st.LT <- water.params.summary %>%
   group_by(station) %>%
@@ -241,6 +246,11 @@ Add the bottom O2 (& temperature) to the summary dataset by station.
                                     by = c("station", "day", "month", "year"))
  
  )
+```
+Save this, too - before summarizing further.   
+```{r save_oxygen_raw_clean}
+write_csv(oxygen.summary.st.all, 
+          here(save.dir, "oxygen_raw_clean.csv"))
 ```
 
 Now, average for the stations only (all data available, if you can call it long-term) - as for the other water column variables.  
@@ -331,7 +341,7 @@ Yay! After all the possibly-deal-breaking manipulations, there really is no miss
 Now summarise the seagrass parameters.  
 With the exception of 2012, there are zoobenthic samples from only 1 station/meadow (number 1 everywhere). Don't know which way of summarising them is correct.. on one hand, no - better to have multiple sites in each meadow to better reflect variability in cover, biomass, etc. - more representative of that particular meadow's characteristics.. On the other hand, my animals - not so mobile - don't exactly care what the cover is at other points in the meadow, so maybe the snapshot closest to their own location will explain the observed zoobenthic community differences better. Actually, they could care - the species that eat the seagrass, if any; or if they eat particular epiphytes which differ between seagrass species... But that's an experiment for another day.     
 
-Anyway, I'm keeping all stations from 2012, and the st.1's from the other years.   
+Bottom line: In general, I'm keeping all stations from 2012, and the st.1's from the other years. Just in case, however, I'll also keep the raw (cleaned) file with all stations etc. - it might be useful for the elastic net/PCA crappity crap.   
 I'm interested in the shoot density and biomass of **all seagrass species** at each station/site, taken together (again, the animals don't particularly care).   
 ```{r summary_seagrass_filter_st}
 ## first, filter out the st.2's at each sampling location for 2013 & 2014  
@@ -339,11 +349,26 @@ seagrass.params.summary <- seagrass.params %>%
   filter(year %in% c(2013, 2014), grepl("1", x = station))
 
 ## then add the data for 2012 (from the original tibble)
-(seagrass.params.summary <- bind_rows(seagrass.params.summary, 
-                                     seagrass.params %>% filter(year == 2012))
+(seagrass.params.summary <- bind_rows(seagrass.params.summary,
+                                      seagrass.params %>% filter(year == 2012))
 )
 ```
 
+First, calculate the total shoot count, above- and below-ground biomass - keeping **all stations and replicates**, and save.  
+```{r seagrass_all_species_all_samples}
+(seagrass.params.all.stations <- seagrass.params %>%
+  group_by(station, year, replicate) %>%
+  ## clumsy, but works, and I don't expect to have to do it again anyway - except below
+  transmute(shoot_count = znol_sd_count + zmar_sd_count + zpal_sd_count + pp_sd_count, 
+            ag_biomass_wet = znol_ag_wet + zmar_ag_wet + zpal_ag_wet + pp_ag_wet, 
+            bg_biomass_wet = znol_bg_wet + zmar_bg_wet + zpal_bg_wet + pp_bg_wet)
+)
+
+write_csv(seagrass.params.all.stations, 
+          here(save.dir, "seagrass_all_stations.csv"))
+```
+
+Then do the same on the reduced dataset, and proceed with the other summaries.   
 ```{r summary_seagrass_all_species}
 (seagrass.params.summary.all <- seagrass.params.summary %>%
   group_by(station, year, replicate) %>%
@@ -442,10 +467,14 @@ Summarize the sediment parameters - by station and year for sand/seagrass; by si
 )
 ```
 
-
+Summarize the **st.1** data from all meadows. As with the seagrass parameters, I originally decided it was more useful to look at the immediate environment of my macrozoobenthic communities.   
 ```{r summary_sediments_seagrass}
 (sediment.params.summary.seagrass <- sediment.params %>% 
-   filter(year %in% c(2013, 2014), habitat == "Z") %>%
+   ## filter the seagrass st.1's from 2013 and 2014 
+   filter(year %in% c(2013, 2014), habitat == "Z", grepl("1", x = station)) %>%
+   ## remove the numbers from the station names
+   mutate(station = gsub(pattern = "1", replacement = "", x = station)) %>%
+   ## make station a factor
    mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo"))) %>% 
    group_by(station, year) %>% 
    select(-c(station:habitat)) %>%
@@ -454,6 +483,23 @@ Summarize the sediment parameters - by station and year for sand/seagrass; by si
 )
 
 ```
+
+Now clean a little the whole dataset of sediments in seagrass (2013-2014). Save without summarizing, preserving variability.    
+```{r save_sediments_seagrass_all_stations}
+(sediment.params.all.st.seagrass <- sediment.params %>% 
+   ## filter all seagrass stations from 2013 and 2014 
+   filter(year %in% c(2013, 2014), habitat == "Z") %>%
+   ## remove the numbers from the station names
+   mutate(station = str_extract(station, "[^\\d]+")) %>%
+   ## make station a factor
+   mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo"))) %>% 
+   arrange(station, year)
+)
+
+write_csv(sediment.params.all.st.seagrass, 
+          here(save.dir, "sediments_seagrass_raw_clean.csv"))
+```
+
 
 ```{r summary_sediments_2012}
 ## get the sites, again
@@ -501,7 +547,10 @@ write_csv(sediment.params.imputed.sand,
 Now do the same for the seagrasses (2013-2014), which is considerably easier - we only need to fill in the heavy metals (this time, upwards).   
 ```{r impute_missing_sediments_seagrass}
 (sediment.params.imputed.seagrass <- sediment.params %>% 
-   filter(year %in% c(2013, 2014), habitat == "Z") %>%
+   filter(year %in% c(2013, 2014), habitat == "Z", grepl("1", x = station)) %>% 
+   ## remove the numbers from the station names
+   mutate(station = str_extract(station, "[^\\d]+")) %>%
+   ## make station a factor
    mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo"))) %>% 
    group_by(station) %>% 
    fill(Cu:Ni, .direction = "up")

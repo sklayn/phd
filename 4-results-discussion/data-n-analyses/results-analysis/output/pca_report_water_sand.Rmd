@@ -20,9 +20,9 @@ The analysis of the graphs does not detect any outlier.
 The inertia of the first dimensions shows if there are strong relationships between variables and suggests the number of dimensions that should be studied.
 
 The first two dimensions of PCA express **72.95%** of the total dataset inertia ; that means that 72.95% of the individuals (or variables) cloud total variability is explained by the plane.
-The inertia observed on the first plane is smaller than the reference value that equals **85.74%**, therefore low in comparison
-(the reference value is the 0.95-quantile of the inertia percentages distribution obtained by simulating 864 data tables of equivalent size on the basis of a normal distribution).
-Moreover, the inertia projected on the first dimension is smaller than the reference value **61.68%**.
+The inertia observed on the first plane is smaller than the reference value that equals **85.72%**, therefore low in comparison
+(the reference value is the 0.95-quantile of the inertia percentages distribution obtained by simulating 850 data tables of equivalent size on the basis of a normal distribution).
+Moreover, the inertia projected on the first dimension is smaller than the reference value **61.86%**.
 The variability expressed by the PCA is thus **not** significant.
 
 ```{r, echo = FALSE, fig.align = 'center', fig.height = 3.5, fig.width = 5.5}
@@ -33,7 +33,7 @@ barplot(res$eig[,2], names.arg = 1:nrow(res$eig))
 **Figure 2 - Decomposition of the total inertia on the components of the PCA**
 
 An estimation of the right number of axis to interpret suggests to not interpret the analysis at all.
-Indeed, the amount of inertia of the first axis is not higher than that obtained by the 0.95-quantile of random distributions (46.6% against 61.68%).
+Indeed, the amount of inertia of the first axis is not higher than that obtained by the 0.95-quantile of random distributions (46.6% against 61.86%).
 This observation suggests that no axis is carrying a real information.
 As a consequence, the description will stand to these axis.
 
