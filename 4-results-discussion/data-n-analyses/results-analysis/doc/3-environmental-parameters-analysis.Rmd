@@ -1,6 +1,6 @@
 ---
 title: "Environmental parameters - analysis & variable selection"
-date: "2018-04-23"
+date: "2018-04-25"
 output: 
   html_notebook:
     theme: paper
@@ -198,7 +198,7 @@ In terms of variables, PC1 can be considered a representation of the eutrophicat
 
 Since I did these, I found out about a new package doing **automatic** exploration & report on the PCA - FactoInvestigate. Let's try it out, see what we get..  
 ```{r report_pca_water_sand}
-Investigate(water.sand.pca.fin, file = here(save.dir, "pca_report_water_sand.Rmd"), document = "pdf_document", parallel = TRUE)
+Investigate(water.sand.pca.fin, file = here(save.dir, "pca_report_water_sand.Rmd"), document = "pdf_document")
 ```
 
 The automatic report **fails** at the attempt to describe the dimensions - that's because there is nothing to describe; the orignal data only has 1 value per station - not really appropriate for PCA, which attempts to describe variability after all (what variability with only 1 value?).  
@@ -708,3 +708,75 @@ So the moisture content and the silt & clay (maybe the TOM, a little)..
 
 
 **For seagrass samples, there are too few observations of the environmental parameters for us to be able to apply the elastic net method of variable selection. For that matter, the PCA on these parameters is not really meaningful either, esp. for the sediments.**   
+
+
+##### Sozopol Bay, 2012  
+Starting with the water column parameters. Here at least there are some more - thanks to the 2009-2011 project.  
+However, I am going to work with the non-summarized data, because I don't have any more nerves for invalid analyses.  
+```{r filter_water_data_2012}
+## from the long-term non-summarized water column parameters
+(water.2012 <- water.all %>% 
+    filter(station %in% c("Konski", "Ribka", "Gradina"))
+)
+```
+There is no point to add LUSI here - the entire Sozopol Bay falls within one watershed, so only one value.  
+
+ 
+```{r pca_water_2012}
+## scale and center the data (different units), and add back the stations 
+water.2012.scaled <- scale(water.2012 %>% select(chl_a:secchi), center = TRUE, scale = TRUE)
+
+water.2012.scaled <- bind_cols(water.2012 %>% select(station), 
+                               as.tibble(water.2012.scaled))
+
+## make station a factor
+water.2012.scaled <- water.2012.scaled %>% 
+  mutate(station = factor(station, levels = c("Konski", "Ribka", "Gradina")))
+
+## perform PCA with FactoMineR - it's equivalent to the base version, anyway, but the visualization expects a particular structure of the results, so easier to do it this way. 
+water.2012.pca <- PCA(water.2012.scaled,
+                      scale.unit = FALSE, 
+                      quali.sup = 1,
+                      graph = FALSE)
+
+## display the summary and biplot
+summary(water.2012.pca)
+
+(plot.water.2012.pca <- fviz_pca_biplot(water.2012.pca, axes = c(1, 2), 
+                                        label = "var", 
+                                        col.var = "cos2", gradient.cols = c("skyblue", "navyblue", "red"),
+                                        repel = TRUE)
+)
+
+ggsave(here(figures.dir, "pca_water_2012.png"), plot.water.2012.pca, dpi = 300)
+```
+This, however, is without first filtering the very much correlated variables.  
+
+Generate a report on the PCA with FactoInvestigate.  
+```{r report_pca_water_2012}
+Investigate(water.2012.pca, file = "pca_water_2012_report.Rmd", document = "html_document", remove.temp = TRUE)
+```
+OK this bullshit doesn't work, I don't know why and I don't care - something to do with outlier detection. That's why I hate complicated black box functions.  
+Moving right along to elastic net, which I would trust more in any case.  
+```{r en_water_2012}
+## filter out one row with NaN in NH4
+water.2012.sub <- water.2012 %>% 
+  filter(!is.nan(NH4))
+
+en.water.st.2012 <- glmnet(x = as.matrix(water.2012.sub %>% select(chl_a:seston)), 
+                           y = water.2012.sub %>% pull(station), 
+                           family = "multinomial", type.multinomial = "grouped")
+
+plot(en.water.st.2012, xvar = "lambda", label = TRUE, type.coef = "2norm")
+
+## check the fit
+cvfit.water.st.2012 <- cv.glmnet(x = as.matrix(water.2012.sub %>% select(chl_a:seston)),
+                                 y = water.2012.sub %>% pull(station), 
+                                 family="multinomial", type.multinomial = "grouped")
+
+plot(cvfit.water.st.2012)
+
+```
+
+No convergence for lambda, even for the maximum number of iterations.  
+
