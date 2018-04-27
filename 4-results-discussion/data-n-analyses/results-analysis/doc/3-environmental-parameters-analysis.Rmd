@@ -1,6 +1,6 @@
 ---
 title: "Environmental parameters - analysis & variable selection"
-date: "2018-04-25"
+date: "2018-04-27"
 output: 
   html_notebook:
     theme: paper
@@ -422,14 +422,7 @@ lambda.lim <- cvfit.st.sand$lambda[which.min(cvfit.st.sand$cvm)]
 temp.coefficients.i <- coefficients(en.st.sand, s = lambda.lim)
 
 ```
-So, glmnet thinks there are 8 predictors, but has reservations about the validity of < 8 observations per factor level - as it should.   
-Let's check what a more traditional model with these predictors looks like..  
-```{r check_em_model_sand}
-null.model.sand <- glm(as.numeric(envir.en.sand %>% pull(station)) ~ Cu + Pb + Zn + Cd + Fe + Ni + LUSI, data = envir.en.sand)
-
-summary(null.model.sand)
-```
-Yeeees - as expected, this is complete crap...  essentially a perfect fit, which is NOT possible, sorry.  
+So, glmnet fails because there are too few observations...   
 I'll try again with non-summarized data - for the water, this will essentially repeat Mitko's PhD analyses, but what the hell, I have the computing power and I don't care...   
 The raw data come from the enivronmental data cleaning notebook; I'll save them later to avoid repeating these steps, which I just did off the record..   
 Starting with water column crap.  
@@ -470,11 +463,12 @@ Let's see which variables are the most important according to the elastic net.
 ```{r coef_en_water_sand}
 coef(en.water.st.sand, s = cvfit.water.st.sand$lambda.min)
 ```
-  
+Seston and NO3 are the (apparent) winners. All right, I'll try those..     
 ```{r test_glm_en_water_sand}
 summary(glm(as.numeric(station) ~ NO3 + seston, data = water.sand.sub))
 ```
-OK - let's pretend this is meaningful, and try again with the **sediment parameters minus the heavy metals**.    
+OK - the deviance drops between the null model and the actual model, although I couldn't say how significant this is.  
+For now, let's pretend this is meaningful, and try again with the **sediment parameters minus the heavy metals**.    
 ```{r en_sediments_sand}
 en.sediments.st.sand <- glmnet(x = as.matrix(sediments.sand %>% select(TOM:silt_clay)), 
                            y = sediments.sand %>% pull(station), 
@@ -499,6 +493,92 @@ coef(en.sediments.st.sand, s = cvfit.sediments.st.sand$lambda.min)
 summary(glm(as.numeric(as.factor(station)) ~ TOM + moisture_content + gravel + silt_clay, data = sediments.sand))
 ```
 Well, despite all reservations, I'm going to try and see how well these do in envfit etc. to explain the variability of the macrozoobenthic communities themselves.      
+
+
+Finally, I'll try with **habitats** as the dependent variable. Essentially, these are the groups that also come from the cluster analysis of community composition - so maybe it's more accurate to say they are the biotopes.   
+This is only relevant for the sand communities (2013-2014) - the seagrasses are all one habitat/biotope, and 2012 are not so distinct (and the data are shitty).       
+Whatever. I'm defining them by hand, then joining them to each dataset (water and sediments), and redoing the analyses.  
+```{r import_habitats_sand}
+## define the habitats (biotopes) = clusters from the MDS and other community structure analyses
+(habitats.sand <- tibble(station = c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva"),
+                         habitat = c(1, 1, 2, 3, 4, 3))
+ )
+```
+
+Now perform the elastic net analysis using the non-summarized water column data (first adding the habitats to the dataset).  
+```{r en_water_hab_sand}
+## add habitats to water column (non-summarized) dataset
+(water.sand.sub.hab <- left_join(water.sand.sub, 
+                                 habitats.sand, 
+                                 by = "station")
+)
+
+## make habitat a factor
+water.sand.sub.hab <- water.sand.sub.hab %>% 
+  mutate(habitat = factor(habitat))
+
+## perform the elastic net with habitat as dependent variable
+en.water.hab.sand <- glmnet(x = as.matrix(water.sand.sub.hab %>% select(chl_a:seston)), 
+                            y = water.sand.sub.hab %>% pull(habitat), 
+                            family = "multinomial", type.multinomial = "grouped")
+
+plot(en.water.hab.sand, xvar = "lambda", label = TRUE, type.coef = "2norm")
+
+
+cvfit.water.hab.sand <- cv.glmnet(x = as.matrix(water.sand.sub.hab %>% select(chl_a:seston)),
+                                  y = water.sand.sub.hab %>% pull(habitat), 
+                                  family="multinomial", type.multinomial = "grouped")
+
+plot(cvfit.water.hab.sand)
+```
+
+Wow, no complaints here - what's going on?!  
+```{r coef_en_water_hab_sand}
+coef(en.water.hab.sand, s = cvfit.water.hab.sand$lambda.min)
+```
+Hm, NO3 and seston again. Great!   
+Let's check out what the model says.    
+```{r test_glm_en_water_hab_sand}
+summary(glm(as.numeric(as.factor(habitat)) ~ NO3 + seston, data = water.sand.sub.hab))
+```
+
+Now, fingers crossed for the sediments.  
+```{r en_sediments_hab_sand}
+## add the habitats to the sediment dataset 
+sediments.sand.hab <- left_join(sediments.sand, 
+                                habitats.sand, 
+                                by = "station")
+
+## convert habitat to factor
+sediments.sand.hab <- sediments.sand.hab %>% 
+  mutate(habitat = factor(habitat))
+
+en.sediments.hab.sand <- glmnet(x = as.matrix(sediments.sand.hab %>%
+                                                select(TOM:silt_clay)), 
+                                y = sediments.sand.hab %>% pull(habitat), 
+                                family = "multinomial", type.multinomial = "grouped")
+
+plot(en.sediments.hab.sand, xvar = "lambda", label = TRUE, type.coef = "2norm")
+
+cvfit.sediments.hab.sand <- cv.glmnet(x = as.matrix(sediments.sand.hab %>% select(TOM:silt_clay)),
+                                      y = sediments.sand.hab %>% pull(habitat), 
+                                      family="multinomial", type.multinomial = "grouped")
+
+plot(cvfit.sediments.hab.sand)
+```
+No luck here - still too few replications, I guess. No convergence even after the maximum number of iterations.    
+The lowest deviance is achieved with 4 explanatory variables - let's check them out.  
+```{r coef_en_sediments_hab_sand}
+coef(en.sediments.hab.sand, s = cvfit.sediments.hab.sand$lambda.min)
+```
+
+Test the model.  
+```{r test_glm_en_sediments_hab_sand}
+summary(glm(as.numeric(as.factor(habitat)) ~ TOM + moisture_content + gravel + sorting, data = sediments.sand.hab))
+```
+Gravel and sorting, still over 0.05 (but < 0.1).   
+
+More or less the same results with the habitats as dependent variable (with the same statistical problems).  
 
 
 
@@ -706,8 +786,45 @@ summary(glm(as.numeric(as.factor(station)) ~ TOM + moisture_content + sorting + 
 ```
 So the moisture content and the silt & clay (maybe the TOM, a little)..  
 
+Let's play with the **seagrass parameters**. I'm not holding my breath, though.  
+```{r import_seagrass_params_zostera}
+## import the non-summarized data first 
+(seagrass.all <- read_csv(here(save.dir, "seagrass_all_stations.csv"))
+ )
 
-**For seagrass samples, there are too few observations of the environmental parameters for us to be able to apply the elastic net method of variable selection. For that matter, the PCA on these parameters is not really meaningful either, esp. for the sediments.**   
+## remove the number from the station names
+seagrass.all.clean <- seagrass.all %>% 
+  mutate(station = str_extract(station, "[^\\d]+"))
+
+## filter only the 2013-2014 stations and convert station to factor
+(seagrass.all.clean <- seagrass.all.clean %>% 
+    filter(station %in% c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")) %>% 
+    mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")))
+)  
+```
+
+Perform the elastic net variable selection.  
+```{r en_seagrass_params_zostera}
+en.seagrass.st.zostera <- glmnet(x = as.matrix(seagrass.all.clean %>%  select(shoot_count:bg_biomass_wet)),
+                                 y = seagrass.all.clean %>% pull(station), 
+                                 family = "multinomial", type.multinomial = "grouped")
+
+plot(en.seagrass.st.zostera, xvar = "lambda", label = TRUE, type.coef = "2norm")
+
+cvfit.seagrass.st.zostera <- cv.glmnet(x = as.matrix(seagrass.all.clean %>% select(shoot_count:bg_biomass_wet)),
+                                       y = seagrass.all.clean %>% pull(station),
+                                       family="multinomial", type.multinomial = "grouped")
+
+plot(cvfit.seagrass.st.zostera)
+```
+Still it doesn't like it... no convergence of lambda after the max number of iterations. Sweet...   
+From the plot of the fit it looks like all 3 parameters combined would provide the best explanatory power, but who knows...   
+```{r test_glm_seagrass_params_zostera}
+summary(glm(as.numeric(as.factor(station)) ~ shoot_count + ag_biomass_wet + bg_biomass_wet, data = seagrass.all.clean))
+```
+*Maybe* just the below-ground wet biomass...   
+
+**For seagrass samples, it looks like there are too few observations of the environmental parameters for us to be able to apply the elastic net method of variable selection. For that matter, the PCA on these parameters is not really meaningful either, esp. for the sediments.**   
 
 
 ##### Sozopol Bay, 2012  
@@ -765,18 +882,25 @@ water.2012.sub <- water.2012 %>%
 
 en.water.st.2012 <- glmnet(x = as.matrix(water.2012.sub %>% select(chl_a:seston)), 
                            y = water.2012.sub %>% pull(station), 
-                           family = "multinomial", type.multinomial = "grouped")
+                           family = "multinomial")
 
 plot(en.water.st.2012, xvar = "lambda", label = TRUE, type.coef = "2norm")
 
 ## check the fit
 cvfit.water.st.2012 <- cv.glmnet(x = as.matrix(water.2012.sub %>% select(chl_a:seston)),
                                  y = water.2012.sub %>% pull(station), 
-                                 family="multinomial", type.multinomial = "grouped")
+                                 family="multinomial")
 
 plot(cvfit.water.st.2012)
 
 ```
 
-No convergence for lambda, even for the maximum number of iterations.  
+```{r}
+coef(en.water.st.2012, s = cvfit.water.st.2012$lambda.min)
+```
+
+
+No convergence for lambda, even after the maximum number of iterations (10000).. Isn't it sweet.  
+
+
 
