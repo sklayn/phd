@@ -196,12 +196,13 @@ Stations 2 and 6, then 1 and 4 contribute the most to the first PC (Dim.1), nad 
 On a plot of PC1-2, the separation is between stations 1 2 in one end (to the left), and stations 4 and 6 in the other (right); stations 3 and 5 are close  together near the middle (not too well represented).    
 In terms of variables, PC1 can be considered a representation of the eutrophication gradient - highly correlated with Ntotal and chl-a on one side ("pulling" to the left), and with bottom O2 (and total O2) on the other ("pulling" to the right). PC2 represents mainly the temperature ("pulls" down), and to a lesser degree - NO3.  
 
-Since I did these, I found out about a new package doing **automatic** exploration & report on the PCA - FactoInvestigate. Let's try it out, see what we get..  
+Since I did these, I found out about a new package doing **automatic** exploration & report on the PCA - FactoInvestigate. Let's try it out, see what we get..   
+This inevitably fails, because it can't describe the dimensions with no actual variation - I'm commenting it out, but leaving it here for the sake of completeness.   
 ```{r report_pca_water_sand}
-Investigate(water.sand.pca.fin, file = here(save.dir, "pca_report_water_sand.Rmd"), document = "pdf_document")
+# Investigate(water.sand.pca.fin, file = "pca_report_water_sand.Rmd", document = "html_document", remove.temp = TRUE)
 ```
 
-The automatic report **fails** at the attempt to describe the dimensions - that's because there is nothing to describe; the orignal data only has 1 value per station - not really appropriate for PCA, which attempts to describe variability after all (what variability with only 1 value?).  
+To reiterate - the automatic report **fails** at the attempt to describe the dimensions - that's because there is nothing to describe; the orignal data only has 1 value per station - not really appropriate for PCA, which attempts to describe variability after all (what variability with only 1 value?).  
 Before that, it manages to say that the analysis should not be attempted at all - see generated report. Quoting: "An estimation of the right number of axes to interpret suggests to not interpret the analysis at all.  Indeed, the amount of inertia of the first axis is not higher than that obtained by the 0.95-quantile of random distributions (46.6% against 61.68%). This observation suggests that no axis is carrying a real information."
 
 **Also, I don't like how LUSI got excluded - I think in the end, I might just show the correlation table to demonstrate that LUSI reflects well the eutrophication gradient, then just pass it on to the community structure analyses. Will dramatically reduce the number of variables + the uncertainty associated with only a few discrete samples of highly variable parameters such as nutrients and oxygen.**  
@@ -381,7 +382,7 @@ write_rds(sediments.sand.pca,
 
 For the **heavy metals**, I think the wisest would be to calculate the total (new variable, sum of all heavy metals), calculate another variable - ratio of every metal to Fe, which is usually present naturally in the environment, and to keep only Pb and Cd - source - pollution from human activities.    
 
-*На национално ниво няма изведени стандарти за качество на околната среда за морски седименти, които да се използват за оценка на състоянието по замърсяването на седиментите.*
+**There are no national standards for environmental quality for heavy metals in sediments - these values are next to useless then. All I can say is at which station the concentration of Pb is higher, and some such.**   
 
 
 ###### **Elastic net - sand stations, 2013-14**  
@@ -399,27 +400,21 @@ envir.en.sand <- left_join(sediments,
 ```
 
 Despite everything I said before about substituting LUSI for all water column variables, I'm going to throw everything at the model and see how it does.   
-First try: y = station
+First try: y = station   
+It doesn't work, because there are too few observtions per group, this being the summarized long-term water column data (commented out to allow knitting of the notebook).    
 ```{r elastic_net_stations_sand}
-en.st.sand <- glmnet(x = as.matrix(envir.en.sand %>% select(TOM:LUSI)), 
-                     y = envir.en.sand %>% pull(station), 
-                     family = "multinomial", type.multinomial = "grouped")
-
-plot(en.st.sand, xvar = "lambda", label = TRUE, type.coef = "2norm")
-
-
-cvfit.st.sand <- cv.glmnet(x = as.matrix(envir.en.sand %>% select(TOM:LUSI)), 
-                     y = envir.en.sand %>% pull(station), 
-                     family="multinomial", type.multinomial = "grouped")
-
-plot(cvfit.st.sand)
-
-
-## find the local minima for lambda.
-lambda.lim <- cvfit.st.sand$lambda[which.min(cvfit.st.sand$cvm)]
-
-## now identify the coefficients that correspond to the lambda minimum.
-temp.coefficients.i <- coefficients(en.st.sand, s = lambda.lim)
+# en.st.sand <- glmnet(x = as.matrix(envir.en.sand %>% select(TOM:LUSI)), 
+#                      y = envir.en.sand %>% pull(station), 
+#                      family = "multinomial", type.multinomial = "grouped")
+# 
+# plot(en.st.sand, xvar = "lambda", label = TRUE, type.coef = "2norm")
+# 
+# 
+# cvfit.st.sand <- cv.glmnet(x = as.matrix(envir.en.sand %>% select(TOM:LUSI)), 
+#                            y = envir.en.sand %>% pull(station), 
+#                            family="multinomial", type.multinomial = "grouped")
+# 
+# plot(cvfit.st.sand)
 
 ```
 So, glmnet fails because there are too few observations...   
@@ -471,15 +466,15 @@ OK - the deviance drops between the null model and the actual model, although I 
 For now, let's pretend this is meaningful, and try again with the **sediment parameters minus the heavy metals**.    
 ```{r en_sediments_sand}
 en.sediments.st.sand <- glmnet(x = as.matrix(sediments.sand %>% select(TOM:silt_clay)), 
-                           y = sediments.sand %>% pull(station), 
-                           family = "multinomial", type.multinomial = "grouped")
+                               y = sediments.sand %>% pull(station),
+                               family = "multinomial", type.multinomial = "grouped")
 
 plot(en.sediments.st.sand, xvar = "lambda", label = TRUE, type.coef = "2norm")
 
 
 cvfit.sediments.st.sand <- cv.glmnet(x = as.matrix(sediments.sand %>% select(TOM:silt_clay)),
-                                 y = sediments.sand %>% pull(station), 
-                                 family="multinomial", type.multinomial = "grouped")
+                                     y = sediments.sand %>% pull(station), 
+                                     family="multinomial", type.multinomial = "grouped")
 
 plot(cvfit.sediments.st.sand)
 ```
@@ -574,9 +569,9 @@ coef(en.sediments.hab.sand, s = cvfit.sediments.hab.sand$lambda.min)
 
 Test the model.  
 ```{r test_glm_en_sediments_hab_sand}
-summary(glm(as.numeric(as.factor(habitat)) ~ TOM + moisture_content + gravel + sorting, data = sediments.sand.hab))
+summary(glm(as.numeric(as.factor(habitat)) ~ TOM + moisture_content + gravel + silt_clay, data = sediments.sand.hab))
 ```
-Gravel and sorting, still over 0.05 (but < 0.1).   
+No significant variables - mostly expected, without convergence and all.   
 
 More or less the same results with the habitats as dependent variable (with the same statistical problems).  
 
@@ -684,6 +679,157 @@ Also save the seagrass sediment PCA, despite its doubtful usability...
 ```{r save_pca_sediments_zostera}
 write_rds(sediments.zostera.pca, 
           here(save.dir, "pca_sediments_zostera.RDS"))
+```
+
+
+For consistency, I'll do a quick PCA on **non-summarized water column data** in seagrass.  
+First - without removing any variables, even if they're highly inter-correlated.  
+```{r pca_water_zostera_all}
+## scale and center the data
+water.zostera.all.scaled <- scale(water.zostera.all %>% select(-c(station:month)), 
+                                  center = TRUE, scale = TRUE)
+
+water.zostera.all.scaled <- bind_cols(water.zostera.all %>% select(station),
+                                      as.tibble(water.zostera.all.scaled))
+
+## convert stations into factor, because for some stations there are more observations than for others, which causes the Investigate function to freak out later
+water.zostera.all.scaled <- water.zostera.all.scaled %>% 
+  mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")))
+water.zostera.all.pca <- PCA(water.zostera.all.scaled, scale.unit = FALSE, quali.sup = 1)
+
+Investigate(water.zostera.all.pca, 
+            file = "pca_water_zostera_all_report.Rmd", document = "html_document", 
+            out.selec = FALSE, # NB if outlier detection is performed, the function fails miserably, and I can't see a way to fix it 
+            remove.temp = TRUE)  
+```
+OK, since the outlier check is omitted, the report shows that two rows with extreme values have a really high influence on the axes, the separation, etc. These are rows 18 (Poda) and 26 (Ropotamo). Let's see them:  
+```{r water_zostera_all_outliers}
+water.zostera.all %>% filter(row_number() %in% c(18, 26))
+```
+
+I'll remove them manually and try again.  
+```{r pca_water_zostera_all_noout}
+water.zostera.all.scaled.noout <- water.zostera.all.scaled %>%
+  filter(!row_number() %in% c(18, 26))
+
+water.zostera.all.scaled.noout.pca <- PCA(water.zostera.all.scaled.noout, scale.unit = FALSE, quali.sup = 1)
+
+Investigate(water.zostera.all.scaled.noout.pca, 
+            file = "pca_water_zostera_all_noout.Rmd", document = "html_document", 
+            out.selec = FALSE, # NB if outlier detection is performed, the function fails miserably, and I can't see a way to fix it 
+            remove.temp = TRUE)   
+```
+
+Great. Now I'll try it properly - I'll first remove the most correlated variables, because this leads to artificial inflation of the significance of representation (?).   
+```{r filter_correlated_water_zostera}
+# calculate the correlation matrix (on the numeric variables only)
+water.zostera.all.cors <- cor(water.zostera.all %>% select(-c(station:month)))
+  
+# find and eliminate the highly correlated variables. NB names = FALSE, to return column index
+highly.cor.water.zostera.all <- findCorrelation(water.zostera.all.cors, cutoff = 0.85)
+
+(water.zostera.red <- water.zostera.all %>% 
+    select(-c(station:month)) %>% # otherwise column indices don't match 
+    select(-highly.cor.water.zostera.all)
+)
+```
+
+```{r pca_water_zostera_red}
+## scale and center the reduced dataset
+water.zostera.red.scaled <- scale(water.zostera.red,
+                                  center = TRUE, scale = TRUE)
+
+water.zostera.red.scaled <- bind_cols(water.zostera.all %>% select(station),
+                                      as.tibble(water.zostera.red.scaled))
+
+## convert stations into factor, because for some stations there are more observations than for others, which causes the Investigate function to freak out later
+water.zostera.red.scaled <- water.zostera.red.scaled %>% 
+  mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")))
+
+## filter out the two outliers
+water.zostera.red.scaled <- water.zostera.red.scaled %>% 
+  filter(!row_number() %in% c(18, 26))
+
+water.zostera.red.pca <- PCA(water.zostera.red.scaled, scale.unit = FALSE, quali.sup = 1)
+
+Investigate(water.zostera.red.pca, 
+            file = "pca_water_zostera_red_report.Rmd", document = "html_document", 
+            out.selec = FALSE, # NB if outlier detection is performed, the function fails miserably, and I can't see a way to fix it 
+            remove.temp = TRUE)  
+```
+
+Same for the **sediments - with all available data**.   
+```{r filter_correlated_sediments_zostera_all}
+## remove the heavy metals, which are still in the dataset for some reason
+sediments.zostera.all.sub <- sediments.zostera.all %>% 
+  select(-habitat, -c(Cu:Ni))
+
+## calculate the correlation matrix (on the numeric variables only)
+sediments.zostera.all.cors <- cor(sediments.zostera.all.sub %>% select(-c(station:year)))
+  
+## find and eliminate the highly correlated variables. NB names = FALSE, to return column index
+highly.cor.sediments.zostera.all.sub <- findCorrelation(sediments.zostera.all.cors, cutoff = 0.85)
+
+(sediments.zostera.red <- sediments.zostera.all.sub %>% 
+    select(-c(station:year)) %>% # otherwise column indices don't match 
+    select(-highly.cor.sediments.zostera.all.sub)
+)
+```
+
+
+```{r pca_sediments_zostera_red}
+## scale and center the reduced dataset
+sediments.zostera.red.scaled <- scale(sediments.zostera.red,
+                                      center = TRUE, scale = TRUE)
+
+sediments.zostera.red.scaled <- bind_cols(sediments.zostera.all %>% select(station),
+                                          as.tibble(sediments.zostera.red.scaled))
+
+## convert stations into factor, because for some stations there are more observations than for others, which causes the Investigate function to freak out later
+sediments.zostera.red.scaled <- sediments.zostera.red.scaled %>% 
+  mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")))
+
+sediments.zostera.red.pca <- PCA(sediments.zostera.red.scaled, scale.unit = FALSE, quali.sup = 1)
+
+Investigate(sediments.zostera.red.pca, 
+            file = "pca_sediments_zostera_red_report.Rmd", document = "html_document", 
+            out.selec = FALSE, # NB if outlier detection is performed, the function fails miserably, and I can't see a way to fix it 
+            remove.temp = TRUE)  
+```
+Here - no luck again: too little variability is explained by the PCs - no real information carried by this PCA, either.   
+
+OK, one more to go: **seagrass parameters - again, using all available data**.  
+```{r filter_correlated_seagrass_params_zostera}
+## calculate the correlation matrix (on the numeric variables only)
+seagrass.all.cors <- cor(seagrass.all.clean %>% select(-c(station:replicate)))
+  
+## find and eliminate the highly correlated variables. NB names = FALSE, to return column index
+highly.cor.seagrass.all <- findCorrelation(seagrass.all.cors, cutoff = 0.85)
+
+(seagrass.red <- seagrass.all.clean %>% 
+    select(-c(station:replicate)) %>% # otherwise column indices don't match 
+    select(-highly.cor.seagrass.all)
+)
+```
+All right - apparently the seagrass parameters are not so inter-correlated after all...   
+```{r pca_seagrass_params_zostera}
+## scale and center the reduced dataset
+seagrass.red.scaled <- scale(seagrass.red,
+                             center = TRUE, scale = TRUE)
+
+seagrass.red.scaled <- bind_cols(seagrass.all.clean %>% select(station),
+                                 as.tibble(seagrass.red.scaled))
+
+## convert stations into factor, because for some stations there are more observations than for others, which causes the Investigate function to freak out later
+seagrass.red.scaled <- seagrass.red.scaled %>% 
+  mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")))
+
+seagrass.red.pca <- PCA(seagrass.red.scaled, scale.unit = FALSE, quali.sup = 1)
+
+Investigate(seagrass.red.pca, 
+            file = "pca_seagrass_params_zostera_red_report.Rmd", document = "html_document", 
+            out.selec = FALSE, # NB if outlier detection is performed, the function fails miserably, and I can't see a way to fix it 
+            remove.temp = TRUE)  
 ```
 
 
