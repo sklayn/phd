@@ -1,6 +1,6 @@
 ---
 title: "Environmental parameters - analysis & variable selection"
-date: "2018-04-27"
+date: "2018-04-30"
 output: 
   html_notebook:
     theme: paper
@@ -212,6 +212,64 @@ In any case, let's save the PCA result - just in case, to avoid repeating a mill
 write_rds(water.sand.pca.fin, path = here(save.dir, "pca_water_sand.RDS"))
 ```
 
+
+Now do a proper PCA on non-summarized water column data (essentially a repeat of Mitko's PhD analyses, but ok).
+```{r import_water_non_summarized_all}
+## import water column raw - non-summarized - data. 
+water.all <- read_csv(here(save.dir, "water_column_raw_clean.csv"))
+
+## get only the sand stations from the water column dataset
+(water.sand.all <- water.all %>% 
+   filter(station %in% c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva")) %>% 
+   ungroup() %>%
+   mutate(station = factor(station, levels = c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva")))
+)
+```
+
+Reduce the dataset a little, removing correlations.   
+```{r filter_correlated_water_sand}
+# calculate the correlation matrix (on the numeric variables only)
+water.sand.all.cors <- cor(water.sand.all %>% select(-c(station:month)))
+  
+# find and eliminate the highly correlated variables. NB names = FALSE, to return column index
+highly.cor.water.sand.all <- findCorrelation(water.sand.all.cors, cutoff = 0.85)
+
+(water.sand.all.red <- water.sand.all %>% 
+    select(-c(station:month)) %>% # otherwise column indices don't match 
+    select(-highly.cor.water.sand.all)
+)
+```
+
+```{r pca_water_sand_all_red}
+## scale and center the reduced dataset
+water.sand.all.red.scaled <- scale(water.sand.all.red,
+                                   center = TRUE, scale = TRUE)
+
+water.sand.all.red.scaled <- bind_cols(water.sand.all %>% select(station),
+                                       as.tibble(water.sand.all.red.scaled))
+
+## convert stations into factor, because for some stations there are more observations than for others, which causes the Investigate function to freak out later
+water.sand.all.red.scaled <- water.sand.all.red.scaled %>% 
+  mutate(station = factor(station, levels = c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva")))
+
+
+## perform the PCA
+water.sand.all.red.pca <- PCA(water.sand.all.red.scaled, scale.unit = FALSE, quali.sup = 1)
+
+Investigate(water.sand.all.red.pca, 
+            file = "pca_water_sand_all_red_report.Rmd", document = "html_document", 
+            out.selec = TRUE,
+            remove.temp = TRUE)  
+```
+
+Goody! At least the analysis is significant - although the elimination threshold of correlation is probably too high - judging from how close the vectors of the N species are situated...   
+
+```{r save_pca_water_sand_all_red}
+write_rds(water.sand.all.red.pca, 
+          here(save.dir, "pca_water_sand_all_red.RDS"))
+```
+
+
 ***  
 ###### **Sidebar: PCA result exploration - demonstrated on water parameters on sand stations, 2013-14**   
 PCA done like this is meaningless.  
@@ -337,6 +395,7 @@ fviz_contrib(water.sand.pca.fin, choice = "ind", axes = 1, top = 3)
 fviz_pca_ind(water.sand.pca.fin, col.ind = "contrib")
 
 ```
+Sidebar end.  
 
 ***  
 
@@ -380,6 +439,46 @@ write_rds(sediments.sand.pca,
           here(save.dir, "pca_sediments_sand.RDS"))
 ```
 
+Now do it one more time, but first remove the most correlated variables from the sediment dataset.   
+```{r filter_correlated_sediments_sand}
+## calculate the correlation matrix (on the numeric variables only)
+sediments.sand.cors <- cor(sediments.sand %>% select(-c(station:year)))
+  
+## find and eliminate the highly correlated variables. NB names = FALSE, to return column index
+highly.cor.sediments.sand <- findCorrelation(sediments.sand.cors, cutoff = 0.85)
+
+(sediments.sand.red <- sediments.sand %>% 
+    select(-c(station:year)) %>% # otherwise column indices don't match 
+    select(-highly.cor.sediments.sand)
+)
+```
+
+```{r pca_sediments_sand_red}
+# scale and center the data (different units), and add back the stations 
+sediments.sand.red.scaled <- scale(sediments.sand.red,
+                                   center = TRUE, scale = TRUE)
+
+sediments.sand.red.scaled <- bind_cols(sediments.sand %>% select(station),
+                                       as.tibble(sediments.sand.red.scaled))
+
+sediments.sand.red.pca <- PCA(sediments.sand.red.scaled, scale.unit = FALSE, quali.sup = 1)
+
+Investigate(sediments.sand.red.pca, 
+            file = "pca_sediments_sand_red_report.Rmd", document = "html_document",
+            out.selec = FALSE, # don't check for outliers; it breaks the analysis
+            remove.temp = TRUE)
+```
+
+OK, with the reduced sediment dataset, the PCA turns out not significant at all. Because it wasn't confusing enough to begin with...  
+
+I'll save it anyway.   
+```{r save_pca_sediments_sand_red}
+write_rds(sediments.sand.red.pca, 
+          here(save.dir, "pca_sediments_sand_red.RDS"))
+```
+
+
+
 For the **heavy metals**, I think the wisest would be to calculate the total (new variable, sum of all heavy metals), calculate another variable - ratio of every metal to Fe, which is usually present naturally in the environment, and to keep only Pb and Cd - source - pollution from human activities.    
 
 **There are no national standards for environmental quality for heavy metals in sediments - these values are next to useless then. All I can say is at which station the concentration of Pb is higher, and some such.**   
@@ -422,16 +521,7 @@ I'll try again with non-summarized data - for the water, this will essentially r
 The raw data come from the enivronmental data cleaning notebook; I'll save them later to avoid repeating these steps, which I just did off the record..   
 Starting with water column crap.  
 ```{r en_water_sand}
-## import water column raw - non-summarized - data. 
-water.all <- read_csv(here(save.dir, "water_column_raw_clean.csv"))
-
-## get only the sand stations from the water column dataset
-(water.sand <- water.all %>% 
-   filter(station %in% c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva")) %>% 
-   ungroup() %>%
-   mutate(station = factor(station, levels = c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva")))
-)
-
+## starting with the non-summarized water column data (imported several chunks above, because needed for trying PCA). 
 ## remove row Paraskeva-2015 (the only one where seston is NaN) + variable secchi - has lots of NAs and NaNs which are not handled by glmnet
 (water.sand.sub <- water.sand %>% 
     filter(!(station == "Paraskeva" & year == 2015)) %>% 
