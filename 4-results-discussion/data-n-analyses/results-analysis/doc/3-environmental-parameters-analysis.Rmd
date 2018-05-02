@@ -1,6 +1,6 @@
 ---
 title: "Environmental parameters - analysis & variable selection"
-date: "2018-04-30"
+date: "2018-05-01"
 output: 
   html_notebook:
     theme: paper
@@ -846,7 +846,15 @@ Investigate(water.zostera.red.pca,
             file = "pca_water_zostera_red_report.Rmd", document = "html_document", 
             out.selec = FALSE, # NB if outlier detection is performed, the function fails miserably, and I can't see a way to fix it 
             remove.temp = TRUE)  
+
 ```
+
+Save this PCA, too.  
+```{r save_pca_water_zostera_red}
+write_rds(water.zostera.red.pca, 
+          here(save.dir, "pca_water_zostera_red.RDS"))
+```
+
 
 Same for the **sediments - with all available data**.   
 ```{r filter_correlated_sediments_zostera_all}
@@ -888,6 +896,13 @@ Investigate(sediments.zostera.red.pca,
 ```
 Here - no luck again: too little variability is explained by the PCs - no real information carried by this PCA, either.   
 
+Save for posterity anyway.   
+```{r save_pca_sediments_zostera_red}
+write_rds(sediments.zostera.red.pca, 
+          here(save.dir, "pca_sediments_zostera_red.RDS"))
+```
+
+
 OK, one more to go: **seagrass parameters - again, using all available data**.  
 ```{r filter_correlated_seagrass_params_zostera}
 ## calculate the correlation matrix (on the numeric variables only)
@@ -920,6 +935,12 @@ Investigate(seagrass.red.pca,
             file = "pca_seagrass_params_zostera_red_report.Rmd", document = "html_document", 
             out.selec = FALSE, # NB if outlier detection is performed, the function fails miserably, and I can't see a way to fix it 
             remove.temp = TRUE)  
+```
+
+Save this last one, too.   
+```{r save_pca_seagrass_red}
+write_rds(seagrass.red.pca, 
+          here(save.dir, "pca_seagrass_red.RDS"))
 ```
 
 
