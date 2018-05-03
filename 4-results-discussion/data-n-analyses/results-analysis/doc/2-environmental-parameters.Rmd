@@ -1,6 +1,6 @@
 ---
 title: "Environmental parameters - cleaning & preparation"
-date: "2018-03-24"
+date: "2018-05-03"
 output: 
   html_notebook:
     theme: paper
@@ -108,7 +108,18 @@ Looks fine. Let's get cleaning, then!
   
 ####  Data cleaning & processing  
 ##### Water column parameters  
-To have more data for my stations, I'll add to them the data from some other nearby stations in Burgas Bay (and Sozopol Bay): Atia -> Akin; Maslen nos -> Paraskeva.
+To have more data for my stations, I'll add to them the data from some other nearby stations in Burgas Bay (and Sozopol Bay): Atia -> Akin; Maslen nos -> Paraskeva.   
+Before overwriting the object and going on with the analyses, I'll recode and subset the stations first to get some more water column data for the **seagrass stations** - turns out only using the data for 2013-2014 is not enough (barely, but not satisfactorily so). So I will try one last time to see what comes out of it all. Recodings: Kraimorie -> Poda, Chukalya -> Otmanli, Atia -> Vromos, Ribka -> Gradina.  
+```{r subset_water_params_zostera_LT}
+(water.params.zostera.LT <- water.params %>% 
+   mutate(station = recode(station, "Kraimorie" = "Poda", "Chukalya" = "Otmanli", "Atia" = "Vromos", "Ribka" = "Gradina")) %>% 
+   filter(station %in% c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo"))
+)
+
+write_csv(water.params.zostera.LT, 
+          here(save.dir, "water_colmumn_raw_LT_seagrass.csv"))
+```
+
 ```{r water_params_cleaning}
 water.params <- water.params %>% 
   mutate(station = recode(station, "Atia" = "Akin", "Maslen nos" = "Paraskeva"))

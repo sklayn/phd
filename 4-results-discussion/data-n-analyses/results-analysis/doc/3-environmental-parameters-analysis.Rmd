@@ -1,6 +1,6 @@
 ---
 title: "Environmental parameters - analysis & variable selection"
-date: "2018-05-01"
+date: "2018-05-03"
 output: 
   html_notebook:
     theme: paper
@@ -189,7 +189,6 @@ summary(water.sand.pca.fin)
                                         repel = TRUE)
 )
 
-ggsave(here(figures.dir, "pca_water_sand.png"), plot.water.sand.pca, dpi = 300)
 ```
 The first 2 PCs explain ~73% of the total variance - not too bad.. Add the third, and the proportion of the explained variance becomes nearly 90%.  
 Stations 2 and 6, then 1 and 4 contribute the most to the first PC (Dim.1), nad are best represented on it (cos2). Stations 1, 4, 2 and 3 contribute the most to PC2, and are again best represented on it (see also the supplementary categories table).   
@@ -209,7 +208,7 @@ Before that, it manages to say that the analysis should not be attempted at all 
 
 In any case, let's save the PCA result - just in case, to avoid repeating a million times later.   
 ```{r save_pca_water_sand}
-write_rds(water.sand.pca.fin, path = here(save.dir, "pca_water_sand.RDS"))
+write_rds(water.sand.pca.fin, path = here(save.dir, "pca_water_sand_summarized.RDS"))
 ```
 
 
@@ -269,135 +268,6 @@ write_rds(water.sand.all.red.pca,
           here(save.dir, "pca_water_sand_all_red.RDS"))
 ```
 
-
-***  
-###### **Sidebar: PCA result exploration - demonstrated on water parameters on sand stations, 2013-14**   
-PCA done like this is meaningless.  
-However, let's explore the results a bit - just to demonstrate the basic procedure with PCA quality checks & interpretation.   
-1) Check the variances of the principal components. Amount of variation retained by each PC = eigenvalue. First PC = direction with maximum amount of variation in the dataset.  
-```{r explore_pca_water_sand_1}
-water.sand.pca.fin$eig
-```
-2) Visualize the importance of the PCs (-> scree plot).   
-```{r explore_pca_water_sand_2}
-fviz_screeplot(water.sand.pca.fin)
-```
-3) Plot correlations/loadings of the variables with the PCs = variable loadings. Variables can be plotted as points in the component space using their loadings as coordinates.  
-```{r explore_pca_water_sand_3}
-## look at variable coordinates on each PC
-water.sand.pca.fin$var$coord
-
-## visualize the variables on the factor map. Correlation circle can help visualize the most correlated variables (variables that group together). 
-fviz_pca_var(water.sand.pca.fin, col.circle = "grey")
-```
-
-4) Explore the quality of the representation for variables on the factor map (cos2 = squared loadings for variables = cor x cor = coord x coord). The closer a variable to the circle of correlations, the better its representation on the factor map, and the more important it is to interpret these components. If a variable is perfectly represented by only 2 components, the sum of the cos2 = 1, and the variables will be positioned on the circle of correlations. For some variables - more than 2 components required to perfectly represent the data; then - variables positioned inside circle of correlations. Variables close to the center of the plot - less important for the first components.  
-```{r explore_pca_water_sand_4}
-## check the variables with highest correlation to the first few PCs
-as_tibble(water.sand.pca.fin$var$cos2, rownames = "var") %>%
-  arrange(desc(Dim.1))
-
-## plot the variables factor map, and color the vectors according to the amount of correlation to the PCs. Can select the minimum value of cos2 and the PC axes to plot.
-# PC1-PC2
-fviz_pca_var(water.sand.pca.fin, axes = c(1, 2), select.var = list(cos2 = 0.5), 
-             col.var = "cos2", gradient.cols = c("skyblue", "navyblue", "red"))
-
-# PC1-PC3
-fviz_pca_var(water.sand.pca.fin, axes = c(1, 3), select.var = list(cos2 = 0.5), 
-             col.var = "cos2", gradient.cols = c("skyblue", "navyblue", "red"))
-
-```
-
-5) Check the contributions of the variables to the PCs. Variables that are correlated with PC1 and PC2 - the most important in explaining the variability in the dataset.  
-Variables not correlated with any PC or correlated with the last dimensions - low contribution; could be removed to simplify overall analysis.  
-% contribution of a variable in accounting for the variability in a given PC = (variable.cos2 x 100) / (total cos2 of component)  
-```{r explore_pca_water_sand_5}
-as_tibble(water.sand.pca.fin$var$contrib, rownames = "var") %>%
-  arrange(desc(Dim.1))
-```
-
-6) Visualize the most important variables associated with a given PC. The red line on the graph represents the expected average contribution (if all variable contributions were uniform). For a given component, any variable with contribution larger than that cutoff could be considered important.  
-```{r explore_pca_water_sand_6}
-plot_pca_var_contrib <- function(pca.res, choice = c("var", "ind"), axes = c(start : end)) {
-  ## helper for plotting variable/individuals contributions (as bars) to the specified PC axes. 
-  ## Dependencies: factoextra
-  
-  # plot contributions for each axis separately
-  for(i in axes){
-    print(fviz_contrib(pca.res, choice = choice, axes = i))
-  }
-  
-  # plot the overall contributions to the specified axes
-  print(fviz_contrib(pca.res, choice = choice, axes = axes))
-}
-
-
-
-# variable contributions on PC1, PC2 and PC3 (+ all 3 axes together)
-plot_pca_var_contrib(water.sand.pca.fin, 
-                     choice = "var", 
-                     axes = c(1:3))
-
-
-# if there are many variables in the dataset, we can show only the top n contributing variables:
-fviz_contrib(water.sand.pca.fin, choice = "var", axes = 1, top = 5)
-
-```
-
-7) Color variables on the variable factor map according to their contributions - highlights the most important variables in explaining the variations retained  by the PCs.
-```{r explore_pca_water_sand_7}
-fviz_pca_var(water.sand.pca.fin, col.var = "contrib") 
-
-## variable contributions to PC1-2
-fviz_pca_var(water.sand.pca.fin, axes = c(1, 2), col.var = "contrib") 
-##..and to PC1-3
-fviz_pca_var(water.sand.pca.fin, axes = c(1, 3), col.var = "contrib")
-
-```
-
-8) Dimension description - identify the most correlated variables with a given PC -> but only works with more categories (e.g. replicates at the stations, years,..). I'm including it as a reminder that it exists as an option.    
-```{r explore_pca_water_sand_8}
-# dimdesc(water.sand.pca.fin, axes = c(1:5))
-```
-
-9) Explore individuals (= stations/species/..) in the same way as the variables just now.  
-```{r explore_pca_water_sand_9}
-## coordinates of individuals on the PCs
-water.sand.pca.fin$ind$coord
-
-## plot & label by station (can also colour by group - year,..)
-fviz_pca_ind(water.sand.pca.fin, label = c("quali", "ind"))
-
-## quality of representation for individuals on the PCs (cos2)
-as_tibble(water.sand.pca.fin$ind$cos2, rownames = "ind") %>% 
-  arrange(desc(Dim.1))
-
-## correlation of individuals with PC1-2
-fviz_pca_ind(water.sand.pca.fin, axes = c(1, 2), col.ind = "cos2", gradient.cols = c("skyblue", "navyblue", "red")) 
-
-## ...and with PC1-3
-fviz_pca_ind(water.sand.pca.fin, axes = c(1, 3), col.ind = "cos2", gradient.cols = c("skyblue", "navyblue", "red")) 
-
-## contribution of individuals to the PCs
-as_tibble(water.sand.pca.fin$ind$contrib, rownames = "ind") %>% 
-  arrange(desc(Dim.1))
-
-## visualize the most contributing individuals (stations) associated with a given PC
-# PC1-3 + all 3 together (custom function)
-plot_pca_var_contrib(water.sand.pca.fin, 
-                     choice = "ind", 
-                     axes = c(1:3))
-
-## top 3 individuals (stations) contributing to PC1 (for ex.)
-fviz_contrib(water.sand.pca.fin, choice = "ind", axes = 1, top = 3)
-
-## individuals (stations) map colored according to their contribution
-fviz_pca_ind(water.sand.pca.fin, col.ind = "contrib")
-
-```
-Sidebar end.  
-
-***  
 
 Let's try again with the **sediment parameters** - there are more values per station here, so should turn out better.  
 ```{r pca_sediments_sand}
@@ -523,7 +393,7 @@ Starting with water column crap.
 ```{r en_water_sand}
 ## starting with the non-summarized water column data (imported several chunks above, because needed for trying PCA). 
 ## remove row Paraskeva-2015 (the only one where seston is NaN) + variable secchi - has lots of NAs and NaNs which are not handled by glmnet
-(water.sand.sub <- water.sand %>% 
+(water.sand.sub <- water.sand.all %>% 
     filter(!(station == "Paraskeva" & year == 2015)) %>% 
     select(-secchi)
 )
@@ -645,16 +515,16 @@ en.sediments.hab.sand <- glmnet(x = as.matrix(sediments.sand.hab %>%
 
 plot(en.sediments.hab.sand, xvar = "lambda", label = TRUE, type.coef = "2norm")
 
-cvfit.sediments.hab.sand <- cv.glmnet(x = as.matrix(sediments.sand.hab %>% select(TOM:silt_clay)),
-                                      y = sediments.sand.hab %>% pull(habitat), 
-                                      family="multinomial", type.multinomial = "grouped")
-
-plot(cvfit.sediments.hab.sand)
+# cvfit.sediments.hab.sand <- cv.glmnet(x = as.matrix(sediments.sand.hab %>% select(TOM:silt_clay)),
+#                                       y = sediments.sand.hab %>% pull(habitat), 
+#                                       family="multinomial", type.multinomial = "grouped")
+# 
+# plot(cvfit.sediments.hab.sand)
 ```
 No luck here - still too few replications, I guess. No convergence even after the maximum number of iterations.    
 The lowest deviance is achieved with 4 explanatory variables - let's check them out.  
 ```{r coef_en_sediments_hab_sand}
-coef(en.sediments.hab.sand, s = cvfit.sediments.hab.sand$lambda.min)
+# coef(en.sediments.hab.sand, s = cvfit.sediments.hab.sand$lambda.min)
 ```
 
 Test the model.  
@@ -682,6 +552,9 @@ Filter water column data anyway, in case I decide to do something with it.
     filter(station %in% c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo"))
 )
 
+## ... and import the pseudo-manplated-long-term data for the seagrasses
+(water.zostera.LT <- read_csv(here(save.dir, "water_colmumn_raw_LT_seagrass.csv"))
+)
 ```
 
 Import the **summarized** sediment data (it also contains the heavy metals).   
@@ -856,7 +729,68 @@ write_rds(water.zostera.red.pca,
 ```
 
 
+All right, after much deliberation - decided to see if using the long-term data for Burgas Bay, with stations (more or less) recoded to correspond to the seagrass meadows, amounts to anything.  
+```{r filter_correlated_water_zostera_LT}
+## average the data over the depths
+(water.zostera.LT <- water.zostera.LT %>% 
+   group_by(station, year, month) %>% 
+   summarize_all(mean) %>% 
+   select(-depth) %>% 
+   ungroup()
+)
+
+# calculate the correlation matrix (on the numeric variables only)
+water.zostera.LT.cors <- cor(water.zostera.LT %>% select(-c(station:month)))
+  
+# find and eliminate the highly correlated variables. NB names = FALSE, to return column index
+highly.cor.water.zostera.LT <- findCorrelation(water.zostera.LT.cors, cutoff = 0.85)
+
+(water.zostera.LT.red <- water.zostera.LT %>% 
+    select(-c(station:month)) %>% # otherwise column indices don't match 
+    select(-highly.cor.water.zostera.LT)
+)
+```
+
+```{r pca_water_zostera_LT_red}
+## scale and center the reduced dataset
+water.zostera.LT.red.scaled <- scale(water.zostera.LT.red,
+                                     center = TRUE, scale = TRUE)
+
+water.zostera.LT.red.scaled <- bind_cols(water.zostera.LT %>% select(station),
+                                         as.tibble(water.zostera.LT.red.scaled))
+
+## convert stations into factor, because for some stations there are more observations than for others, which causes the Investigate function to freak out later
+water.zostera.LT.red.scaled <- water.zostera.LT.red.scaled %>% 
+  mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")))
+
+water.zostera.LT.red.pca <- PCA(water.zostera.LT.red.scaled, scale.unit = FALSE, quali.sup = 1)
+
+Investigate(water.zostera.LT.red.pca, 
+            file = "pca_water_zostera_LT_red_report.Rmd", document = "html_document", 
+            out.selec = FALSE, # NB if outlier detection is performed, the function fails miserably, and I can't see a way to fix it 
+            remove.temp = TRUE)  
+
+```
+Well unsurprisingly, it's the same picture as for the sand stations (same data). And it *still* doesn't manage to be significant enough to separate the stations on the plane..     
+Whatever. Save this PCA, too.  
+```{r save_pca_water_zostera_LT_red}
+write_rds(water.zostera.LT.red.pca, 
+          here(save.dir, "pca_water_zostera_LT_red.RDS"))
+```
+
+
 Same for the **sediments - with all available data**.   
+Import all available sediment data for the seagrass stations.  
+```{r import_sediments_zostera_all}
+sediments.zostera.all <- read_csv(here(save.dir, "sediments_seagrass_raw_clean.csv"))
+
+
+## make station a factor 
+(sediments.zostera.all <- sediments.zostera.all %>% 
+  mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")))
+)
+```
+
 ```{r filter_correlated_sediments_zostera_all}
 ## remove the heavy metals, which are still in the dataset for some reason
 sediments.zostera.all.sub <- sediments.zostera.all %>% 
@@ -903,7 +837,24 @@ write_rds(sediments.zostera.red.pca,
 ```
 
 
-OK, one more to go: **seagrass parameters - again, using all available data**.  
+OK, one more: **seagrass parameters - again, using all available data**.   
+Import seagrass data.   
+```{r import_seagrass_params_zostera}
+## import the non-summarized data first 
+(seagrass.all <- read_csv(here(save.dir, "seagrass_all_stations.csv"))
+ )
+
+## remove the number from the station names
+seagrass.all.clean <- seagrass.all %>% 
+  mutate(station = str_extract(station, "[^\\d]+"))
+
+## filter only the 2013-2014 stations and convert station to factor
+(seagrass.all.clean <- seagrass.all.clean %>% 
+    filter(station %in% c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")) %>% 
+    mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")))
+)  
+```
+
 ```{r filter_correlated_seagrass_params_zostera}
 ## calculate the correlation matrix (on the numeric variables only)
 seagrass.all.cors <- cor(seagrass.all.clean %>% select(-c(station:replicate)))
@@ -937,7 +888,7 @@ Investigate(seagrass.red.pca,
             remove.temp = TRUE)  
 ```
 
-Save this last one, too.   
+Save this one, too.   
 ```{r save_pca_seagrass_red}
 write_rds(seagrass.red.pca, 
           here(save.dir, "pca_seagrass_red.RDS"))
@@ -988,25 +939,18 @@ Seston, at the boundary of significance... Load of shit, all of it.
 OK - let's try again with the **sediment parameters minus the heavy metals**.   
 In this case, I am going to go back and look at the sediment data for the rest of the stations (there were 2 stations in each seagrass meadow at each sampling, and there is data for those, too).   
 ```{r en_sediments_zostera}
-## import the non-summarized sediment data for the zostera stations
-(sediments.zostera.all <- read_csv(here(save.dir, "sediments_seagrass_raw_clean.csv"))
-)  
-
-## make station a factor 
-sediments.zostera.all <- sediments.zostera.all %>% 
-  mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")))
-
+## using all available sediment data
 en.sediments.st.zostera <- glmnet(x = as.matrix(sediments.zostera.all %>% select(TOM:silt_clay)), 
                            y = sediments.zostera.all %>% pull(station), 
                            family = "multinomial", type.multinomial = "grouped")
 
 plot(en.sediments.st.zostera, xvar = "lambda", label = TRUE, type.coef = "2norm")
 
-cvfit.sediments.st.zostera <- cv.glmnet(x = as.matrix(sediments.zostera.all %>% select(TOM:silt_clay)),
-                                 y = sediments.zostera.all %>% pull(station), 
-                                 family="multinomial", type.multinomial = "grouped")
-
-plot(cvfit.sediments.st.zostera)
+# cvfit.sediments.st.zostera <- cv.glmnet(x = as.matrix(sediments.zostera.all %>% select(TOM:silt_clay)),
+#                                  y = sediments.zostera.all %>% pull(station),
+#                                  family="multinomial", type.multinomial = "grouped")
+# 
+# plot(cvfit.sediments.st.zostera)
 ```
 
 It still complains, doesn't want to assess the fit. 
@@ -1044,21 +988,6 @@ summary(glm(as.numeric(as.factor(station)) ~ TOM + moisture_content + sorting + 
 So the moisture content and the silt & clay (maybe the TOM, a little)..  
 
 Let's play with the **seagrass parameters**. I'm not holding my breath, though.  
-```{r import_seagrass_params_zostera}
-## import the non-summarized data first 
-(seagrass.all <- read_csv(here(save.dir, "seagrass_all_stations.csv"))
- )
-
-## remove the number from the station names
-seagrass.all.clean <- seagrass.all %>% 
-  mutate(station = str_extract(station, "[^\\d]+"))
-
-## filter only the 2013-2014 stations and convert station to factor
-(seagrass.all.clean <- seagrass.all.clean %>% 
-    filter(station %in% c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")) %>% 
-    mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")))
-)  
-```
 
 Perform the elastic net variable selection.  
 ```{r en_seagrass_params_zostera}
@@ -1122,13 +1051,12 @@ summary(water.2012.pca)
                                         repel = TRUE)
 )
 
-ggsave(here(figures.dir, "pca_water_2012.png"), plot.water.2012.pca, dpi = 300)
 ```
 This, however, is without first filtering the very much correlated variables.  
 
 Generate a report on the PCA with FactoInvestigate.  
 ```{r report_pca_water_2012}
-Investigate(water.2012.pca, file = "pca_water_2012_report.Rmd", document = "html_document", remove.temp = TRUE)
+# Investigate(water.2012.pca, file = "pca_water_2012_report.Rmd", document = "html_document", remove.temp = TRUE)
 ```
 OK this bullshit doesn't work, I don't know why and I don't care - something to do with outlier detection. That's why I hate complicated black box functions.  
 Moving right along to elastic net, which I would trust more in any case.  
@@ -1155,9 +1083,202 @@ plot(cvfit.water.st.2012)
 ```{r}
 coef(en.water.st.2012, s = cvfit.water.st.2012$lambda.min)
 ```
-
-
 No convergence for lambda, even after the maximum number of iterations (10000).. Isn't it sweet.  
 
 
 
+***  
+##### **Additional PCA visualizations**   
+Visualize - more clearly - some of the stupid, stupid, useless PCAs.  
+###### Sand stations - Burgas Bay (2013-14)  
+```{r plot_water_sand_all_red_pca}
+plot.water.sand.all.red.pca <- fviz_pca_biplot(water.sand.all.red.pca,
+                                               habillage = "station", 
+                                               label = "var", 
+                                               repel = TRUE,
+                                               alpha.ind = 0.75,  
+                                               title = "Water - sand stations (2013-14)")
+
+## fix the color scale
+plot.water.sand.all.red.pca + scale_color_viridis(discrete = TRUE, direction = -1)
+```
+
+```{r plot_sediments_sand_all_red_pca}
+plot.sediments.sand.red.pca <- fviz_pca_biplot(sediments.sand.red.pca,
+                                                   habillage = "station",
+                                                   label = "var",
+                                                   repel = TRUE,
+                                                   alpha.ind = 0.75,
+                                                   title = "Sediments - sand stations (2013-14)")
+
+## fix the color scale
+plot.sediments.sand.red.pca + scale_color_viridis(discrete = TRUE, direction = -1)
+```
+
+###### Seagrass stations - Burgas Bay (2013-14)  
+```{r plot_water_zostera_all_red_pca}
+plot.water.zostera.red.pca <- fviz_pca_biplot(water.zostera.red.pca,
+                                              habillage = "station",
+                                              label = "var", 
+                                              repel = TRUE,
+                                              alpha.ind = 0.75,
+                                              title = "Water - seagrass stations (2013-14)")
+
+## fix the color scale
+plot.water.zostera.red.pca + scale_color_viridis(discrete = TRUE, direction = -1)
+```
+
+```{r plot_sediments_zostera_all_red_pca}
+plot.sediments.zostera.red.pca <- fviz_pca_biplot(sediments.zostera.red.pca,
+                                                  habillage = "station",
+                                                  label = "var",
+                                                  repel = TRUE,
+                                                  alpha.ind = 0.75,
+                                                  title = "Sediments - seagrass stations (2013-14)")
+
+## fix the color scale
+plot.sediments.zostera.red.pca + scale_color_viridis(discrete = TRUE, direction = -1)
+```
+
+
+```{r plot_seagrasss_zostera_all_red_pca}
+plot.seagrass.red.pca <- fviz_pca_biplot(seagrass.red.pca,
+                                         habillage = "station",
+                                         label = "var",
+                                         repel = TRUE,
+                                         alpha.ind = 0.75,
+                                         title = "Seagrass parameters (2013-14)")
+
+## fix the color scale
+plot.seagrass.red.pca + scale_color_viridis(discrete = TRUE, direction = -1)
+```
+
+
+
+***  
+###### **Sidebar: PCA result exploration - demonstrated on water parameters on sand stations, 2013-14**   
+PCA done like this is meaningless.  
+However, let's explore the results a bit - just to demonstrate the basic procedure with PCA quality checks & interpretation.   
+1) Check the variances of the principal components. Amount of variation retained by each PC = eigenvalue. First PC = direction with maximum amount of variation in the dataset.  
+```{r explore_pca_water_sand_1}
+water.sand.pca.fin$eig
+```
+2) Visualize the importance of the PCs (-> scree plot).   
+```{r explore_pca_water_sand_2}
+fviz_screeplot(water.sand.pca.fin)
+```
+3) Plot correlations/loadings of the variables with the PCs = variable loadings. Variables can be plotted as points in the component space using their loadings as coordinates.  
+```{r explore_pca_water_sand_3}
+## look at variable coordinates on each PC
+water.sand.pca.fin$var$coord
+
+## visualize the variables on the factor map. Correlation circle can help visualize the most correlated variables (variables that group together). 
+fviz_pca_var(water.sand.pca.fin, col.circle = "grey")
+```
+
+4) Explore the quality of the representation for variables on the factor map (cos2 = squared loadings for variables = cor x cor = coord x coord). The closer a variable to the circle of correlations, the better its representation on the factor map, and the more important it is to interpret these components. If a variable is perfectly represented by only 2 components, the sum of the cos2 = 1, and the variables will be positioned on the circle of correlations. For some variables - more than 2 components required to perfectly represent the data; then - variables positioned inside circle of correlations. Variables close to the center of the plot - less important for the first components.  
+```{r explore_pca_water_sand_4}
+## check the variables with highest correlation to the first few PCs
+as_tibble(water.sand.pca.fin$var$cos2, rownames = "var") %>%
+  arrange(desc(Dim.1))
+
+## plot the variables factor map, and color the vectors according to the amount of correlation to the PCs. Can select the minimum value of cos2 and the PC axes to plot.
+# PC1-PC2
+fviz_pca_var(water.sand.pca.fin, axes = c(1, 2), select.var = list(cos2 = 0.5), 
+             col.var = "cos2", gradient.cols = c("skyblue", "navyblue", "red"))
+
+# PC1-PC3
+fviz_pca_var(water.sand.pca.fin, axes = c(1, 3), select.var = list(cos2 = 0.5), 
+             col.var = "cos2", gradient.cols = c("skyblue", "navyblue", "red"))
+
+```
+
+5) Check the contributions of the variables to the PCs. Variables that are correlated with PC1 and PC2 - the most important in explaining the variability in the dataset.  
+Variables not correlated with any PC or correlated with the last dimensions - low contribution; could be removed to simplify overall analysis.  
+% contribution of a variable in accounting for the variability in a given PC = (variable.cos2 x 100) / (total cos2 of component)  
+```{r explore_pca_water_sand_5}
+as_tibble(water.sand.pca.fin$var$contrib, rownames = "var") %>%
+  arrange(desc(Dim.1))
+```
+
+6) Visualize the most important variables associated with a given PC. The red line on the graph represents the expected average contribution (if all variable contributions were uniform). For a given component, any variable with contribution larger than that cutoff could be considered important.  
+```{r explore_pca_water_sand_6}
+plot_pca_var_contrib <- function(pca.res, choice = c("var", "ind"), axes = c(start : end)) {
+  ## helper for plotting variable/individuals contributions (as bars) to the specified PC axes. 
+  ## Dependencies: factoextra
+  
+  # plot contributions for each axis separately
+  for(i in axes){
+    print(fviz_contrib(pca.res, choice = choice, axes = i))
+  }
+  
+  # plot the overall contributions to the specified axes
+  print(fviz_contrib(pca.res, choice = choice, axes = axes))
+}
+
+
+
+# variable contributions on PC1, PC2 and PC3 (+ all 3 axes together)
+plot_pca_var_contrib(water.sand.pca.fin, 
+                     choice = "var", 
+                     axes = c(1:3))
+
+
+# if there are many variables in the dataset, we can show only the top n contributing variables:
+fviz_contrib(water.sand.pca.fin, choice = "var", axes = 1, top = 5)
+
+```
+
+7) Color variables on the variable factor map according to their contributions - highlights the most important variables in explaining the variations retained  by the PCs.
+```{r explore_pca_water_sand_7}
+fviz_pca_var(water.sand.pca.fin, col.var = "contrib") 
+
+## variable contributions to PC1-2
+fviz_pca_var(water.sand.pca.fin, axes = c(1, 2), col.var = "contrib") 
+##..and to PC1-3
+fviz_pca_var(water.sand.pca.fin, axes = c(1, 3), col.var = "contrib")
+
+```
+
+8) Dimension description - identify the most correlated variables with a given PC -> but only works with more categories (e.g. replicates at the stations, years,..). I'm including it as a reminder that it exists as an option.    
+```{r explore_pca_water_sand_8}
+# dimdesc(water.sand.pca.fin, axes = c(1:5))
+```
+
+9) Explore individuals (= stations/species/..) in the same way as the variables just now.  
+```{r explore_pca_water_sand_9}
+## coordinates of individuals on the PCs
+water.sand.pca.fin$ind$coord
+
+## plot & label by station (can also colour by group - year,..)
+fviz_pca_ind(water.sand.pca.fin, label = c("quali", "ind"))
+
+## quality of representation for individuals on the PCs (cos2)
+as_tibble(water.sand.pca.fin$ind$cos2, rownames = "ind") %>% 
+  arrange(desc(Dim.1))
+
+## correlation of individuals with PC1-2
+fviz_pca_ind(water.sand.pca.fin, axes = c(1, 2), col.ind = "cos2", gradient.cols = c("skyblue", "navyblue", "red")) 
+
+## ...and with PC1-3
+fviz_pca_ind(water.sand.pca.fin, axes = c(1, 3), col.ind = "cos2", gradient.cols = c("skyblue", "navyblue", "red")) 
+
+## contribution of individuals to the PCs
+as_tibble(water.sand.pca.fin$ind$contrib, rownames = "ind") %>% 
+  arrange(desc(Dim.1))
+
+## visualize the most contributing individuals (stations) associated with a given PC
+# PC1-3 + all 3 together (custom function)
+plot_pca_var_contrib(water.sand.pca.fin, 
+                     choice = "ind", 
+                     axes = c(1:3))
+
+## top 3 individuals (stations) contributing to PC1 (for ex.)
+fviz_contrib(water.sand.pca.fin, choice = "ind", axes = 1, top = 3)
+
+## individuals (stations) map colored according to their contribution
+fviz_pca_ind(water.sand.pca.fin, col.ind = "contrib")
+
+```
+Sidebar end.   
+***  

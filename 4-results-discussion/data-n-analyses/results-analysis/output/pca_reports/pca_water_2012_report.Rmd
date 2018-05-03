@@ -1,0 +1,15 @@
+---
+title: 'Principal Component Analysis'
+author: 'Dataset water.2012.scaled'
+output:
+  html_document: default
+---
+This dataset contains 68 individuals and 9 variables, 1 qualitative variable is considered as illustrative.
+
+- - -
+
+```{r, echo = FALSE}
+load('Workspace.RData')
+```
+### 1. Study of the outliers
+The analysis of the graphs leads to detect outliers that strongly influence the results. First we will describe these outliers and then we will suppress them from the analysis.
