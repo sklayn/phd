@@ -1,0 +1,140 @@
+---
+title: "Black Sea currents"
+date: "2018-06-27"
+output: html_notebook
+theme: paper
+---
+
+##  Black Sea circulation  
+This notebook details the process of opening a NetCDF dataset downloaded from CMEMS (marine.copernicus.eu), extracting & then plotting the data.  
+
+The current dataset contains a subset of surface current velocities from BLKSEA_REANALYSIS_PHYS_007_004 - a reanalysis product of the physical state of the Black Sea (1992-2017). The subset covers the SW Black Sea - Burgas Bay to the Turkish border, and the period 2012-01-01 to 2015-01-01 (my PhD study period).  
+
+***  
+
+Setup!  
+```{r setup, include = FALSE}
+library(knitr)
+
+knit_hooks$set(small.mar = function(before, options, envir) {
+    if (before) par(mar = c(2, 2, .1, 2))  # smaller margin on top
+})
+
+## set the working directory to one directory up (I'm keeping the notebooks in their own subdirectory of the project, doc).
+opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+
+## set knitr options for knitting code into the report.
+opts_chunk$set(cache = TRUE, # save results so that code blocks aren't re-run unless code changes
+               autodep = TRUE, # ..or unless a relevant earlier code block changed
+               cache.comments = FALSE, # don't re-run if the only thing that changed was the comments
+               highlight = TRUE, 
+               small.mar = TRUE)
+
+```
+
+Define working subdirectories. 
+```{r workspace_setup}
+## print the working directory, just to be on the safe side
+paste("You are here: ", getwd())
+
+data.dir <- "data"    # input data files
+functions.dir <- "R"  # functions & scripts
+save.dir <- "output"  # clean data, output from models & more complex calculations
+figures.dir <- "figs" # plots & figures 
+```
+
+Import libraries.
+```{r import_packages, message = FALSE}
+library(here) ## find root of project directory
+library(tidyverse) ## data manipulation & tidying
+#library(viridis) ## pretty & readable colour schemes 
+
+library(ncdf4) ## read & manipulate NetCDF files
+```
+
+Some commonly-used ggplot2 modifications..  
+```{r custom_ggplot_settings_helpers}
+## ggplot settings & things that I keep reusing
+# ggplot_theme <- list(
+#   theme_bw(),
+#   theme(element_text(family = "Times"))
+# )
+
+## always use black-and-white theme
+theme_set(theme_bw())
+
+## helper to adjust ggplot text size & avoid repetitions 
+text_size <- function(text.x = NULL,
+                      text.y = NULL,
+                      title.x = NULL,
+                      title.y = NULL,
+                      legend.text = NULL,
+                      legend.title = NULL, 
+                      strip.x = NULL, 
+                      strip.y = NULL) {
+  theme(axis.text.x = element_text(size = text.x),
+        axis.text.y = element_text(size = text.y),
+        axis.title.x = element_text(size = title.x),
+        axis.title.y = element_text(size = title.y),
+        legend.text = element_text(size = legend.text), 
+        legend.title = element_text(size = legend.title), 
+        strip.text.x = element_text(size = strip.x), 
+        strip.text.y = element_text(size = strip.y)
+        )
+  }
+```
+
+***  
+First, the **daily means** of the current velocities.  
+Read in the data & check the file contents.  
+```{r import_netcdf}
+(currents.in <- nc_open(file = here(data.dir, "currents", "sv04-bs-cmcc-cur-rean-d_1530092744997.nc"))
+)
+```
+
+Looks fine! Let's extract the current velocities..  
+```{r extract_variables}
+## meridional current matrix
+currents.y <- ncvar_get(currents.in, "vomecrty")
+dim(currents.y)
+
+## zonal current matrix
+currents.x <- ncvar_get(currents.in, "vozocrtx")
+dim(currents.x)
+
+```
+The current velocities are stored in a lon x lat x time matrix. There is also a depth dimension, but it only has one value, 2.5 m - only surface currents here.  
+Let's extract the time, latitude and longitude - stored as **NetCDF dimensions**.  
+```{r extract_dimensions}
+## check the names of the dimensions 
+attributes(currents.in$dim)$names
+
+## we'll only get the latitude, longitude & time
+nc_time <- ncvar_get(currents.in, "time")
+nc_lat <- ncvar_get(currents.in, "lat")
+nc_lon <- ncvar_get(currents.in, "lon")
+
+## print the dimensions to see if they match what we have for the velocities above..
+print(paste(dim(nc_lon), "longitudes, ", dim(nc_lat), "latitudes and ", dim(nc_time), "times."))
+```
+
+Reformat the time into something more readable (otherwise it's in seconds since 1990-01-01, as the attributes suggest).  
+```{r format_time}
+nc_time <- as.POSIXct(nc_time, format = "%Y-%m-%d", tz = "UTC", origin = "1990-01-01")
+
+head(nc_time)
+```
+
+Great. Let's get some of the additional data that might come in handy, then close the NetCDF connection. 
+
+
+
+```{r}
+ugh <- currents.x
+dimnames(ugh) <- list(lon = nc_lon, lat = nc_lat, time = nc_time)
+as.data.frame.table(ugh, responseName = "value") 
+
+plyr::adply(ugh, 1:3)
+
+```
+
