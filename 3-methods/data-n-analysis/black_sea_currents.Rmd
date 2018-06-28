@@ -1,6 +1,6 @@
 ---
 title: "Black Sea currents"
-date: "2018-06-27"
+date: "2018-06-28"
 output: html_notebook
 theme: paper
 ---
@@ -85,6 +85,8 @@ text_size <- function(text.x = NULL,
 ```
 
 ***  
+
+#### Import & clean current velocity data.  
 First, the **daily means** of the current velocities.  
 Read in the data & check the file contents.  
 ```{r import_netcdf}
@@ -93,7 +95,7 @@ Read in the data & check the file contents.
 ```
 
 Looks fine! Let's extract the current velocities..  
-```{r extract_variables}
+```{r extract_netcdf_variables}
 ## meridional current matrix
 currents.y <- ncvar_get(currents.in, "vomecrty")
 dim(currents.y)
@@ -105,7 +107,7 @@ dim(currents.x)
 ```
 The current velocities are stored in a lon x lat x time matrix. There is also a depth dimension, but it only has one value, 2.5 m - only surface currents here.  
 Let's extract the time, latitude and longitude - stored as **NetCDF dimensions**.  
-```{r extract_dimensions}
+```{r extract_netcdf_dimensions}
 ## check the names of the dimensions 
 attributes(currents.in$dim)$names
 
@@ -118,23 +120,78 @@ nc_lon <- ncvar_get(currents.in, "lon")
 print(paste(dim(nc_lon), "longitudes, ", dim(nc_lat), "latitudes and ", dim(nc_time), "times."))
 ```
 
+OK, there is no real need to get more of the attributes - let's close the NetCDF connection. 
+```{r close_netcdf}
+nc_close(currents.in)
+```
+
+
+Now for the cleaning...  
 Reformat the time into something more readable (otherwise it's in seconds since 1990-01-01, as the attributes suggest).  
 ```{r format_time}
-nc_time <- as.POSIXct(nc_time, format = "%Y-%m-%d", tz = "UTC", origin = "1990-01-01")
+nc_time <- as.POSIXct(nc_time, format = "%Y-%m-%d", tz = "UTC", origin = "1990-01-01") ## the file metadata say that the time format is in seconds since 1990-01-01
 
 head(nc_time)
 ```
 
-Great. Let's get some of the additional data that might come in handy, then close the NetCDF connection. 
+OK; now collapse the array into a data frame which is infinitely easier to manage..
+```{r arrays_to_data_frame}
+## put the latitudes in column names, the longitudes in row names and the times in 3d dimension
+dimnames(currents.x) <- list(lon = nc_lon, lat = nc_lat, time = nc_time)
+dimnames(currents.y) <- list(lon = nc_lon, lat = nc_lat, time = nc_time)
+
+## collapse the velocity arrays into data frames 
+currents.x.df <- as.data.frame.table(currents.x, responseName = "u") 
+currents.y.df <- as.data.frame.table(currents.y, responseName = "v")
+
+## convert these data frames to tibbles, just because I like them better
+currents.x.df <- as_data_frame(currents.x.df)
+currents.y.df <- as_data_frame(currents.y.df)
+```
+
+Now, this turns the latitudes, longitudes and times into factors, and we don't want that.  
+```{r fix_numeric_vars}
+(currents.x.df <- currents.x.df %>% 
+   ## convert factors to numeric
+   mutate_if(is.factor, funs(as.numeric(as.character(.)))) %>% 
+   ## fix time, KEEPING IN MIND THAT THIS TIME THE ORIGIN IS 1970-01-01, AS IN R
+   mutate(time = as.POSIXct(time, tz = "UTC", origin = "1970-01-01"))
+)
+
+
+(currents.y.df <- currents.y.df %>% 
+   ## convert factors to numeric
+   mutate_if(is.factor, funs(as.numeric(as.character(.)))) %>% 
+   mutate(time = as.POSIXct(time, tz = "UTC", origin = "1970-01-01"))
+)
+```
+
+
+#### Map data  
+I'm going with the GADM data for Bulgaria - at this scale it's reasonably precise AND it includes St Ivan island, which none of the others do..  
+```{r import_map_data}
+bg.map <- read_rds(here(data.dir, "currents", "gadm36_BGR_0_sp.rds"))
+
+```
 
 
 
+
+#### Plot currents
 ```{r}
-ugh <- currents.x
-dimnames(ugh) <- list(lon = nc_lon, lat = nc_lat, time = nc_time)
-as.data.frame.table(ugh, responseName = "value") 
+## join u & v then filter a bit, for testing
+dummy.currents <- left_join(currents.x.df, currents.y.df, by = c("lat", "lon", "time"))
 
-plyr::adply(ugh, 1:3)
+dummy.currents <- dummy.currents %>% 
+  filter(time == as.POSIXct("2012-01-01", tz = "UTC"))
 
+# lon_sub <- seq(27, 29, by = 0.001)
+# lat_sub <- seq(42, 43, by = 0.001)
+# dummy.currents <- dummy.currents %>% 
+#   filter(lon %in% lon_sub, lat %in% lat_sub)
+
+ggplot(dummy.currents, aes(x = lon, y = lat)) +
+  geom_segment(aes(xend = lon + u * 0.25, yend = lat + v * 0.25),
+arrow = arrow(angle = 15, length = unit(0.02, "inches"), type = "closed"), alpha = 0.3)
 ```
 
