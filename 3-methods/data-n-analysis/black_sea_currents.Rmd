@@ -1,6 +1,6 @@
 ---
 title: "Black Sea currents"
-date: "2018-06-28"
+date: "2018-06-29"
 output: html_notebook
 theme: paper
 ---
@@ -47,9 +47,10 @@ Import libraries.
 ```{r import_packages, message = FALSE}
 library(here) ## find root of project directory
 library(tidyverse) ## data manipulation & tidying
-#library(viridis) ## pretty & readable colour schemes 
-
+library(viridis) ## pretty & readable colour schemes 
 library(ncdf4) ## read & manipulate NetCDF files
+library(maps) ## background maps
+library(mapdata) ## background maps, too
 ```
 
 Some commonly-used ggplot2 modifications..  
@@ -168,22 +169,33 @@ Now, this turns the latitudes, longitudes and times into factors, and we don't w
 
 
 #### Map data  
-I'm going with the GADM data for Bulgaria - at this scale it's reasonably precise AND it includes St Ivan island, which none of the others do..  
-```{r import_map_data}
-bg.map <- read_rds(here(data.dir, "currents", "gadm36_BGR_0_sp.rds"))
+I'm going to play around - for practice - with various ways to get a background map, and see which one I like the most.. 
+
+* use ggplot function map_data to get the desired area from the mapdata package database. Bonus: already converted to a data frame ggplot can read!  
+```{r background_map_ggplot}
+## map_data is a ggplot function! 
+(bg.coast <- map_data("worldHires", "Bulgaria", xlim=c(27.0, 29.0), ylim = c(42.0, 43.0))
+)
+```
+
+* read in a shapefile (from GIS_Ecology_BG). This results in a Spdf object (= spatial polygons data frame).    
+```{r background_map_shp}
+## this needs library rgdal
+# my_spdf <- rgdal::readOGR(dsn = here(), layer = "TM_WORLD_BORDERS_SIMPL-0.3") 
 
 ```
 
 
 
-
 #### Plot currents
-```{r}
+
+
+```{r test_plot_sub}
 ## join u & v then filter a bit, for testing
 dummy.currents <- left_join(currents.x.df, currents.y.df, by = c("lat", "lon", "time"))
 
 dummy.currents <- dummy.currents %>% 
-  filter(time == as.POSIXct("2012-01-01", tz = "UTC"))
+  filter(time == as.POSIXct("2012-01-01", tz = "UTC")) 
 
 # lon_sub <- seq(27, 29, by = 0.001)
 # lat_sub <- seq(42, 43, by = 0.001)
@@ -191,7 +203,12 @@ dummy.currents <- dummy.currents %>%
 #   filter(lon %in% lon_sub, lat %in% lat_sub)
 
 ggplot(dummy.currents, aes(x = lon, y = lat)) +
+  geom_polygon(data = bg.coast, mapping = aes(x = long, y = lat, group = group), fill = "darkgrey", colour = "grey45") +
   geom_segment(aes(xend = lon + u * 0.25, yend = lat + v * 0.25),
-arrow = arrow(angle = 15, length = unit(0.02, "inches"), type = "closed"), alpha = 0.3)
+arrow = arrow(angle = 15, length = unit(0.02, "inches"), type = "closed"), alpha = 0.3) + 
+  ## zoom in on the coastline
+  coord_fixed(xlim = c(27.3, 29),  ylim = c(42, 43), ratio = 1.3)
+  
 ```
+
 
