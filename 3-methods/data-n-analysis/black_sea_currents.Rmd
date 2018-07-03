@@ -1,6 +1,6 @@
 ---
 title: "Black Sea currents"
-date: "2018-06-29"
+date: "2018-07-03"
 output: html_notebook
 theme: paper
 ---
@@ -51,6 +51,8 @@ library(viridis) ## pretty & readable colour schemes
 library(ncdf4) ## read & manipulate NetCDF files
 library(maps) ## background maps
 library(mapdata) ## background maps, too
+library(rgdal) ## read & interact with shapefiles
+library(sp) ## work with spatial data
 ```
 
 Some commonly-used ggplot2 modifications..  
@@ -128,7 +130,7 @@ nc_close(currents.in)
 
 
 Now for the cleaning...  
-Reformat the time into something more readable (otherwise it's in seconds since 1990-01-01, as the attributes suggest).  
+Reformat the time into something more readable (otherwise it's in seconds since 1990-01-01, as the attributes say).  
 ```{r format_time}
 nc_time <- as.POSIXct(nc_time, format = "%Y-%m-%d", tz = "UTC", origin = "1990-01-01") ## the file metadata say that the time format is in seconds since 1990-01-01
 
@@ -166,6 +168,11 @@ Now, this turns the latitudes, longitudes and times into factors, and we don't w
    mutate(time = as.POSIXct(time, tz = "UTC", origin = "1970-01-01"))
 )
 ```
+Now combine the two data frames (u and v) into a single large data frame..  
+```{r combine_currents_df}
+(currents.all <- left_join(currents.x.df, currents.y.df, by = c("lat", "lon", "time"))
+)
+```
 
 
 #### Map data  
@@ -176,39 +183,93 @@ I'm going to play around - for practice - with various ways to get a background 
 ## map_data is a ggplot function! 
 (bg.coast <- map_data("worldHires", "Bulgaria", xlim=c(27.0, 29.0), ylim = c(42.0, 43.0))
 )
-```
 
-* read in a shapefile (from GIS_Ecology_BG). This results in a Spdf object (= spatial polygons data frame).    
+ggplot(bg.coast, aes(x = long, y = lat)) + 
+  geom_polygon()
+```
+Cool!  
+
+* read in a shapefile (from GIS_Ecology_BG; file(s) BG_Border copied into the data directory before starting). This results in a spdf object (= spatial polygons data frame).    
 ```{r background_map_shp}
 ## this needs library rgdal
-# my_spdf <- rgdal::readOGR(dsn = here(), layer = "TM_WORLD_BORDERS_SIMPL-0.3") 
+bg_spdf <- readOGR(dsn = here(data.dir, "currents"), layer = "BG_Border")
 
+## reproject to latitude/longitude - the original shapefile is in UTM, zone 35 N (these functions come from package sp)
+bg_spdf_geog <- spTransform(bg_spdf, CRS("+proj=longlat +datum=WGS84"))
+
+## plot to see if everything went fine..
+plot(bg_spdf_geog)
+
+## The plot doesn't show up in the notebook - probably something to do with sp's plotting method and knitr. It looks fine when run from the normal console/graphical device.
 ```
 
+The spdf needs to be transformed into a dataframe that ggplot understands... Excellent overview & description of how and why here: https://github.com/tidyverse/ggplot2/wiki/plotting-polygon-shapefiles
+```{r spdf_to_df}
+bg_df <- fortify(bg_spdf_geog, region = "STATE_B_ID") ## region is the name of the id field of the data slot in the spdf
 
+## plot to check things out.. 
+ggplot(bg_df, aes(x = long, y = lat, group = group)) + 
+  geom_polygon()
+```
+Zoom in on the southern Black Sea coast (same extent as the currents data from the Black Sea model)..  
+```{r zoom_bg_coast}
+ggplot(bg_df, aes(x = long, y = lat, group = group)) + 
+  geom_polygon() + 
+  coord_fixed(xlim = c(27, 29),  ylim = c(42, 43), ratio = 1.3)
+```
+Goody! Maybe remove the gridlines in the finished plot, though.  
 
-#### Plot currents
-
-
-```{r test_plot_sub}
-## join u & v then filter a bit, for testing
-dummy.currents <- left_join(currents.x.df, currents.y.df, by = c("lat", "lon", "time"))
-
-dummy.currents <- dummy.currents %>% 
+#### Plot currents - test
+Now that we have a background map, let's try plotting a subset of the currents..  
+```{r test_plot_currents_sub}
+## get only one date from the currents data frame for testing 
+dummy.currents <- currents.all %>% 
   filter(time == as.POSIXct("2012-01-01", tz = "UTC")) 
 
-# lon_sub <- seq(27, 29, by = 0.001)
-# lat_sub <- seq(42, 43, by = 0.001)
-# dummy.currents <- dummy.currents %>% 
-#   filter(lon %in% lon_sub, lat %in% lat_sub)
-
-ggplot(dummy.currents, aes(x = lon, y = lat)) +
-  geom_polygon(data = bg.coast, mapping = aes(x = long, y = lat, group = group), fill = "darkgrey", colour = "grey45") +
-  geom_segment(aes(xend = lon + u * 0.25, yend = lat + v * 0.25),
+ggplot() +
+  ## plot the currents (filtered a bit to avoid overplotting)
+  geom_segment(data = dummy.currents %>% filter(row_number() %% 2 == 0), aes(x = lon, y = lat, xend = lon + u * 0.25, yend = lat + v * 0.25),
 arrow = arrow(angle = 15, length = unit(0.02, "inches"), type = "closed"), alpha = 0.3) + 
-  ## zoom in on the coastline
-  coord_fixed(xlim = c(27.3, 29),  ylim = c(42, 43), ratio = 1.3)
-  
+  ## plot the coastline
+  geom_polygon(data = bg_df, aes(x = long, y = lat, group = group)) +
+  ## zoom in on the coastline (keeping the aspect ratio)
+  coord_fixed(xlim = c(27, 29),  ylim = c(42, 43), ratio = 1.3)
+```
+The currents data frame contains a lot of missing values which are automatically removed by ggplot - this causes the warning, but it's not a big deal.  
+
+
+#### Average currents - by year  
+I'm going to average the currents by year, for each latitude-longitude pair.  
+Hopefully this produces something valid - I'm not really sure you can treat reanalysis data this way, but ok..  
+```{r yearly_average_currents}
+## make a copy of the currents data frame, which will be overwritten with the summary
+currents.all.average <- currents.all
+
+## add a column with the year to the summary currents data frame - will be used for grouping
+(currents.all.average <- currents.all.average %>% 
+    mutate(year = lubridate::year(time)) %>% 
+    select(lon, lat, time, year, u, v) ## rearrange the columns a bit 
+)
+
+## for each longitude and latitude, summarize the currents by year
+(currents.all.average <- currents.all.average %>%
+    group_by(lon, lat, year) %>%
+    transmute(u_mean = mean(u, na.rm = TRUE), v_mean = mean(v, na.rm = TRUE))
+)
 ```
 
+Plot the yearly averages..   
+```{r plot_yearly_average_currents}
+ggplot() +
+  ## plot the currents (filtered a bit to avoid overplotting)
+  geom_segment(data = currents.all.average %>% filter(dplyr::row_number() %% 2 == 0) %>% unique(), aes(x = lon, y = lat, xend = lon + u_mean * 0.5, yend = lat + v_mean * 0.5), ## higher scalar to (hopefully) make vectors more visible
+arrow = arrow(angle = 15, length = unit(0.02, "inches"), type = "closed"), alpha = 0.3) + 
+  facet_wrap(~ year) + ## facet by year
+  ## plot the coastline
+  geom_polygon(data = bg_df, aes(x = long, y = lat, group = group)) +
+  ## zoom in on the coastline (keeping the aspect ratio)
+  coord_fixed(xlim = c(27, 29),  ylim = c(42, 43), ratio = 1.3)
+```
+That's good, but even with the reduced dataset and the higher multiplication factor for the vectors the maps are practically unreadable..  
 
+First try to fix this: plot the years one by one, then combine in one plot if needed.   
