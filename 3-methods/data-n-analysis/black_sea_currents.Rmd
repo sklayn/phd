@@ -1,6 +1,6 @@
 ---
 title: "Black Sea currents"
-date: "2018-07-03"
+date: "2018-07-04"
 output: html_notebook
 theme: paper
 ---
@@ -230,7 +230,7 @@ ggplot() +
   ## plot the currents (filtered a bit to avoid overplotting)
   geom_segment(data = dummy.currents %>% filter(row_number() %% 2 == 0), aes(x = lon, y = lat, xend = lon + u * 0.25, yend = lat + v * 0.25),
 arrow = arrow(angle = 15, length = unit(0.02, "inches"), type = "closed"), alpha = 0.3) + 
-  ## plot the coastline
+  ## plot the land mass
   geom_polygon(data = bg_df, aes(x = long, y = lat, group = group)) +
   ## zoom in on the coastline (keeping the aspect ratio)
   coord_fixed(xlim = c(27, 29),  ylim = c(42, 43), ratio = 1.3)
@@ -253,23 +253,106 @@ currents.all.average <- currents.all
 
 ## for each longitude and latitude, summarize the currents by year
 (currents.all.average <- currents.all.average %>%
-    group_by(lon, lat, year) %>%
-    transmute(u_mean = mean(u, na.rm = TRUE), v_mean = mean(v, na.rm = TRUE))
+    group_by(year, lon, lat) %>%
+    transmute(u_mean = mean(u, na.rm = TRUE), v_mean = mean(v, na.rm = TRUE)) %>% 
+    distinct() ## keep only distinct rows
 )
+
 ```
 
 Plot the yearly averages..   
 ```{r plot_yearly_average_currents}
 ggplot() +
-  ## plot the currents (filtered a bit to avoid overplotting)
-  geom_segment(data = currents.all.average %>% filter(dplyr::row_number() %% 2 == 0) %>% unique(), aes(x = lon, y = lat, xend = lon + u_mean * 0.5, yend = lat + v_mean * 0.5), ## higher scalar to (hopefully) make vectors more visible
+  ## plot the currents
+  geom_segment(data = currents.all.average %>% filter(year != 2015), aes(x = lon, y = lat, xend = lon + u_mean * 0.5, yend = lat + v_mean * 0.5), ## higher scalar to (hopefully) make vectors more visible
 arrow = arrow(angle = 15, length = unit(0.02, "inches"), type = "closed"), alpha = 0.3) + 
   facet_wrap(~ year) + ## facet by year
-  ## plot the coastline
+  ## plot the land mass
   geom_polygon(data = bg_df, aes(x = long, y = lat, group = group)) +
   ## zoom in on the coastline (keeping the aspect ratio)
   coord_fixed(xlim = c(27, 29),  ylim = c(42, 43), ratio = 1.3)
 ```
+
+
 That's good, but even with the reduced dataset and the higher multiplication factor for the vectors the maps are practically unreadable..  
 
 First try to fix this: plot the years one by one, then combine in one plot if needed.   
+```{r plot_yearly_average_currents_2012}
+plot.mean.currents.yr.2012 <- ggplot() +
+  ## plot the currents
+  geom_segment(data = currents.all.average %>% ungroup() %>% filter(year == 2012, dplyr::row_number() %% 2 == 0), 
+               aes(x = lon, y = lat, xend = lon + u_mean * 0.5, yend = lat + v_mean * 0.5), ## higher scalar to (hopefully) make vectors more visible
+               arrow = arrow(angle = 15, length = unit(0.03, "inches"), type = "closed"), 
+               alpha = 0.3) + 
+  ## plot the land mass
+  geom_polygon(data = bg_df, aes(x = long, y = lat, group = group)) +
+  ## zoom in on the coastline (keeping the aspect ratio)
+  coord_fixed(xlim = c(27, 29),  ylim = c(42, 43), ratio = 1.3)
+
+## add some finishing touches
+(plot.mean.currents.yr.2012 <- plot.mean.currents.yr.2012 + 
+    # improve the x and y axis labels a bit.. 
+    scale_x_continuous(labels = scales::unit_format("°E", sep = "")) +
+    scale_y_continuous(labels = scales::unit_format("°N", sep = "")) +
+    # remove axis labels and panel grid
+    labs(x = NULL, y = NULL) + 
+    theme(panel.grid = element_blank())
+)
+
+## save the plot, just in case
+ggsave(here(figures.dir, "plot_mean_current_velocity_2012.png"), plot.mean.currents.yr.2012, dpi = 300)
+
+```
+
+
+```{r plot_yearly_average_currents_2013}
+plot.mean.currents.yr.2013 <- ggplot() +
+  ## plot the currents
+  geom_segment(data = currents.all.average %>% ungroup() %>% filter(year == 2013, dplyr::row_number() %% 2 == 0), aes(x = lon, y = lat, xend = lon + u_mean * 0.5, yend = lat + v_mean * 0.5), ## higher scalar to (hopefully) make vectors more visible
+arrow = arrow(angle = 15, length = unit(0.03, "inches"), type = "closed"), alpha = 0.3) + 
+  ## plot the coastline
+  geom_polygon(data = bg_df, aes(x = long, y = lat, group = group)) +
+  ## zoom in on the coastline (keeping the aspect ratio)
+  coord_fixed(xlim = c(27, 29),  ylim = c(42, 43), ratio = 1.3)
+
+
+## add some finishing touches
+(plot.mean.currents.yr.2013 <- plot.mean.currents.yr.2013 + 
+    # improve the x and y axis labels a bit.. 
+    scale_x_continuous(labels = scales::unit_format("°E", sep = "")) +
+    scale_y_continuous(labels = scales::unit_format("°N", sep = "")) +
+    # remove axis labels and panel grid
+    labs(x = NULL, y = NULL) + 
+    theme(panel.grid = element_blank())
+)
+
+## save the plot, just in case
+ggsave(here(figures.dir, "plot_mean_current_velocity_2013.png"), plot.mean.currents.yr.2013, dpi = 300)
+
+```
+
+
+```{r plot_yearly_average_currents_2014}
+plot.mean.currents.yr.2014 <- ggplot() +
+  ## plot the currents
+  geom_segment(data = currents.all.average %>% ungroup() %>% filter(year == 2014, dplyr::row_number() %% 2 == 0), aes(x = lon, y = lat, xend = lon + u_mean * 0.5, yend = lat + v_mean * 0.5), ## higher scalar to (hopefully) make vectors more visible
+arrow = arrow(angle = 15, length = unit(0.03, "inches"), type = "closed"), alpha = 0.3) + 
+  ## plot the coastline
+  geom_polygon(data = bg_df, aes(x = long, y = lat, group = group)) +
+  ## zoom in on the coastline (keeping the aspect ratio)
+  coord_fixed(xlim = c(27, 29),  ylim = c(42, 43), ratio = 1.3)
+
+## add some finishing touches
+(plot.mean.currents.yr.2014 <- plot.mean.currents.yr.2014 + 
+    # improve the x and y axis labels a bit.. 
+    scale_x_continuous(labels = scales::unit_format("°E", sep = "")) +
+    scale_y_continuous(labels = scales::unit_format("°N", sep = "")) +
+    # remove axis labels and panel grid
+    labs(x = NULL, y = NULL) + 
+    theme(panel.grid = element_blank())
+)
+
+## save the plot, just in case
+ggsave(here(figures.dir, "plot_mean_current_velocity_2014.png"), plot.mean.currents.yr.2014, dpi = 300)
+
+```
