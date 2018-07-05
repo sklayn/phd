@@ -1,14 +1,15 @@
 ---
-title: "Black Sea currents"
-date: "2018-07-04"
+title: "Black Sea currents & water temperatures"
+date: "2018-07-05"
 output: html_notebook
 theme: paper
 ---
 
-##  Black Sea circulation  
+##  Black Sea circulation and seawater temperature    
 This notebook details the process of opening a NetCDF dataset downloaded from CMEMS (marine.copernicus.eu), extracting & then plotting the data.  
 
-The current dataset contains a subset of surface current velocities from BLKSEA_REANALYSIS_PHYS_007_004 - a reanalysis product of the physical state of the Black Sea (1992-2017). The subset covers the SW Black Sea - Burgas Bay to the Turkish border, and the period 2012-01-01 to 2015-01-01 (my PhD study period).  
+The currents dataset contains a subset of surface current velocities from BLKSEA_REANALYSIS_PHYS_007_004 - a reanalysis product of the physical state of the Black Sea (1992-2017). The subset covers the SW Black Sea - Burgas Bay to the Turkish border, and the period 2012-01-01 to 2015-01-01 (my PhD study period). 
+The temperatures dataset is also a subset from the same model (BLKSEA_REANALYSIS_PHYS_007_004). It has the same geographical and temporal extent as the currents dataset, but it has two temperature variables - surface and bottom.  
 
 ***  
 
@@ -89,99 +90,14 @@ text_size <- function(text.x = NULL,
 
 ***  
 
-#### Import & clean current velocity data.  
-First, the **daily means** of the current velocities.  
-Read in the data & check the file contents.  
-```{r import_netcdf}
-(currents.in <- nc_open(file = here(data.dir, "currents", "sv04-bs-cmcc-cur-rean-d_1530092744997.nc"))
-)
-```
 
-Looks fine! Let's extract the current velocities..  
-```{r extract_netcdf_variables}
-## meridional current matrix
-currents.y <- ncvar_get(currents.in, "vomecrty")
-dim(currents.y)
-
-## zonal current matrix
-currents.x <- ncvar_get(currents.in, "vozocrtx")
-dim(currents.x)
-
-```
-The current velocities are stored in a lon x lat x time matrix. There is also a depth dimension, but it only has one value, 2.5 m - only surface currents here.  
-Let's extract the time, latitude and longitude - stored as **NetCDF dimensions**.  
-```{r extract_netcdf_dimensions}
-## check the names of the dimensions 
-attributes(currents.in$dim)$names
-
-## we'll only get the latitude, longitude & time
-nc_time <- ncvar_get(currents.in, "time")
-nc_lat <- ncvar_get(currents.in, "lat")
-nc_lon <- ncvar_get(currents.in, "lon")
-
-## print the dimensions to see if they match what we have for the velocities above..
-print(paste(dim(nc_lon), "longitudes, ", dim(nc_lat), "latitudes and ", dim(nc_time), "times."))
-```
-
-OK, there is no real need to get more of the attributes - let's close the NetCDF connection. 
-```{r close_netcdf}
-nc_close(currents.in)
-```
-
-
-Now for the cleaning...  
-Reformat the time into something more readable (otherwise it's in seconds since 1990-01-01, as the attributes say).  
-```{r format_time}
-nc_time <- as.POSIXct(nc_time, format = "%Y-%m-%d", tz = "UTC", origin = "1990-01-01") ## the file metadata say that the time format is in seconds since 1990-01-01
-
-head(nc_time)
-```
-
-OK; now collapse the array into a data frame which is infinitely easier to manage..
-```{r arrays_to_data_frame}
-## put the latitudes in column names, the longitudes in row names and the times in 3d dimension
-dimnames(currents.x) <- list(lon = nc_lon, lat = nc_lat, time = nc_time)
-dimnames(currents.y) <- list(lon = nc_lon, lat = nc_lat, time = nc_time)
-
-## collapse the velocity arrays into data frames 
-currents.x.df <- as.data.frame.table(currents.x, responseName = "u") 
-currents.y.df <- as.data.frame.table(currents.y, responseName = "v")
-
-## convert these data frames to tibbles, just because I like them better
-currents.x.df <- as_data_frame(currents.x.df)
-currents.y.df <- as_data_frame(currents.y.df)
-```
-
-Now, this turns the latitudes, longitudes and times into factors, and we don't want that.  
-```{r fix_numeric_vars}
-(currents.x.df <- currents.x.df %>% 
-   ## convert factors to numeric
-   mutate_if(is.factor, funs(as.numeric(as.character(.)))) %>% 
-   ## fix time, KEEPING IN MIND THAT THIS TIME THE ORIGIN IS 1970-01-01, AS IN R
-   mutate(time = as.POSIXct(time, tz = "UTC", origin = "1970-01-01"))
-)
-
-
-(currents.y.df <- currents.y.df %>% 
-   ## convert factors to numeric
-   mutate_if(is.factor, funs(as.numeric(as.character(.)))) %>% 
-   mutate(time = as.POSIXct(time, tz = "UTC", origin = "1970-01-01"))
-)
-```
-Now combine the two data frames (u and v) into a single large data frame..  
-```{r combine_currents_df}
-(currents.all <- left_join(currents.x.df, currents.y.df, by = c("lat", "lon", "time"))
-)
-```
-
-
-#### Map data  
+### Map data  
 I'm going to play around - for practice - with various ways to get a background map, and see which one I like the most.. 
 
 * use ggplot function map_data to get the desired area from the mapdata package database. Bonus: already converted to a data frame ggplot can read!  
 ```{r background_map_ggplot}
 ## map_data is a ggplot function! 
-(bg.coast <- map_data("worldHires", "Bulgaria", xlim=c(27.0, 29.0), ylim = c(42.0, 43.0))
+(bg.coast <- map_data("worldHires", "Bulgaria", xlim = c(27.0, 29.0), ylim = c(42.0, 43.0))
 )
 
 ggplot(bg.coast, aes(x = long, y = lat)) + 
@@ -215,21 +131,110 @@ Zoom in on the southern Black Sea coast (same extent as the currents data from t
 ```{r zoom_bg_coast}
 ggplot(bg_df, aes(x = long, y = lat, group = group)) + 
   geom_polygon() + 
-  coord_fixed(xlim = c(27, 29),  ylim = c(42, 43), ratio = 1.3)
+  coord_fixed(xlim = c(27, 29),  ylim = c(42, 43), ratio = 1.3) 
 ```
-Goody! Maybe remove the gridlines in the finished plot, though.  
+Goody! I like this one the most. Maybe remove the gridlines in the finished plot, though.  
 
-#### Plot currents - test
+
+### Import & clean current velocity data - **daily means**.  
+Read in the data & check the file contents.  
+```{r import_netcdf_daily}
+(currents.d.in <- nc_open(file = here(data.dir, "currents", "sv04-bs-cmcc-cur-rean-d_1530092744997.nc"))
+)
+```
+
+Looks fine! Let's extract the current velocities..  
+```{r extract_netcdf_variables_daily}
+## meridional current matrix
+currents.d.y <- ncvar_get(currents.d.in, "vomecrty")
+dim(currents.d.y)
+
+## zonal current matrix
+currents.d.x <- ncvar_get(currents.d.in, "vozocrtx")
+dim(currents.d.x)
+
+```
+The current velocities are stored in a lon x lat x time matrix. There is also a depth dimension, but it only has one value, 2.5 m - only surface currents here.  
+Let's extract the time, latitude and longitude - stored as **NetCDF dimensions**.  
+```{r extract_netcdf_dimensions_daily}
+## check the names of the dimensions 
+attributes(currents.d.in$dim)$names
+
+## we'll only get the latitude, longitude & time
+nc.time.d <- ncvar_get(currents.d.in, "time")
+nc.lat.d <- ncvar_get(currents.d.in, "lat")
+nc.lon.d <- ncvar_get(currents.d.in, "lon")
+
+## print the dimensions to see if they match what we have for the velocities above..
+print(paste(dim(nc.lon.d), "longitudes, ", dim(nc.lat.d), "latitudes and ", dim(nc.time.d), "times."))
+
+```
+
+OK, there is no real need to get more of the attributes - let's close the NetCDF connection. 
+```{r close_netcdf_daily}
+nc_close(currents.d.in)
+```
+
+
+Now for the cleaning...  
+Reformat the time into something more readable (otherwise it's in seconds since 1990-01-01, as the attributes say).  
+```{r format_time_daily}
+nc.time.d <- as.POSIXct(nc.time.d, format = "%Y-%m-%d", tz = "UTC", origin = "1990-01-01") ## the file metadata say that the time format is in seconds since 1990-01-01
+
+head(nc.time.d)
+```
+
+OK; now collapse the array into a data frame which is infinitely easier to manage..
+```{r arrays_to_data_frame_daily}
+## put the latitudes in column names, the longitudes in row names and the times in 3d dimension
+dimnames(currents.d.x) <- list(lon = nc.lon.d, lat = nc.lat.d, time = nc.time.d)
+dimnames(currents.d.y) <- list(lon = nc.lon.d, lat = nc.lat.d, time = nc.time.d)
+
+## collapse the velocity arrays into data frames 
+currents.d.x.df <- as.data.frame.table(currents.d.x, responseName = "u") 
+currents.d.y.df <- as.data.frame.table(currents.d.y, responseName = "v")
+
+## convert these data frames to tibbles, just because I like them better
+currents.d.x.df <- as_data_frame(currents.d.x.df)
+currents.d.y.df <- as_data_frame(currents.d.y.df)
+```
+
+Now, this turns the latitudes, longitudes and times into factors, and we don't want that.  
+```{r fix_numeric_vars_daily}
+(currents.d.x.df <- currents.d.x.df %>% 
+   ## convert factors to numeric
+   mutate_if(is.factor, funs(as.numeric(as.character(.)))) %>% 
+   ## fix time, KEEPING IN MIND THAT NOW THE ORIGIN IS 1970-01-01, AS IN R
+   mutate(time = as.POSIXct(time, tz = "UTC", origin = "1970-01-01"))
+)
+
+
+(currents.d.y.df <- currents.d.y.df %>% 
+   ## convert factors to numeric
+   mutate_if(is.factor, funs(as.numeric(as.character(.)))) %>% 
+   mutate(time = as.POSIXct(time, tz = "UTC", origin = "1970-01-01"))
+)
+```
+Now combine the two data frames (u and v) into a single large data frame..  
+```{r combine_currents_df_daily}
+(currents.all.d <- left_join(currents.d.x.df, currents.d.y.df, by = c("lat", "lon", "time"))
+)
+```
+
+
+### Plot currents - test
 Now that we have a background map, let's try plotting a subset of the currents..  
-```{r test_plot_currents_sub}
+```{r test_plot_currents_daily_sub}
 ## get only one date from the currents data frame for testing 
-dummy.currents <- currents.all %>% 
+test.currents <- currents.all.d %>% 
   filter(time == as.POSIXct("2012-01-01", tz = "UTC")) 
 
 ggplot() +
   ## plot the currents (filtered a bit to avoid overplotting)
-  geom_segment(data = dummy.currents %>% filter(row_number() %% 2 == 0), aes(x = lon, y = lat, xend = lon + u * 0.25, yend = lat + v * 0.25),
-arrow = arrow(angle = 15, length = unit(0.02, "inches"), type = "closed"), alpha = 0.3) + 
+  geom_segment(data = test.currents %>% filter(row_number() %% 2 == 0), 
+               aes(x = lon, y = lat, xend = lon + u * 0.25, yend = lat + v * 0.25),
+               arrow = arrow(angle = 15, length = unit(0.02, "inches"), type = "closed"), 
+               alpha = 0.3) + 
   ## plot the land mass
   geom_polygon(data = bg_df, aes(x = long, y = lat, group = group)) +
   ## zoom in on the coastline (keeping the aspect ratio)
@@ -238,12 +243,12 @@ arrow = arrow(angle = 15, length = unit(0.02, "inches"), type = "closed"), alpha
 The currents data frame contains a lot of missing values which are automatically removed by ggplot - this causes the warning, but it's not a big deal.  
 
 
-#### Average currents - by year  
+### Average currents - by year  
 I'm going to average the currents by year, for each latitude-longitude pair.  
 Hopefully this produces something valid - I'm not really sure you can treat reanalysis data this way, but ok..  
 ```{r yearly_average_currents}
 ## make a copy of the currents data frame, which will be overwritten with the summary
-currents.all.average <- currents.all
+currents.all.average <- currents.all.d
 
 ## add a column with the year to the summary currents data frame - will be used for grouping
 (currents.all.average <- currents.all.average %>% 
@@ -276,7 +281,7 @@ arrow = arrow(angle = 15, length = unit(0.02, "inches"), type = "closed"), alpha
 
 That's good, but even with the reduced dataset and the higher multiplication factor for the vectors the maps are practically unreadable..  
 
-First try to fix this: plot the years one by one, then combine in one plot if needed.   
+To fix this: plot the years one by one, then combine in one plot if needed.   
 ```{r plot_yearly_average_currents_2012}
 plot.mean.currents.yr.2012 <- ggplot() +
   ## plot the currents
@@ -304,7 +309,6 @@ ggsave(here(figures.dir, "plot_mean_current_velocity_2012.png"), plot.mean.curre
 
 ```
 
-
 ```{r plot_yearly_average_currents_2013}
 plot.mean.currents.yr.2013 <- ggplot() +
   ## plot the currents
@@ -331,7 +335,6 @@ ggsave(here(figures.dir, "plot_mean_current_velocity_2013.png"), plot.mean.curre
 
 ```
 
-
 ```{r plot_yearly_average_currents_2014}
 plot.mean.currents.yr.2014 <- ggplot() +
   ## plot the currents
@@ -356,3 +359,256 @@ arrow = arrow(angle = 15, length = unit(0.03, "inches"), type = "closed"), alpha
 ggsave(here(figures.dir, "plot_mean_current_velocity_2014.png"), plot.mean.currents.yr.2014, dpi = 300)
 
 ```
+
+OK it looks sort of fine..   
+
+
+
+### Import & clean current velocity data - **monthly means**.  
+Let's do it again..  
+Read in the data & check the file contents.  
+```{r import_netcdf_monthly}
+(currents.m.in <- nc_open(file = here(data.dir, "currents", "sv04-bs-cmcc-cur-rean-m_1530089482440.nc"))
+)
+```
+
+Extract the **monthly average** current velocities.  
+```{r extract_netcdf_variables_monthly}
+## meridional current matrix
+currents.m.y <- ncvar_get(currents.m.in, "vomecrty")
+dim(currents.m.y)
+
+## zonal current matrix
+currents.m.x <- ncvar_get(currents.m.in, "vozocrtx")
+dim(currents.m.x)
+
+```
+The current velocities are stored in a lon x lat x time matrix.  
+
+Extract the time, latitude and longitude - stored as **NetCDF dimensions**.  
+```{r extract_netcdf_dimensions_monthly}
+## check the names of the dimensions 
+attributes(currents.m.in$dim)$names
+
+## we'll only get the latitude, longitude & time
+nc.time.m <- ncvar_get(currents.m.in, "time")
+nc.lat.m <- ncvar_get(currents.m.in, "lat")
+nc.lon.m <- ncvar_get(currents.m.in, "lon")
+
+## print the dimensions to see if they match what we have for the velocities above..
+print(paste(dim(nc.lon.m), "longitudes, ", dim(nc.lat.m), "latitudes and ", dim(nc.time.m), "times."))
+```
+
+Close the NetCDF connection. 
+```{r close_netcdf_monthly}
+nc_close(currents.m.in)
+```
+
+Cleaning time!...  
+Reformat the time into something more readable (otherwise it's in seconds since 1990-01-01, as the attributes say).  
+```{r format_time_monthly}
+nc.time.m <- as.POSIXct(nc.time.m, format = "%Y-%m-%d", tz = "UTC", origin = "1990-01-01") ## the file metadata say that the time format is in seconds since 1990-01-01
+
+head(nc.time.m)
+```
+
+Collapse the array into a data frame which is infinitely easier to manage..
+```{r arrays_to_data_frame_monthly}
+## put the latitudes in column names, the longitudes in row names and the times in 3d dimension
+dimnames(currents.m.x) <- list(lon = nc.lon.m, lat = nc.lat.m, time = nc.time.m)
+dimnames(currents.m.y) <- list(lon = nc.lon.m, lat = nc.lat.m, time = nc.time.m)
+
+## collapse the velocity arrays into data frames 
+currents.m.x.df <- as.data.frame.table(currents.m.x, responseName = "u") 
+currents.m.y.df <- as.data.frame.table(currents.m.y, responseName = "v")
+
+## convert these data frames to tibbles, because I like them better
+currents.m.x.df <- as_data_frame(currents.m.x.df)
+currents.m.y.df <- as_data_frame(currents.m.y.df)
+```
+
+Now, this turns the latitudes, longitudes and times into factors, and we don't want that.  
+```{r fix_numeric_vars_monthly}
+(currents.m.x.df <- currents.m.x.df %>% 
+   ## convert factors to numeric
+   mutate_if(is.factor, funs(as.numeric(as.character(.)))) %>% 
+   ## fix time, KEEPING IN MIND THAT NOW THE ORIGIN IS 1970-01-01, AS IN R
+   mutate(time = as.POSIXct(time, tz = "UTC", origin = "1970-01-01"))
+)
+
+
+(currents.m.y.df <- currents.m.y.df %>% 
+   ## convert factors to numeric
+   mutate_if(is.factor, funs(as.numeric(as.character(.)))) %>% 
+   mutate(time = as.POSIXct(time, tz = "UTC", origin = "1970-01-01"))
+)
+```
+Combine the two data frames (u and v) into a single large data frame..  
+```{r combine_currents_df_monthly}
+(currents.all.m <- left_join(currents.m.x.df, currents.m.y.df, by = c("lat", "lon", "time"))
+)
+```
+
+Add year & month columns..     
+```{r currents_monthly_year_month_cols}
+(currents.all.m <- currents.all.m %>% 
+   mutate(year = lubridate::year(time), 
+          month = lubridate::month(time))
+)
+```
+
+I'll make one plot per season, for one of the years, to test things out - so let's say February, May, August, November 2013.  
+```{r plot_currents_monthly_seasons_2013}
+## subset the data frame 
+(currents.seasons.2013 <- currents.all.m %>% 
+  filter(year == 2013, month %in% c(2, 5, 8, 11))
+)
+
+## make a named character vector to replace the month numbers with the corresponding name
+month.names <- month.name
+names(month.names) <- 1:12
+ 
+## plot 
+plot.currents.seasons.2013 <- ggplot() +
+  ## plot the currents
+  geom_segment(data = currents.seasons.2013 %>% filter(dplyr::row_number() %% 2 == 0), 
+               aes(x = lon, y = lat, xend = lon + u * 0.5, yend = lat + v * 0.5), ## higher scalar to (hopefully) make vectors more visible
+               arrow = arrow(angle = 15, length = unit(0.02, "inches"), type = "closed"), 
+               alpha = 0.3) + 
+  ## split into facets by month & label each facets with the month name rather than number 
+  facet_wrap(~ month, labeller = labeller(month = as_labeller(month.names))) + 
+  ## plot the land mass
+  geom_polygon(data = bg_df, aes(x = long, y = lat, group = group)) +
+  ## zoom in on the coastline (keeping the aspect ratio)
+  coord_fixed(xlim = c(27, 29),  ylim = c(42, 43), ratio = 1.3)
+
+## make the plot a little prettier
+(plot.currents.seasons.2013 <- plot.currents.seasons.2013 + 
+    # improve the x and y axis labels a bit.. 
+    scale_x_continuous(labels = scales::unit_format("°E", sep = "")) +
+    scale_y_continuous(labels = scales::unit_format("°N", sep = "")) +
+    # remove axis labels and panel grid
+    labs(x = NULL, y = NULL) + 
+    theme(panel.grid = element_blank())
+)
+
+```
+This looks fine.. however, when saved, the current vectors are practically invisible. Maybe again it would be better to make one plot per month and combine afterwards..  
+
+
+### Import and clean seawater temperatures  
+I'll also plot the water temperatures just for the fun of it, and because I like pretty pretty colours. 
+Read in the data & check the file contents.  
+```{r import_netcdf_monthly_temp}
+(temp.m.in <- nc_open(file = here(data.dir, "seawater_temp", "sv04-bs-cmcc-tem-rean-m_1530190332561.nc"))
+)
+```
+
+Extract the monthly average **surface temperatures**.  
+```{r extract_netcdf_temp_monthly}
+## surface temperatures
+surface.temp.m <- ncvar_get(temp.m.in, "votemper")
+dim(surface.temp.m)
+
+```
+The temperatures are also stored in a lon x lat x time matrix.  
+
+Extract the time, latitude and longitude - stored as **NetCDF dimensions**.  
+```{r extract_netcdf_dimensions_temp_monthly}
+## check the names of the dimensions 
+attributes(temp.m.in$dim)$names
+
+## we'll only get the latitude, longitude & time
+nc.time.temp.m <- ncvar_get(temp.m.in, "time")
+nc.lat.temp.m <- ncvar_get(temp.m.in, "lat")
+nc.lon.temp.m <- ncvar_get(temp.m.in, "lon")
+
+## print the dimensions to see if they match what we have for the velocities above..
+print(paste(dim(nc.lon.temp.m), "longitudes, ", dim(nc.lat.temp.m), "latitudes and ", dim(nc.time.temp.m), "times."))
+```
+
+Close the NetCDF connection. 
+```{r close_netcdf_temp_monthly}
+nc_close(temp.m.in)
+```
+
+Clean the extracted temperature data.
+Reformat the time into something more readable (otherwise it's in seconds since 1990-01-01, as the attributes say).  
+```{r format_time_temp_monthly}
+nc.time.temp.m <- as.POSIXct(nc.time.temp.m, format = "%Y-%m-%d", tz = "UTC", origin = "1990-01-01") ## the file metadata say that the time format is in seconds since 1990-01-01
+
+head(nc.time.temp.m)
+```
+
+Collapse the array into a data frame which is infinitely easier to manage..
+```{r arrays_to_data_frame_temp_monthly}
+## put the latitudes in column names, the longitudes in row names and the times in 3d dimension
+dimnames(surface.temp.m) <- list(lon = nc.lon.temp.m, lat = nc.lat.temp.m, time = nc.time.temp.m)
+
+## collapse the velocity arrays into data frames 
+surface.temp.m.df <- as.data.frame.table(surface.temp.m, responseName = "surface_temp") 
+
+## convert these data frames to tibbles, because I like them better
+surface.temp.m.df <- as_data_frame(surface.temp.m.df)
+```
+
+Now, this turns the latitudes, longitudes and times into factors, and we don't want that.  
+```{r fix_numeric_vars_temp_monthly}
+(surface.temp.m.df <- surface.temp.m.df %>% 
+   ## convert factors to numeric
+   mutate_if(is.factor, funs(as.numeric(as.character(.)))) %>% 
+   ## fix time, KEEPING IN MIND THAT NOW THE ORIGIN IS 1970-01-01, AS IN R
+   mutate(time = as.POSIXct(time, tz = "UTC", origin = "1970-01-01"))
+)
+```
+
+Add year & month columns..     
+```{r temp_monthly_year_month_cols}
+(surface.temp.m.df <- surface.temp.m.df %>% 
+   mutate(year = lubridate::year(time), 
+          month = lubridate::month(time)) %>% 
+   select(lon, lat, time, year, month, surface_temp) ## rearrange columns
+)
+```
+
+
+#### Plot currents & temperatures
+I'll repeat the seasonal plot from before - so February, May, August, November 2013.  
+```{r plot_currents_temp_monthly_seasons_2013}
+## subset the temperature data frame
+(surface.temp.seasons.2013 <- surface.temp.m.df %>% 
+  filter(year == 2013, month %in% c(2, 5, 8, 11))
+)
+
+## plot 
+plot.currents.temp.seasons.2013 <- ggplot() +
+  ## plot the surface temperatures
+  geom_raster(data = surface.temp.seasons.2013, aes(x = lon, y = lat, fill = surface_temp)) + 
+
+  ## plot the currents
+  geom_segment(data = currents.seasons.2013 %>% filter(dplyr::row_number() %% 2 == 0), 
+               aes(x = lon, y = lat, xend = lon + u * 0.5, yend = lat + v * 0.5), ## higher scalar to (hopefully) make vectors more visible
+               arrow = arrow(angle = 15, length = unit(0.02, "inches"), type = "closed"), 
+               alpha = 0.3) + 
+  
+  ## split into facets by month & label each facets with the month name rather than number 
+  facet_wrap(~ month, labeller = labeller(month = as_labeller(month.names))) + 
+  
+  ## plot the land mass
+  geom_polygon(data = bg_df, aes(x = long, y = lat, group = group)) +
+  ## zoom in on the coastline (keeping the aspect ratio)
+  coord_fixed(xlim = c(27, 29),  ylim = c(42, 43), ratio = 1.3)
+
+## make the plot a little prettier
+(plot.currents.temp.seasons.2013 <- plot.currents.temp.seasons.2013 + 
+    # improve the x and y axis labels a bit.. 
+    scale_x_continuous(labels = scales::unit_format("°E", sep = "")) +
+    scale_y_continuous(labels = scales::unit_format("°N", sep = "")) +
+    labs(x = NULL, y = NULL) + # remove axis labels and panel grid
+    theme(panel.grid = element_blank()) + 
+    scale_fill_viridis(name = "Temp.\n(°C)") ## better colours for the temperature
+)
+
+```
+That's cool and all, but really the model's spatial resolution for the temperature is terrible when viewed at such small scale - there is practically no variation in any single map - only a very clear one between seasons.  
+Anyway, useful as an exercise.  
