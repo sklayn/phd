@@ -1,0 +1,49 @@
+---
+title: "New/modified functions for my R analyses"
+date: "2018-07-09"
+output: html_notebook:
+    theme: paper
+---
+
+This is a project used to keep the development of new functions (and the modification/adaptation of existing ones) organized and clear, and separate from the actual analyses fo my PhD data.  
+Necessary because the process involves a lot of testing and tweaking, especially for complicated multivariate analyses - I'd like to keep a record of my reasoning.  
+Then I'll copy the finished functions to the results analysis directory and apply them to my own data.    
+***  
+
+Setup.  
+```{r setup, include = FALSE}
+library(knitr)
+knit_hooks$set(small.mar = function(before, options, envir) {
+    if (before) par(mar = c(2, 2, .1, 2))  # smaller margin on top
+})
+
+## set the working directory to one up (all notebooks - kept in their own subdirectory within the project directory).
+opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+
+## set knitr options for knitting code into the report.
+opts_chunk$set(cache = TRUE, # save results so that code blocks aren't re-run unless code changes
+               autodep = TRUE, # ..or unless a relevant earlier code block changed
+               cache.comments = FALSE, # don't re-run if the only thing that changed was the comments
+               highlight = TRUE, 
+               small.mar = TRUE)
+```
+  Define the working subdirectories.
+```{r workspace_setup}
+## print the working directory, just to be on the safe side
+paste("You are here: ", getwd())
+
+data.dir <- "data"    # input data files
+functions.dir <- "R"  # functions & scripts
+save.dir <- "output"  # clean data, output from models & more complex calculations
+figures.dir <- "figs" # plots & figures 
+```
+  Import the necessary libraries.  
+```{r import_packages, message = FALSE}
+library(here) ## easily find project root directory and construct relative file paths
+library(vegan) ## community ecology uni- and multivariate analyses
+library(tidyverse) ## data cleaning, manipulation and analysis
+```
+***  
+
+## SIMPER - within-group similarity  
+The vegan package already contains a SIMPER function, but it only calculates **between-group** (dis)similarity. I also want to check out the within-group similarity (= which species )  
