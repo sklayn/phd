@@ -46,4 +46,28 @@ library(tidyverse) ## data cleaning, manipulation and analysis
 ***  
 
 ## SIMPER - within-group similarity  
-The vegan package already contains a SIMPER function, but it only calculates **between-group** (dis)similarity. I also want to check out the within-group similarity (= which species )  
+The vegan package already contains a SIMPER function, but it only calculates **between-group** (dis)similarity. I also want to check out the within-group similarity (= which species contribute the most to the definition of the group according to SIMPER).  
+As a starting point, I'm using the vegan code for the between-group SIMPER. I'm modifying it according to the original article by Clarke (1993): Non-parametric multivariate analyses of changes in community structure. Australian Journal of Ecology 18, 117–143. https://doi.org/10.1111/j.1442-9993.1993.tb00438.x  
+In the article there is a formula and procedure for calculating the group similarity and the individual species' contributions to it, although it's possibly too complicated.  
+The **example dataset** I'm using is the same one from the journal article - the **Exe nematodes**. It's also included in PRIMER installations as an example dataset. However, in the article there were 179 nematode species, while in the dataset I've got there are 140 - I'm not expecting a perfect match in the numbers.   
+To deal with this, I used PRIMER to do a quick SIMPER on the 140-species dataset, both with groups obtained from a de novo MDS and with the pre-defined groups from the article.  
+Another complication is the fact that some groups only have 1 or 2 samples - so no meaningful similarity can be calculated, but let's ignore that for now..  
+The vegan between-group SIMPER also calculates permutations to estimate p-values for the species contributions - to begin I'm not going to implement them, because I don't fully understand the code (it's poorly documented and has matrix calculations in loops that confuse me). So these are the big chunks of commented-out code in the function.  
+
+#### Preliminary testing  
+I've already come some way towards modifying the function to suit me - I'm going to import and test it on the data, see if it works..  
+```{r import_simper_within_gr}
+source(here(functions.dir, "simper_within_group.R"))
+```
+
+Import the nematode data.  
+```{r import_nematode_data}
+## import as is, although I would have preferred no row names and such
+exe.abnd <- read.csv(file = here(data.dir, "exe_nematode_abnd.csv"), header = TRUE, row.names = 1)
+
+## this needs to be transposed - species in columns and sites in rows, as per vegan requirements. I'm going to leave it as a matrix, to make my life easier later on.
+exe.abnd <- t(exe.abnd)
+head(exe.abnd)
+```
+
+Cool.. Let's test! 

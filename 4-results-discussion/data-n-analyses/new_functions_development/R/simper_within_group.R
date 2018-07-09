@@ -168,7 +168,7 @@ simper_within_group <- function (comm, group, permutations = 0, trace = FALSE, p
             avb = avb, ord = ord, cusum = cusum, p = p)
         
         outlist[[paste(comp[i, 1], "_", comp[i, 2], sep = "")]] <- out
-    }
+#    }
     
 #    ## stop the parallel cluster, if one exists 
 #    if (isParal && !isMulticore && !hasClus) 
