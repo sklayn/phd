@@ -1,6 +1,6 @@
 ---
 title: "New/modified functions for my R analyses"
-date: "2018-07-09"
+date: "2018-07-10"
 output: html_notebook:
     theme: paper
 ---
@@ -70,4 +70,13 @@ exe.abnd <- t(exe.abnd)
 head(exe.abnd)
 ```
 
-Cool.. Let's test! 
+Define the groups - first, the original-article groups..  
+```{r define_group_factor}
+(group <- as.character(c(rep(1, 4), 3, 2, rep(10, 3), 3, 2, rep(4, 8))))
+```
+
+Cool.. Let's test!  
+```{r}
+comm <- exe.abnd
+```
+

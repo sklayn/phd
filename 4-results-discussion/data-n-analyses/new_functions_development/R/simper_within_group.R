@@ -82,6 +82,7 @@ simper_within_group <- function (comm, group, permutations = 0, trace = FALSE, p
     ## make a matrix to hold the species contributions to each of the combinations of observations in the groups
     contr <- matrix(ncol = ncol(current.comm), nrow = nrow(comp))
     rownames(contr) <- paste(comp[, 1], comp[, 2], sep = "_")
+    colnames(contr) <- colnames(current.comm)
         
     for (j in 1:nrow(comp)){
         ## get the abundance matrix for the pair of samples 
@@ -102,7 +103,7 @@ simper_within_group <- function (comm, group, permutations = 0, trace = FALSE, p
 
         
         ## calculate the observed average contribution of each species to each combination of observations within a group
-        average <- lapply(observed.contr, colMeans)
+        Si.average <- lapply(observed.contr, colMeans) ## this is now a list of vectors - 1 vector per group, with 140 values in each - 1 for each species
 
 
 #        ### 2. Do permutations if such are required at input (-> for significance testing)
@@ -142,32 +143,29 @@ simper_within_group <- function (comm, group, permutations = 0, trace = FALSE, p
         
         ### 3. Prepare the results and output
         
-        ## overall similarity = sum of the observed average similarities within groups
-        overall <- lapply(average, sum)
+        ## overall similarity of a group = sum of the observed average similarities within groups
+        Si.group.overall <- lapply(Si.average, sum, na.rm = TRUE)
         
         ## standard deviation and ratio of each species' contribution  
         sdi <- lapply(observed.contr, function(x) apply(x, 2, sd))
-        ratio <- mapply(function(x, y) x/y, average, sdi, SIMPLIFY = FALSE) # MAYBE SIMPLIFY = TRUE? DEPENDS.. 
+        ratio <- mapply(function(x, y) x/y, Si.average, sdi, SIMPLIFY = FALSE) # MAYBE SIMPLIFY = TRUE? DEPENDS.. 
         
         ## UNTRANSFORMED abundance of each species in each of the groups 
-        av.abnd <- lapply(unique(as.character(group)), function(x) colMeans(comm[group == i, , drop = FALSE]))
+        av.abnd <- lapply(unique(as.character(group)), function(x) colMeans(comm[group == x, , drop = FALSE]))
         names(av.abnd) <- unique(as.character(group))
         
         ## sort the average contribution in decreasing order and calculate the % contribution
-        ord <- lapply(average, order, decreasing = TRUE) 
-        aver.ordered <- mapply(function(x, y) x[y], average, ord, SIMPLIFY = FALSE)
-        aver.prop <- mapply(function(x, y) x/y, aver.ordered, overall, SIMPLIFY = FALSE)
+        ord <- lapply(Si.average, order, decreasing = TRUE) 
+        Si.average.ordered <- mapply(function(x, y) x[y], Si.average, ord, SIMPLIFY = FALSE)
+        aver.prop <- mapply(function(x, y) x/y, Si.average.ordered, Si.group.overall, SIMPLIFY = FALSE)
                 
-        percent <- lapply(aver.prop, cumsum)
+        cumul.percent <- lapply(aver.prop, cumsum)
         
-        
-        ##### FIX THIS OUTPUT BELOW AND TEST ALL / REWRITE FOR TIDYVERSE IF NEEDED!        
+      
         ## put these values into an output list with item names = names of the pair of groups being compared
-        out <- list(species = colnames(comm), average = average, 
-            overall = overall, sd = sdi, ratio = ratio, ava = ava, 
-            avb = avb, ord = ord, cusum = cusum, p = p)
+
         
-        outlist[[paste(comp[i, 1], "_", comp[i, 2], sep = "")]] <- out
+
 #    }
     
 #    ## stop the parallel cluster, if one exists 
