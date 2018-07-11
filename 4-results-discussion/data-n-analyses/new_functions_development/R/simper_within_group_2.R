@@ -62,7 +62,7 @@ simper_within_group_2 <- function (comm, group, ...) {
                 contr.me[j, k] <- me
                 
                 ## contribution of each species to the similarity between pairs of samples within a group
-                contr.sp[j, k] <- (200 * md)/ me 
+                contr.sp[j, k] <- sum(md)/sum(me) 
                 
             }
         }

@@ -1,6 +1,6 @@
 ---
 title: "New/modified functions for my R analyses"
-date: "2018-07-10"
+date: "2018-07-11"
 output: html_notebook:
     theme: paper
 ---

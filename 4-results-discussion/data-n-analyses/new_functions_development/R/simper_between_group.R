@@ -84,11 +84,9 @@ simper_between_group <- function (comm, group, permutations = 0, trace = FALSE, 
         for (j in seq_len(n.b)) {
             for (k in seq_len(n.a)) {
                 ## calculate the contribution of each species to the overall Bray-Curtis dissimilarity between groups, and put the result in the matrix of species contributions 
-                md <- abs(group.a[k, , drop = FALSE] - group.b[j, 
-                  , drop = FALSE])
-                me <- group.a[k, , drop = FALSE] + group.b[j, 
-                  , drop = FALSE]
-                contr[(j - 1) * n.a + k, ] <- md/sum(me)  ## this complicated row index is so that the result is a triangular matrix
+                md <- abs(group.a[k, , drop = FALSE] - group.b[j, , drop = FALSE])
+                me <- group.a[k, , drop = FALSE] + group.b[j, , drop = FALSE]
+                contr[(j - 1) * n.a + k, ] <- md/sum(me)
             }
         }
         
