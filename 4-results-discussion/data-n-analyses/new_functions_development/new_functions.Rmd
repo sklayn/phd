@@ -1,6 +1,6 @@
 ---
 title: "New/modified functions for my R analyses"
-date: "2018-07-11"
+date: "2018-07-12"
 output: html_notebook:
     theme: paper
 ---
@@ -57,7 +57,7 @@ The vegan between-group SIMPER also calculates permutations to estimate p-values
 #### Preliminary testing  
 I've already come some way towards modifying the function to suit me - I'm going to import and test it on the data, see if it works..  
 ```{r import_simper_within_gr}
-source(here(functions.dir, "simper_within_group.R"))
+source(here(functions.dir, "simper_within_group_2.R"))
 ```
 
 Import the nematode data.  
@@ -67,16 +67,26 @@ exe.abnd <- read.csv(file = here(data.dir, "exe_nematode_abnd.csv"), header = TR
 
 ## this needs to be transposed - species in columns and sites in rows, as per vegan requirements. I'm going to leave it as a matrix, to make my life easier later on.
 exe.abnd <- t(exe.abnd)
-head(exe.abnd)
+exe.abnd[1:4, 1:10] ## only check out a subset; otherwise printout takes up enormous amounts of space
 ```
 
 Define the groups - first, the original-article groups..  
 ```{r define_group_factor}
-(group <- as.character(c(rep(1, 4), 3, 2, rep(10, 3), 3, 2, rep(4, 8))))
+(exe.groups <- as.character(c(rep(1, 4), 3, 2, rep(10, 3), 3, 2, rep(4, 8))))
 ```
 
-Cool.. Let's test!  
-```{r}
-comm <- exe.abnd
+Cool.. After many, MANY trial and error and line-by-line tweaks and stuff (undocumented here)... Let's test the final version of the function on the data!  
+```{r test_simper_within_gr}
+exe.simper.within <- simper_within_group(exe.abnd, exe.groups)
+
+exe.simper.within[[1]]
+exe.simper.within[[5]]
+attr(exe.simper.within, "overall.group.similarity")
 ```
 
+Note: the average abundances won't be the same as with SIMPER from PRIMER (stored in output folder for comparison), because it accepts as input the double-square root transformed abundance matrix and gets the output average abundances from it again in the end. I intentionally made my functon receive as input an UNTRANSFORMED abundance matrix, so that the average abundances in the output can be the actual average counts, which is much more informative and intuitive.  
+
+The output as a list with overall group similarities is a bit awkward. Unlike the vegan simper function (for between-group similarity breakdowns), mine doesn't have a specific class for its output, and no clean pretty summary method, either.  
+There is also no p-value - I didn't implement the permutations, because this is math way, way over my head.  
+Because my function uses a ton of for loops and/or apply functions for its internal calculations, if ever it is applied on a larger dataset the computer will probably choke.  
+In any case, the within-group SIMPER now works and gives passable results; I only intend to use it once, for demonstration and comparison with the other (non-distance-based) community analysis methods in my thesis.  
