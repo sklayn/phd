@@ -1,6 +1,6 @@
 ---
 title: "Black Sea currents & water temperatures"
-date: "2018-07-05"
+date: "2018-07-13"
 output: html_notebook
 theme: paper
 ---
@@ -54,6 +54,7 @@ library(maps) ## background maps
 library(mapdata) ## background maps, too
 library(rgdal) ## read & interact with shapefiles
 library(sp) ## work with spatial data
+# library(cowplot) ## easily combine & annotate ggplot plots
 ```
 
 Some commonly-used ggplot2 modifications..  
@@ -267,9 +268,12 @@ currents.all.average <- currents.all.d
 
 Plot the yearly averages..   
 ```{r plot_yearly_average_currents}
+## set a current scalar, because otherwise the current vectors are superimposed and difficult to distinguish
+current.scalar <- 0.5
+
 ggplot() +
   ## plot the currents
-  geom_segment(data = currents.all.average %>% filter(year != 2015), aes(x = lon, y = lat, xend = lon + u_mean * 0.5, yend = lat + v_mean * 0.5), ## higher scalar to (hopefully) make vectors more visible
+  geom_segment(data = currents.all.average %>% filter(year != 2015), aes(x = lon, y = lat, xend = lon + u_mean * current.scalar, yend = lat + v_mean * current.scalar), ## higher scalar to (hopefully) make vectors more visible
 arrow = arrow(angle = 15, length = unit(0.02, "inches"), type = "closed"), alpha = 0.3) + 
   facet_wrap(~ year) + ## facet by year
   ## plot the land mass
@@ -286,11 +290,11 @@ To fix this: plot the years one by one, then combine in one plot if needed.
 plot.mean.currents.yr.2012 <- ggplot() +
   ## plot the currents
   geom_segment(data = currents.all.average %>% ungroup() %>% filter(year == 2012, dplyr::row_number() %% 2 == 0), 
-               aes(x = lon, y = lat, xend = lon + u_mean * 0.5, yend = lat + v_mean * 0.5), ## higher scalar to (hopefully) make vectors more visible
+               aes(x = lon, y = lat, xend = lon + u_mean * current.scalar, yend = lat + v_mean * current.scalar), ## higher scalar to (hopefully) make vectors more visible
                arrow = arrow(angle = 15, length = unit(0.03, "inches"), type = "closed"), 
-               alpha = 0.3) + 
+               alpha = 0.35) + 
   ## plot the land mass
-  geom_polygon(data = bg_df, aes(x = long, y = lat, group = group)) +
+  geom_polygon(data = bg_df, aes(x = long, y = lat, group = group), fill = "gray40") +
   ## zoom in on the coastline (keeping the aspect ratio)
   coord_fixed(xlim = c(27, 29),  ylim = c(42, 43), ratio = 1.3)
 
@@ -301,21 +305,27 @@ plot.mean.currents.yr.2012 <- ggplot() +
     scale_y_continuous(labels = scales::unit_format("°N", sep = "")) +
     # remove axis labels and panel grid
     labs(x = NULL, y = NULL) + 
-    theme(panel.grid = element_blank())
+    theme(panel.grid = element_blank()) + 
+    text_size(text.x = 8, text.y = 8)
 )
 
 ## save the plot, just in case
-ggsave(here(figures.dir, "plot_mean_current_velocity_2012.png"), plot.mean.currents.yr.2012, dpi = 300)
+ggsave(here(figures.dir, "plot_mean_current_velocity_2012.png"),
+       plot.mean.currents.yr.2012, 
+       width = 15, units = "cm", dpi = 500)
 
 ```
 
 ```{r plot_yearly_average_currents_2013}
 plot.mean.currents.yr.2013 <- ggplot() +
   ## plot the currents
-  geom_segment(data = currents.all.average %>% ungroup() %>% filter(year == 2013, dplyr::row_number() %% 2 == 0), aes(x = lon, y = lat, xend = lon + u_mean * 0.5, yend = lat + v_mean * 0.5), ## higher scalar to (hopefully) make vectors more visible
-arrow = arrow(angle = 15, length = unit(0.03, "inches"), type = "closed"), alpha = 0.3) + 
+  geom_segment(data = currents.all.average %>% ungroup() %>% filter(year == 2013, dplyr::row_number() %% 2 == 0), 
+               aes(x = lon, y = lat, xend = lon + u_mean * current.scalar, yend = lat + v_mean * current.scalar), ## higher scalar to (hopefully) make vectors more visible
+
+               arrow = arrow(angle = 15, length = unit(0.03, "inches"), type = "closed"), 
+               alpha = 0.35) + 
   ## plot the coastline
-  geom_polygon(data = bg_df, aes(x = long, y = lat, group = group)) +
+  geom_polygon(data = bg_df, aes(x = long, y = lat, group = group), fill = "gray40") +
   ## zoom in on the coastline (keeping the aspect ratio)
   coord_fixed(xlim = c(27, 29),  ylim = c(42, 43), ratio = 1.3)
 
@@ -327,21 +337,27 @@ arrow = arrow(angle = 15, length = unit(0.03, "inches"), type = "closed"), alpha
     scale_y_continuous(labels = scales::unit_format("°N", sep = "")) +
     # remove axis labels and panel grid
     labs(x = NULL, y = NULL) + 
-    theme(panel.grid = element_blank())
+    theme(panel.grid = element_blank()) + 
+    text_size(text.x = 8, text.y = 8)
 )
 
 ## save the plot, just in case
-ggsave(here(figures.dir, "plot_mean_current_velocity_2013.png"), plot.mean.currents.yr.2013, dpi = 300)
+ggsave(here(figures.dir, "plot_mean_current_velocity_2013.png"), 
+       plot.mean.currents.yr.2013, 
+       width = 15, units = "cm", dpi = 500)
 
 ```
 
 ```{r plot_yearly_average_currents_2014}
 plot.mean.currents.yr.2014 <- ggplot() +
   ## plot the currents
-  geom_segment(data = currents.all.average %>% ungroup() %>% filter(year == 2014, dplyr::row_number() %% 2 == 0), aes(x = lon, y = lat, xend = lon + u_mean * 0.5, yend = lat + v_mean * 0.5), ## higher scalar to (hopefully) make vectors more visible
-arrow = arrow(angle = 15, length = unit(0.03, "inches"), type = "closed"), alpha = 0.3) + 
+  geom_segment(data = currents.all.average %>% ungroup() %>% filter(year == 2014, dplyr::row_number() %% 2 == 0), 
+               aes(x = lon, y = lat, xend = lon + u_mean * current.scalar, yend = lat + v_mean * current.scalar), ## higher scalar to (hopefully) make vectors more visible
+
+               arrow = arrow(length = unit(0.05, "cm"), type = "closed"), 
+               alpha = 0.35) + 
   ## plot the coastline
-  geom_polygon(data = bg_df, aes(x = long, y = lat, group = group)) +
+  geom_polygon(data = bg_df, aes(x = long, y = lat, group = group), fill = "gray40") +
   ## zoom in on the coastline (keeping the aspect ratio)
   coord_fixed(xlim = c(27, 29),  ylim = c(42, 43), ratio = 1.3)
 
@@ -352,15 +368,35 @@ arrow = arrow(angle = 15, length = unit(0.03, "inches"), type = "closed"), alpha
     scale_y_continuous(labels = scales::unit_format("°N", sep = "")) +
     # remove axis labels and panel grid
     labs(x = NULL, y = NULL) + 
-    theme(panel.grid = element_blank())
+    theme(panel.grid = element_blank()) + 
+    text_size(text.x = 8, text.y = 8)
 )
 
 ## save the plot, just in case
-ggsave(here(figures.dir, "plot_mean_current_velocity_2014.png"), plot.mean.currents.yr.2014, dpi = 300)
+ggsave(here(figures.dir, "plot_mean_current_velocity_2014.png"), 
+       plot.mean.currents.yr.2014, 
+       width = 15, units = "cm", dpi = 500)
 
 ```
 
 OK it looks sort of fine..   
+Combine in one plot (using the excellent package cowplot).  
+```{r plot_yearly_average_currents_combined}
+(plot.mean.currents.yr.combined <- cowplot::plot_grid(plot.mean.currents.yr.2012, plot.mean.currents.yr.2013, plot.mean.currents.yr.2014, 
+                   labels = c("2012", "2013", "2014"),
+                   label_size = 12,
+                   align = "h")
+)
+
+
+## save combined plot
+cowplot::save_plot(here(figures.dir,"plot_mean_current_velocity_yr_combined.png"), 
+                   plot.mean.currents.yr.combined, 
+                   base_width = 7, base_height = 5, base_aspect_ratio = 1,
+                   dpi = 500)
+
+```
+
 
 
 
