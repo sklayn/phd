@@ -1,6 +1,6 @@
 ---
 title: "Environmental parameters - analysis & variable selection"
-date: "2018-05-03"
+date: "2018-07-16"
 output: 
   html_notebook:
     theme: paper
@@ -552,7 +552,7 @@ Filter water column data anyway, in case I decide to do something with it.
     filter(station %in% c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo"))
 )
 
-## ... and import the pseudo-manplated-long-term data for the seagrasses
+## ... and import the pseudo-manipulated-long-term data for the seagrasses
 (water.zostera.LT <- read_csv(here(save.dir, "water_colmumn_raw_LT_seagrass.csv"))
 )
 ```
@@ -599,7 +599,7 @@ sediments.zostera.scaled <- scale(sediments.zostera %>% select(-c(station:habita
 sediments.zostera.scaled <- bind_cols(sediments.zostera %>% select(station),
                                       as.tibble(sediments.zostera.scaled))
 
-## convert stations into factor, because for some stations there are more observations than for others, which causes the Investigate function to freak out later
+## convert stations into factor, because for some stations there   are more observations than for others, which causes the Investigate function to freak out later
 sediments.zostera.scaled <- sediments.zostera.scaled %>% 
   mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")))
 
@@ -679,7 +679,7 @@ water.zostera.all.scaled.noout.pca <- PCA(water.zostera.all.scaled.noout, scale.
 
 Investigate(water.zostera.all.scaled.noout.pca, 
             file = "pca_water_zostera_all_noout.Rmd", document = "html_document", 
-            out.selec = FALSE, # NB if outlier detection is performed, the function fails miserably, and I can't see a way to fix it 
+            out.selec = FALSE, # NB if outlier detection is performed, the function fails, and I can't see a way to fix it 
             remove.temp = TRUE)   
 ```
 
@@ -717,7 +717,7 @@ water.zostera.red.pca <- PCA(water.zostera.red.scaled, scale.unit = FALSE, quali
 
 Investigate(water.zostera.red.pca, 
             file = "pca_water_zostera_red_report.Rmd", document = "html_document", 
-            out.selec = FALSE, # NB if outlier detection is performed, the function fails miserably, and I can't see a way to fix it 
+            out.selec = FALSE, # NB if outlier detection is performed, the function fails, and I can't see a way to fix it 
             remove.temp = TRUE)  
 
 ```
@@ -836,6 +836,34 @@ write_rds(sediments.zostera.red.pca,
           here(save.dir, "pca_sediments_zostera_red.RDS"))
 ```
 
+Try again, but without reducing the dataset prior to the PCA - without excluding highly correlated variables.  
+```{r pca_sediments_zostera_no_red}
+## scale and center the dataset
+sediments.zostera.all.scaled <- scale(sediments.zostera.all %>% select(TOM:silt_clay),
+                                      center = TRUE, scale = TRUE)
+
+sediments.zostera.all.scaled <- bind_cols(sediments.zostera.all %>% select(station),
+                                          as.tibble(sediments.zostera.all.scaled))
+
+## convert stations into factor, because for some stations there are more observations than for others, which causes the Investigate function to freak out later
+sediments.zostera.all.scaled <- sediments.zostera.all.scaled %>% 
+  mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")))
+
+sediments.zostera.all.pca <- PCA(sediments.zostera.all.scaled, scale.unit = FALSE, quali.sup = 1)
+
+Investigate(sediments.zostera.all.pca, 
+            file = "pca_sediments_zostera_all_report.Rmd", document = "html_document", 
+            out.selec = FALSE, # NB if outlier detection is performed, the function fails, and I can't see a way to fix it 
+            remove.temp = TRUE)  
+```
+
+So now the PCA is at least valid, but the stations are still not represented well enough - not surprising, with so little data.. 
+Save in case it's needed.
+```{r save_pca_sediments_zostera_no_red}
+write_rds(sediments.zostera.all.pca, 
+          here(save.dir, "pca_sediments_zostera_all.RDS"))
+```
+
 
 OK, one more: **seagrass parameters - again, using all available data**.   
 Import seagrass data.   
@@ -887,6 +915,7 @@ Investigate(seagrass.red.pca,
             out.selec = FALSE, # NB if outlier detection is performed, the function fails miserably, and I can't see a way to fix it 
             remove.temp = TRUE)  
 ```
+Not informative - doesn't explain enough of the observed variability. The variability explained by PC1 **is** significant - but only marginally so; probably better not to interpret this analysis at all.  
 
 Save this one, too.   
 ```{r save_pca_seagrass_red}
@@ -1103,8 +1132,8 @@ plot.water.sand.all.red.pca <- fviz_pca_biplot(water.sand.all.red.pca,
 plot.water.sand.all.red.pca + scale_color_viridis(discrete = TRUE, direction = -1)
 ```
 
-```{r plot_sediments_sand_all_red_pca}
-plot.sediments.sand.red.pca <- fviz_pca_biplot(sediments.sand.red.pca,
+```{r plot_sediments_sand_all_pca}
+plot.sediments.sand.pca <- fviz_pca_biplot(sediments.sand.pca,
                                                    habillage = "station",
                                                    label = "var",
                                                    repel = TRUE,
@@ -1112,7 +1141,7 @@ plot.sediments.sand.red.pca <- fviz_pca_biplot(sediments.sand.red.pca,
                                                    title = "Sediments - sand stations (2013-14)")
 
 ## fix the color scale
-plot.sediments.sand.red.pca + scale_color_viridis(discrete = TRUE, direction = -1)
+plot.sediments.sand.pca + scale_color_viridis(discrete = TRUE, direction = -1)
 ```
 
 ###### Seagrass stations - Burgas Bay (2013-14)  
@@ -1128,8 +1157,8 @@ plot.water.zostera.red.pca <- fviz_pca_biplot(water.zostera.red.pca,
 plot.water.zostera.red.pca + scale_color_viridis(discrete = TRUE, direction = -1)
 ```
 
-```{r plot_sediments_zostera_all_red_pca}
-plot.sediments.zostera.red.pca <- fviz_pca_biplot(sediments.zostera.red.pca,
+```{r plot_sediments_zostera_no_red_pca}
+plot.sediments.zostera.all.pca <- fviz_pca_biplot(sediments.zostera.all.pca, 
                                                   habillage = "station",
                                                   label = "var",
                                                   repel = TRUE,
@@ -1137,7 +1166,7 @@ plot.sediments.zostera.red.pca <- fviz_pca_biplot(sediments.zostera.red.pca,
                                                   title = "Sediments - seagrass stations (2013-14)")
 
 ## fix the color scale
-plot.sediments.zostera.red.pca + scale_color_viridis(discrete = TRUE, direction = -1)
+plot.sediments.zostera.all.pca + scale_color_viridis(discrete = TRUE, direction = -1)
 ```
 
 
@@ -1282,3 +1311,4 @@ fviz_pca_ind(water.sand.pca.fin, col.ind = "contrib")
 ```
 Sidebar end.   
 ***  
+
