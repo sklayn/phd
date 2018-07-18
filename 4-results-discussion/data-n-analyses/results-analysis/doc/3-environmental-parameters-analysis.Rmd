@@ -1125,7 +1125,9 @@ plot.water.sand.all.red.pca <- fviz_pca_biplot(water.sand.all.red.pca,
                                                habillage = "station", 
                                                label = "var", 
                                                repel = TRUE,
-                                               alpha.ind = 0.75,  
+                                               alpha.ind = 0.75,
+                                               axes.linetype = "dotted",
+                                               mean.point = FALSE,
                                                title = "Water - sand stations (2013-14)")
 
 ## fix the color scale
@@ -1134,15 +1136,33 @@ plot.water.sand.all.red.pca + scale_color_viridis(discrete = TRUE, direction = -
 
 ```{r plot_sediments_sand_all_pca}
 plot.sediments.sand.pca <- fviz_pca_biplot(sediments.sand.pca,
-                                                   habillage = "station",
-                                                   label = "var",
-                                                   repel = TRUE,
-                                                   alpha.ind = 0.75,
-                                                   title = "Sediments - sand stations (2013-14)")
+                                           habillage = "station",
+                                           label = "var",
+                                           repel = TRUE,
+                                           # alpha.ind = 0.75,
+                                           axes.linetype = "dotted",
+                                           mean.point = FALSE, 
+                                           title = "Sediments - sand stations (2013-14)")
 
 ## fix the color scale
 plot.sediments.sand.pca + scale_color_viridis(discrete = TRUE, direction = -1)
 ```
+
+
+```{r plot_sediments_sand_red_pca}
+plot.sediments.sand.red.pca <- fviz_pca_biplot(sediments.sand.red.pca,
+                                               habillage = "station",
+                                               label = "var",
+                                               repel = TRUE,
+                                               # alpha.ind = 0.75,
+                                               axes.linetype = "dotted",
+                                               mean.point = FALSE,
+                                               title = "Sediments (reduced) - sand stations (2013-14)")
+
+## fix the color scale
+plot.sediments.sand.red.pca + scale_color_viridis(discrete = TRUE, direction = -1)
+```
+
 
 ###### Seagrass stations - Burgas Bay (2013-14)  
 ```{r plot_water_zostera_all_red_pca}
@@ -1150,7 +1170,9 @@ plot.water.zostera.red.pca <- fviz_pca_biplot(water.zostera.red.pca,
                                               habillage = "station",
                                               label = "var", 
                                               repel = TRUE,
-                                              alpha.ind = 0.75,
+                                              # alpha.ind = 0.75,
+                                              axes.linetype = "dotted",
+                                              mean.point = FALSE,
                                               title = "Water - seagrass stations (2013-14)")
 
 ## fix the color scale
@@ -1162,12 +1184,30 @@ plot.sediments.zostera.all.pca <- fviz_pca_biplot(sediments.zostera.all.pca,
                                                   habillage = "station",
                                                   label = "var",
                                                   repel = TRUE,
-                                                  alpha.ind = 0.75,
+                                                  # alpha.ind = 0.75,
+                                                  axes.linetype = "dotted",
+                                                  mean.point = FALSE,
                                                   title = "Sediments - seagrass stations (2013-14)")
 
 ## fix the color scale
 plot.sediments.zostera.all.pca + scale_color_viridis(discrete = TRUE, direction = -1)
 ```
+
+
+```{r plot_sediments_zostera_red_pca}
+plot.sediments.zostera.red.pca <- fviz_pca_biplot(sediments.zostera.red.pca, 
+                                                  habillage = "station",
+                                                  label = "var",
+                                                  repel = TRUE,
+                                                  # alpha.ind = 0.75,
+                                                  axes.linetype = "dotted",
+                                                  mean.point = FALSE,
+                                                  title = "Sediments (reduced) - seagrass stations (2013-14)")
+
+## fix the color scale
+plot.sediments.zostera.red.pca + scale_color_viridis(discrete = TRUE, direction = -1)
+```
+
 
 
 ```{r plot_seagrasss_zostera_all_red_pca}
@@ -1176,6 +1216,8 @@ plot.seagrass.red.pca <- fviz_pca_biplot(seagrass.red.pca,
                                          label = "var",
                                          repel = TRUE,
                                          alpha.ind = 0.75,
+                                         axes.linetype = "dotted",
+                                         mean.point = FALSE,
                                          title = "Seagrass parameters (2013-14)")
 
 ## fix the color scale
