@@ -1,6 +1,6 @@
 ---
 title: "Environmental parameters - analysis & variable selection"
-date: "2018-07-16"
+date: "2018-07-18"
 output: 
   html_notebook:
     theme: paper
