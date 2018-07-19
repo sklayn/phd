@@ -1,6 +1,6 @@
 ---
 title: "Environmental parameters - analysis & variable selection"
-date: "2018-07-18"
+date: "2018-07-19"
 output: 
   html_notebook:
     theme: paper
@@ -108,7 +108,10 @@ water <- read_csv(here(save.dir, "water_column_summary_LT.csv"))
 
 ## filter (manually) to get only the sand 2013-2014 stations
 (water.sand <- water %>% 
-    filter(station %in% c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva"))
+    filter(station %in% c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva")) %>% 
+    ## convert station to factor & order
+    mutate(station = factor(station, levels = c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva"))) %>% 
+    arrange(station)
 )
 ```
 
@@ -118,23 +121,32 @@ sediments <- read_csv(here(save.dir, "sediments_imputed_sand.csv"))
 
 ## split into sediment parameters sesnu stricto, and heavy metals
 (sediments.sand <- sediments %>% 
-    select(station:year, TOM:silt_clay)
+    select(station:year, TOM:silt_clay) %>% 
+    ## make station a factor
+    mutate(station = factor(station, levels = c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva"))) %>% 
+    arrange(station)
 )  
 
 (heavy.metals.sand <- sediments %>% 
-    select(station:year, Cu:Ni) 
+    select(station:year, Cu:Ni) %>% 
+    ## make station a factor
+    mutate(station = factor(station, levels = c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva"))) %>% 
+    arrange(station)
 )
 ```
 
 Import LUSI and add it to the water column data, although strictly speaking, it isn't really..  
 ```{r import_lusi_sand}
-(lusi <- read_csv(here(save.dir, "lusi_st.csv"))
+(lusi <- read_csv(here(save.dir, "lusi_st.csv")) 
 )
 
 ## we'll match them by station - and we only want the sand stations - the rows of x (the water column data) where there are matching values in y (LUSI) -> e.g. inner join 
 (water.sand <- inner_join(water.sand, 
                           lusi %>% select(-watershed), 
-                          by = "station")
+                          by = "station") %>% 
+    ## turn station back into a factor (gets coerced to character)
+    mutate(station = factor(station, levels = c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva"))) %>% 
+    arrange(station)
 )
 ```
 The nutrients all decrease towards the outer bay, more or less so, and so do the chl-a and suspended matter; the transparency (Secchi depth) increases - this is the long-term (anthropgenic) eutrophication gradient in Burgas Bay, consistent with previous studies (..) & models.   
@@ -221,7 +233,9 @@ water.all <- read_csv(here(save.dir, "water_column_raw_clean.csv"))
 (water.sand.all <- water.all %>% 
    filter(station %in% c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva")) %>% 
    ungroup() %>%
-   mutate(station = factor(station, levels = c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva")))
+  ## kae station a factor & arrange  
+   mutate(station = factor(station, levels = c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva"))) %>% 
+    arrange(station)
 )
 ```
 
@@ -247,10 +261,6 @@ water.sand.all.red.scaled <- scale(water.sand.all.red,
 water.sand.all.red.scaled <- bind_cols(water.sand.all %>% select(station),
                                        as.tibble(water.sand.all.red.scaled))
 
-## convert stations into factor, because for some stations there are more observations than for others, which causes the Investigate function to freak out later
-water.sand.all.red.scaled <- water.sand.all.red.scaled %>% 
-  mutate(station = factor(station, levels = c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva")))
-
 
 ## perform the PCA
 water.sand.all.red.pca <- PCA(water.sand.all.red.scaled, scale.unit = FALSE, quali.sup = 1)
@@ -266,6 +276,52 @@ Goody! At least the analysis is significant - although the elimination threshold
 ```{r save_pca_water_sand_all_red}
 write_rds(water.sand.all.red.pca, 
           here(save.dir, "pca_water_sand_all_red.RDS"))
+```
+
+
+Now let's add LUSI and try this once more, with feeling.. 
+```{r filter_correlated_water_LUSI_sand}
+water.sand.all.LUSI <- inner_join(water.sand.all, 
+                                  lusi %>% select(-watershed), 
+                                  by = "station") %>% 
+  ## turn station back into a factor (gets coerced to character)
+  mutate(station = factor(station, levels = c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva"))) %>%
+  arrange(station)
+
+# calculate the correlation matrix (on the numeric variables only)
+water.sand.all.LUSI.cors <- cor(water.sand.all.LUSI %>% select(-c(station:month)))
+  
+# find and eliminate the highly correlated variables. NB names = FALSE, to return column index
+highly.cor.water.sand.all.LUSI <- findCorrelation(water.sand.all.LUSI.cors, cutoff = 0.85)
+
+(water.sand.all.LUSI.red <- water.sand.all.LUSI %>% 
+    select(-c(station:month)) %>% # otherwise column indices don't match 
+    select(-highly.cor.water.sand.all.LUSI)
+)
+```
+
+```{r pca_water_sand_all_LUSI_red}
+## scale and center the reduced dataset
+water.sand.all.LUSI.red.scaled <- scale(water.sand.all.LUSI.red,
+                                   center = TRUE, scale = TRUE)
+
+water.sand.all.LUSI.red.scaled <- bind_cols(water.sand.all.LUSI %>% select(station),
+                                       as.tibble(water.sand.all.LUSI.red.scaled))
+
+
+## perform the PCA
+water.sand.all.LUSI.red.pca <- PCA(water.sand.all.LUSI.red.scaled, scale.unit = FALSE, quali.sup = 1)
+
+Investigate(water.sand.all.LUSI.red.pca, 
+            file = "pca_water_sand_all_LUSI_red_report.Rmd", document = "html_document", 
+            out.selec = TRUE,
+            remove.temp = TRUE)  
+```
+
+All right! This is somewhat better; I think I might end up using it in the results themselves..   
+```{r save_pca_water_sand_all_LUSI_red}
+write_rds(water.sand.all.LUSI.red.pca, 
+          here(save.dir, "pca_water_sand_all_LUSI_red.RDS"))
 ```
 
 
@@ -542,24 +598,33 @@ Now I'll analyze the seagrass stations - mostly focusing on the sediment paramet
 
 Filter water column data anyway, in case I decide to do something with it.     
 ```{r import_water_data_zostera}
-## filter (manually) to get only the zostera 2013-2014 stations - mean data
+## filter (manually) to get only the zostera 2013-2014 stations - mean data & convert station to factor
 (water.zostera <- water %>% 
-    filter(station %in% c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo"))
+    filter(station %in% c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")) %>% 
+   mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo"))) %>% 
+   arrange(station)
 )
 
-## also filter the non-summarized water column data
+## also filter the non-summarized water column data & arrange by station! 
 (water.zostera.all <- water.all %>% 
-    filter(station %in% c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo"))
+    filter(station %in% c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")) %>% 
+   mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo"))) %>% 
+   arrange(station)
 )
 
 ## ... and import the pseudo-manipulated-long-term data for the seagrasses
-(water.zostera.LT <- read_csv(here(save.dir, "water_colmumn_raw_LT_seagrass.csv"))
+(water.zostera.LT <- read_csv(here(save.dir, "water_colmumn_raw_LT_seagrass.csv")) %>% 
+   mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo"))) %>% 
+   arrange(station)
 )
 ```
 
 Import the **summarized** sediment data (it also contains the heavy metals).   
 ```{r import_summary_sediment_data_zostera}
-sediments.zostera <- read_csv(here(save.dir, "sediments_imputed_seagrass.csv"))
+sediments.zostera <- read_csv(here(save.dir, "sediments_imputed_seagrass.csv")) %>% 
+    ## convert station to factor and arrange by it 
+   mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo"))) %>% 
+   arrange(station)
 
 ## split into sediment parameters sesnu stricto, and heavy metals
 (heavy.metals.zostera <- sediments.zostera %>% 
@@ -576,7 +641,10 @@ Add LUSI to the water column data for the seagrass stations.
 ## match by station - only for the seagrass stations - the rows of x (the water column data) where there are matching values in y (LUSI) -> e.g. inner join 
 (water.zostera <- inner_join(water.zostera, 
                              lusi %>% select(-watershed), 
-                             by = "station")
+                             by = "station") %>% 
+    ## convert station back to factor 
+   mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo"))) %>% 
+   arrange(station)
 )
 ```
 
@@ -590,6 +658,17 @@ Hm, no luck here: no signifcant correlations of LUSI with anything but the botto
 In essence, the available water column data for the seagrasses doesn't really capture the anthropogenic eutrophication gradient (it's the same Burgas Bay gradient as the sand stations).      
 Could also explain why there are very, very few significant correlations at all...  
 
+For maximum fun, let's try these correlations with **non-summarized water data** for the seagrass stations.. 
+```{r water_zostera_correlations_2}
+Hmisc::rcorr(as.matrix(inner_join(water.zostera.all, 
+                             lusi %>% select(-watershed), 
+                             by = "station") %>%
+                         select(-c(station:month))), 
+             type = "pearson")
+```
+Well not a significant improvement (maybe because LUSI only has a single value per station).  
+
+
 OK, let's proceed with the sediment PCA. I'm not even going to bother eliminating highly correlated variables, that's how useless I think this whole exercise is.  
 ```{r pca_sediments_zostera}
 # scale and center the data (different units), and add back the stations 
@@ -599,9 +678,6 @@ sediments.zostera.scaled <- scale(sediments.zostera %>% select(-c(station:habita
 sediments.zostera.scaled <- bind_cols(sediments.zostera %>% select(station),
                                       as.tibble(sediments.zostera.scaled))
 
-## convert stations into factor, because for some stations there   are more observations than for others, which causes the Investigate function to freak out later
-sediments.zostera.scaled <- sediments.zostera.scaled %>% 
-  mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")))
 
 sediments.zostera.pca <- PCA(sediments.zostera.scaled, scale.unit = FALSE, quali.sup = 1)
 
@@ -655,9 +731,7 @@ water.zostera.all.scaled <- scale(water.zostera.all %>% select(-c(station:month)
 water.zostera.all.scaled <- bind_cols(water.zostera.all %>% select(station),
                                       as.tibble(water.zostera.all.scaled))
 
-## convert stations into factor, because for some stations there are more observations than for others, which causes the Investigate function to freak out later
-water.zostera.all.scaled <- water.zostera.all.scaled %>% 
-  mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")))
+
 water.zostera.all.pca <- PCA(water.zostera.all.scaled, scale.unit = FALSE, quali.sup = 1)
 
 Investigate(water.zostera.all.pca, 
@@ -665,15 +739,15 @@ Investigate(water.zostera.all.pca,
             out.selec = FALSE, # NB if outlier detection is performed, the function fails miserably, and I can't see a way to fix it 
             remove.temp = TRUE)  
 ```
-OK, since the outlier check is omitted, the report shows that two rows with extreme values have a really high influence on the axes, the separation, etc. These are rows 18 (Poda) and 26 (Ropotamo). Let's see them:  
+OK, since the outlier check is omitted, the (previous, failed) report shows that three rows with extreme values have a really high influence on the axes, the separation, etc. These are rows 1 (Poda), 23 (Gradina) and 29 (Ropotamo). Let's see them:  
 ```{r water_zostera_all_outliers}
-water.zostera.all %>% filter(row_number() %in% c(18, 26))
+water.zostera.all %>% filter(row_number() %in% c(1, 23, 29))
 ```
 
 I'll remove them manually and try again.  
 ```{r pca_water_zostera_all_noout}
 water.zostera.all.scaled.noout <- water.zostera.all.scaled %>%
-  filter(!row_number() %in% c(18, 26))
+  filter(!row_number() %in% c(1, 23, 29))
 
 water.zostera.all.scaled.noout.pca <- PCA(water.zostera.all.scaled.noout, scale.unit = FALSE, quali.sup = 1)
 
@@ -705,13 +779,9 @@ water.zostera.red.scaled <- scale(water.zostera.red,
 water.zostera.red.scaled <- bind_cols(water.zostera.all %>% select(station),
                                       as.tibble(water.zostera.red.scaled))
 
-## convert stations into factor, because for some stations there are more observations than for others, which causes the Investigate function to freak out later
+## filter out - manually - the outliers
 water.zostera.red.scaled <- water.zostera.red.scaled %>% 
-  mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")))
-
-## filter out the two outliers
-water.zostera.red.scaled <- water.zostera.red.scaled %>% 
-  filter(!row_number() %in% c(18, 26))
+  filter(!row_number() %in% c(1, 23, 29))
 
 water.zostera.red.pca <- PCA(water.zostera.red.scaled, scale.unit = FALSE, quali.sup = 1)
 
@@ -727,6 +797,58 @@ Save this PCA, too.
 write_rds(water.zostera.red.pca, 
           here(save.dir, "pca_water_zostera_red.RDS"))
 ```
+
+
+Now I'll do the same as for the sand stations, and **try again with LUSI**.  
+```{r filter_correlated_water_zostera_LUSI}
+## add LUSI to the dataset
+water.zostera.all.LUSI <-  inner_join(water.zostera.all, 
+                                      lusi %>% select(-watershed), 
+                                      by = "station") %>% 
+  ## convert station back to factor 
+  mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo"))) %>% 
+  arrange(station)
+
+## calculate the correlation matrix (on the numeric variables only)
+water.zostera.all.LUSI.cors <- cor(water.zostera.all.LUSI %>% select(-c(station:month)))
+  
+## find and eliminate the highly correlated variables. NB names = FALSE, to return column index
+highly.cor.water.zostera.all.LUSI <- findCorrelation(water.zostera.all.LUSI.cors, cutoff = 0.85)
+
+(water.zostera.LUSI.red <- water.zostera.all.LUSI %>% 
+    select(-c(station:month)) %>% # otherwise column indices don't match 
+    select(-highly.cor.water.zostera.all.LUSI)
+)
+```
+
+```{r pca_water_zostera_LUSI_red}
+## scale and center the reduced dataset
+water.zostera.LUSI.red.scaled <- scale(water.zostera.LUSI.red,
+                                       center = TRUE, scale = TRUE)
+
+water.zostera.LUSI.red.scaled <- bind_cols(water.zostera.all.LUSI %>% select(station),
+                                           as.tibble(water.zostera.LUSI.red.scaled))
+
+## filter out - manually - the outliers
+water.zostera.LUSI.red.scaled <- water.zostera.LUSI.red.scaled %>% 
+  filter(!row_number() %in% c(1, 23, 29))
+
+water.zostera.LUSI.red.pca <- PCA(water.zostera.LUSI.red.scaled, scale.unit = FALSE, quali.sup = 1)
+
+Investigate(water.zostera.LUSI.red.pca, 
+            file = "pca_water_zostera_LUSI_red_report.Rmd", document = "html_document", 
+            out.selec = FALSE, # NB if outlier detection is performed, the function fails, and I can't see a way to fix it 
+            remove.temp = TRUE)  
+
+```
+OK, at least THIS manages to separate the stations significantly. Yay!
+
+Save this PCA, too.  
+```{r save_pca_water_zostera_LUSI_red}
+write_rds(water.zostera.LUSI.red.pca, 
+          here(save.dir, "pca_water_zostera_LUSI_red.RDS"))
+```
+
 
 
 All right, after much deliberation - decided to see if using the long-term data for Burgas Bay, with stations (more or less) recoded to correspond to the seagrass meadows, amounts to anything.  
@@ -759,9 +881,6 @@ water.zostera.LT.red.scaled <- scale(water.zostera.LT.red,
 water.zostera.LT.red.scaled <- bind_cols(water.zostera.LT %>% select(station),
                                          as.tibble(water.zostera.LT.red.scaled))
 
-## convert stations into factor, because for some stations there are more observations than for others, which causes the Investigate function to freak out later
-water.zostera.LT.red.scaled <- water.zostera.LT.red.scaled %>% 
-  mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")))
 
 water.zostera.LT.red.pca <- PCA(water.zostera.LT.red.scaled, scale.unit = FALSE, quali.sup = 1)
 
@@ -785,9 +904,10 @@ Import all available sediment data for the seagrass stations.
 sediments.zostera.all <- read_csv(here(save.dir, "sediments_seagrass_raw_clean.csv"))
 
 
-## make station a factor 
+## make station a factor & rearrange
 (sediments.zostera.all <- sediments.zostera.all %>% 
-  mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")))
+  mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo"))) %>% 
+    arrange(station)
 )
 ```
 
@@ -817,10 +937,6 @@ sediments.zostera.red.scaled <- scale(sediments.zostera.red,
 sediments.zostera.red.scaled <- bind_cols(sediments.zostera.all %>% select(station),
                                           as.tibble(sediments.zostera.red.scaled))
 
-## convert stations into factor, because for some stations there are more observations than for others, which causes the Investigate function to freak out later
-sediments.zostera.red.scaled <- sediments.zostera.red.scaled %>% 
-  mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")))
-
 sediments.zostera.red.pca <- PCA(sediments.zostera.red.scaled, scale.unit = FALSE, quali.sup = 1)
 
 Investigate(sediments.zostera.red.pca, 
@@ -829,7 +945,6 @@ Investigate(sediments.zostera.red.pca,
             remove.temp = TRUE)  
 ```
 Here - no luck again: too little variability is explained by the PCs - no real information carried by this PCA, either.   
-
 Save for posterity anyway.   
 ```{r save_pca_sediments_zostera_red}
 write_rds(sediments.zostera.red.pca, 
@@ -845,9 +960,6 @@ sediments.zostera.all.scaled <- scale(sediments.zostera.all %>% select(TOM:silt_
 sediments.zostera.all.scaled <- bind_cols(sediments.zostera.all %>% select(station),
                                           as.tibble(sediments.zostera.all.scaled))
 
-## convert stations into factor, because for some stations there are more observations than for others, which causes the Investigate function to freak out later
-sediments.zostera.all.scaled <- sediments.zostera.all.scaled %>% 
-  mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")))
 
 sediments.zostera.all.pca <- PCA(sediments.zostera.all.scaled, scale.unit = FALSE, quali.sup = 1)
 
@@ -879,7 +991,8 @@ seagrass.all.clean <- seagrass.all %>%
 ## filter only the 2013-2014 stations and convert station to factor
 (seagrass.all.clean <- seagrass.all.clean %>% 
     filter(station %in% c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")) %>% 
-    mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")))
+    mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo"))) %>% 
+    arrange(station)
 )  
 ```
 
@@ -904,9 +1017,6 @@ seagrass.red.scaled <- scale(seagrass.red,
 seagrass.red.scaled <- bind_cols(seagrass.all.clean %>% select(station),
                                  as.tibble(seagrass.red.scaled))
 
-## convert stations into factor, because for some stations there are more observations than for others, which causes the Investigate function to freak out later
-seagrass.red.scaled <- seagrass.red.scaled %>% 
-  mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")))
 
 seagrass.red.pca <- PCA(seagrass.red.scaled, scale.unit = FALSE, quali.sup = 1)
 
@@ -1063,7 +1173,8 @@ water.2012.scaled <- bind_cols(water.2012 %>% select(station),
 
 ## make station a factor
 water.2012.scaled <- water.2012.scaled %>% 
-  mutate(station = factor(station, levels = c("Konski", "Ribka", "Gradina")))
+  mutate(station = factor(station, levels = c("Konski", "Ribka", "Gradina"))) %>% 
+  arrange(station)
 
 ## perform PCA with FactoMineR - it's equivalent to the base version, anyway, but the visualization expects a particular structure of the results, so easier to do it this way. 
 water.2012.pca <- PCA(water.2012.scaled,
@@ -1124,15 +1235,52 @@ Visualize - more clearly - some of the stupid, stupid, useless PCAs.
 plot.water.sand.all.red.pca <- fviz_pca_biplot(water.sand.all.red.pca,
                                                habillage = "station", 
                                                label = "var", 
+                                               col.var = "grey35",
                                                repel = TRUE,
-                                               alpha.ind = 0.75,
+                                               alpha.ind = 0.7,
+                                               alpha.var = 0.5,
                                                axes.linetype = "dotted",
                                                mean.point = FALSE,
-                                               title = "Water - sand stations (2013-14)")
+                                               pointsize = 2,
+                                               title = "Water (reduced) - sand stations (2013-14)")
 
-## fix the color scale
-plot.water.sand.all.red.pca + scale_color_viridis(discrete = TRUE, direction = -1)
+## fix the cosmetics
+plot.water.sand.all.red.pca + 
+  scale_shape_manual(values = c(19, 17, 15, 3, 8, 11), 
+                     labels = paste0("S", as.numeric((unique(water.sand.all.red.scaled$station))))
+                     ) +
+  scale_color_brewer(palette = "Set2", 
+                     labels = paste0("S", as.numeric((unique(water.sand.all.red.scaled$station))))
+                     ) 
+
 ```
+
+I think **this one** will make it into the results section..   
+```{r plot_water_sand_all_LUSI_red_pca}
+plot.water.sand.all.LUSI.red.pca <- fviz_pca_biplot(water.sand.all.LUSI.red.pca,
+                                               habillage = "station", 
+                                               label = "var", 
+                                               col.var = "grey10",
+                                               repel = TRUE,
+                                               alpha.ind = 0.65,
+                                               # alpha.var = 0.7,
+                                               axes.linetype = "dotted",
+                                               mean.point = FALSE,
+                                               pointsize = 2,
+                                               title = "Water (reduced+LUSI) - sand stations (2013-14)")
+
+## fix the cosmetic stuff
+plot.water.sand.all.LUSI.red.pca + 
+  scale_shape_manual(values = c(19, 17, 15, 3, 8, 11), 
+                     labels = paste0("S", as.numeric((unique(water.sand.all.LUSI.red.scaled$station))))
+                     ) +
+  scale_color_viridis(discrete = TRUE,
+                      direction = -1,
+                      labels = paste0("S", as.numeric((unique(water.sand.all.LUSI.red.scaled$station))))
+                      ) 
+  
+```
+
 
 ```{r plot_sediments_sand_all_pca}
 plot.sediments.sand.pca <- fviz_pca_biplot(sediments.sand.pca,
@@ -1165,19 +1313,58 @@ plot.sediments.sand.red.pca + scale_color_viridis(discrete = TRUE, direction = -
 
 
 ###### Seagrass stations - Burgas Bay (2013-14)  
+
 ```{r plot_water_zostera_all_red_pca}
 plot.water.zostera.red.pca <- fviz_pca_biplot(water.zostera.red.pca,
                                               habillage = "station",
-                                              label = "var", 
+                                              label = "var",
+                                              col.var = "grey25", 
                                               repel = TRUE,
-                                              # alpha.ind = 0.75,
+                                              alpha.ind = 0.8,
+                                              alpha.var = 0.5,
+                                              pointsize = 2,
                                               axes.linetype = "dotted",
                                               mean.point = FALSE,
-                                              title = "Water - seagrass stations (2013-14)")
+                                              title = "Water (reduced) - seagrass stations (2013-14)")
 
-## fix the color scale
-plot.water.zostera.red.pca + scale_color_viridis(discrete = TRUE, direction = -1)
+## cosmetic stuff
+plot.water.zostera.red.pca +
+  scale_shape_manual(values = c(19, 17, 15, 3, 8), 
+                     labels = paste0("Z", as.numeric((unique(water.zostera.red.scaled$station))))
+                     ) +
+  scale_color_viridis(discrete = TRUE,
+                      direction = -1,
+                      labels = paste0("Z", as.numeric((unique(water.zostera.red.scaled$station))))
+                      ) 
+
 ```
+
+And **this one** is also going to the results section..
+```{r plot_water_zostera_all_LUSI_red_pca}
+plot.water.zostera.LUSI.red.pca <- fviz_pca_biplot(water.zostera.LUSI.red.pca,
+                                              habillage = "station",
+                                              label = "var",
+                                              col.var = "grey35", 
+                                              repel = TRUE,
+                                              alpha.ind = 0.8,
+                                              alpha.var = 0.5,
+                                              pointsize = 2,
+                                              axes.linetype = "dotted",
+                                              mean.point = FALSE,
+                                              title = "Water (reduced+LUSI) - seagrass stations (2013-14)")
+
+## cosmetic stuff
+plot.water.zostera.LUSI.red.pca +
+  scale_shape_manual(values = c(19, 17, 15, 3, 8), 
+                     labels = paste0("Z", as.numeric((unique(water.zostera.LUSI.red.scaled$station))))
+                     ) +
+  scale_color_viridis(discrete = TRUE,
+                      direction = -1,
+                      labels = paste0("Z", as.numeric((unique(water.zostera.LUSI.red.scaled$station))))
+                      ) 
+
+```
+
 
 ```{r plot_sediments_zostera_no_red_pca}
 plot.sediments.zostera.all.pca <- fviz_pca_biplot(sediments.zostera.all.pca, 

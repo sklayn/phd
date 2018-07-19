@@ -1,0 +1,15 @@
+unnamed-chunk-1	load
+unnamed-chunk-2	drawn	integer	par	c	plot.PCA	memory	cex
+unnamed-chunk-3	drawn	integer	par	c	plot.PCA	res	cex
+unnamed-chunk-4	drawn	c	par	plot.PCA	memory	cex
+unnamed-chunk-5	drawn	c	par	plot.PCA	res	cex
+unnamed-chunk-6	par	c	barplot	res	eig	nrow
+unnamed-chunk-7	drawn	c	par	plot.PCA	res	cex
+unnamed-chunk-8	wilks.p	structure
+unnamed-chunk-9	sample	rownames	res	call	X	length	ind	coord	%in%	ind.sup	drawn	c	hab	par	plotellipses	cex
+unnamed-chunk-10	drawn	c	par	plot.PCA	res	cex
+unnamed-chunk-11	drawn	c	par	plot.PCA	res	cex
+unnamed-chunk-12	res.hcpc	HCPC	res
+unnamed-chunk-13	drawn	c	par	plot.HCPC	res.hcpc
+unnamed-chunk-14	dimdesc	res
+unnamed-chunk-15	res.hcpc	desc.var
