@@ -1,6 +1,6 @@
 ---
 title: "Environmental parameters - analysis & variable selection"
-date: "2018-07-19"
+date: "2018-07-20"
 output: 
   html_notebook:
     theme: paper
@@ -318,7 +318,8 @@ Investigate(water.sand.all.LUSI.red.pca,
             remove.temp = TRUE)  
 ```
 
-All right! This is somewhat better; I think I might end up using it in the results themselves..   
+All right! This is somewhat better; I think I might end up using it in the results themselves.. 
+In short: 
 ```{r save_pca_water_sand_all_LUSI_red}
 write_rds(water.sand.all.LUSI.red.pca, 
           here(save.dir, "pca_water_sand_all_LUSI_red.RDS"))
@@ -1258,28 +1259,52 @@ plot.water.sand.all.red.pca +
 I think **this one** will make it into the results section..   
 ```{r plot_water_sand_all_LUSI_red_pca}
 plot.water.sand.all.LUSI.red.pca <- fviz_pca_biplot(water.sand.all.LUSI.red.pca,
-                                               habillage = "station", 
-                                               label = "var", 
-                                               col.var = "grey10",
-                                               repel = TRUE,
-                                               alpha.ind = 0.65,
-                                               # alpha.var = 0.7,
-                                               axes.linetype = "dotted",
-                                               mean.point = FALSE,
-                                               pointsize = 2,
-                                               title = "Water (reduced+LUSI) - sand stations (2013-14)")
+                                                    habillage = "station",
+                                                    label = "var",
+                                                    col.var = "grey10",
+                                                    repel = TRUE,
+                                                    alpha.ind = 0.65,
+                                                    # alpha.var = 0.7,
+                                                    axes.linetype = "dotted",
+                                                    mean.point = FALSE,
+                                                    pointsize = 2, 
+                                                    title = NULL)
 
 ## fix the cosmetic stuff
-plot.water.sand.all.LUSI.red.pca + 
-  scale_shape_manual(values = c(19, 17, 15, 3, 8, 11), 
-                     labels = paste0("S", as.numeric((unique(water.sand.all.LUSI.red.scaled$station))))
-                     ) +
-  scale_color_viridis(discrete = TRUE,
-                      direction = -1,
-                      labels = paste0("S", as.numeric((unique(water.sand.all.LUSI.red.scaled$station))))
-                      ) 
-  
+(plot.water.sand.all.LUSI.red.pca <- plot.water.sand.all.LUSI.red.pca + 
+    ## better point shapes + labels for legend
+    scale_shape_manual(values = c(19, 17, 15, 3, 8, 11), 
+                       labels = paste0("S", as.numeric((unique(water.sand.all.LUSI.red.scaled$station))))) +
+    ## better colour scheme for points + labels for legend
+    scale_color_viridis(discrete = TRUE,
+                        option = "viridis",
+                        direction = -1,
+                        labels = paste0("S", as.numeric((unique(water.sand.all.LUSI.red.scaled$station))))) 
+)  
 ```
+Save this plot.. 
+```{r save_plot_water_sand_all_LUSI_red_pca}
+ggsave(here(figures.dir, "pca_water_LUSI_sand.png"), 
+       plot.water.sand.all.LUSI.red.pca,
+       width = 15, units = "cm", dpi = 300)
+```
+
+Ok now for consistency make this plot again with the old colour scheme (Set 2 from RColorBrewer). I'll decide later which one to use.  
+```{r plot_water_sand_all_LUSI_red_pca_2}
+## another colour scheme... 
+(plot.water.sand.all.LUSI.red.pca2 <- plot.water.sand.all.LUSI.red.pca +
+    ## colour scheme for points + labels for legend
+    scale_color_brewer(palette = "Set2",
+                       labels = paste0("S", as.numeric((unique(water.sand.all.LUSI.red.scaled$station))))) 
+)  
+
+## save.. 
+ggsave(here(figures.dir, "pca_water_LUSI_sand_2.png"), 
+       plot.water.sand.all.LUSI.red.pca2,
+       width = 15, units = "cm", dpi = 300)
+```
+For some strange reason, the first plot is very high (17.8 cm), while the second one is only 8.8 cm.. Some weird aspect ratio thingie, although the only difference is the colours.  
+
 
 
 ```{r plot_sediments_sand_all_pca}
@@ -1342,28 +1367,51 @@ plot.water.zostera.red.pca +
 And **this one** is also going to the results section..
 ```{r plot_water_zostera_all_LUSI_red_pca}
 plot.water.zostera.LUSI.red.pca <- fviz_pca_biplot(water.zostera.LUSI.red.pca,
-                                              habillage = "station",
-                                              label = "var",
-                                              col.var = "grey35", 
-                                              repel = TRUE,
-                                              alpha.ind = 0.8,
-                                              alpha.var = 0.5,
-                                              pointsize = 2,
-                                              axes.linetype = "dotted",
-                                              mean.point = FALSE,
-                                              title = "Water (reduced+LUSI) - seagrass stations (2013-14)")
+                                                   habillage = "station",
+                                                   label = "var",
+                                                   col.var = "grey25",
+                                                   repel = TRUE,
+                                                   alpha.ind = 0.8,
+                                                   alpha.var = 0.5,
+                                                   pointsize = 2,
+                                                   axes.linetype = "dotted",
+                                                   mean.point = FALSE,
+                                                   title = NULL)
 
 ## cosmetic stuff
-plot.water.zostera.LUSI.red.pca +
-  scale_shape_manual(values = c(19, 17, 15, 3, 8), 
-                     labels = paste0("Z", as.numeric((unique(water.zostera.LUSI.red.scaled$station))))
-                     ) +
-  scale_color_viridis(discrete = TRUE,
-                      direction = -1,
-                      labels = paste0("Z", as.numeric((unique(water.zostera.LUSI.red.scaled$station))))
-                      ) 
-
+(plot.water.zostera.LUSI.red.pca <- plot.water.zostera.LUSI.red.pca +
+    ## change point shapes - make them more distinguishable 
+    scale_shape_manual(values = c(19, 17, 15, 3, 8), 
+                       labels = paste0("Z", as.numeric((unique(water.zostera.LUSI.red.scaled$station))))) +
+    ## pretty colours 
+    scale_color_viridis(discrete = TRUE,
+                        option = "plasma",
+                        direction = -1,
+                        labels = paste0("Z", as.numeric((unique(water.zostera.LUSI.red.scaled$station))))) 
+)
 ```
+
+Save.. 
+```{r save_plot_water_zostera_all_LUSI_red_pca}
+ggsave(here(figures.dir, "pca_water_LUSI_zostera.png"), 
+       plot.water.zostera.LUSI.red.pca,
+       width = 15, units = "cm", dpi = 300)
+```
+
+Now again with the old station colour scheme.. 
+```{r plot_water_zostera_all_LUSI_red_pca_2}
+(plot.water.zostera.LUSI.red.pca2 <- plot.water.zostera.LUSI.red.pca +
+    ## old brewer colour scheme 
+    scale_color_brewer(palette = "Set2",
+                       labels = paste0("Z", as.numeric((unique(water.zostera.LUSI.red.scaled$station))))) 
+)
+
+ggsave(here(figures.dir, "pca_water_LUSI_zostera_2.png"), 
+       plot.water.zostera.LUSI.red.pca2,
+       width = 15, units = "cm", dpi = 300)
+```
+
+Again with the aspect ratio... hm!  
 
 
 ```{r plot_sediments_zostera_no_red_pca}
