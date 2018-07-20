@@ -319,7 +319,9 @@ Investigate(water.sand.all.LUSI.red.pca,
 ```
 
 All right! This is somewhat better; I think I might end up using it in the results themselves.. 
-In short: 
+In short: PC1-2 explain the largest part of the variability (68.02 % of total), and the analysis should be limited to them. Stations are well separated on the plane defined by PC1-2 (p < 0.05). Variables best shown on the plane: LUSI, seston, chl_a, NO3, secchi. PC1: (+) coordinate - high LUSI, chl_a, seston, NO3, (-) coordinate - high secchi. PC2: (+) coordinate - high secchi, (-) coordinate -  high LUSI, seston, NO3. 3 clusters of individuals: 1) high secchi, low LUSI, chl_a, seston, PO4, NH4; 2) high LUSI, seston, chl_a, low secch; 3) high PO4, NO3, NH4, seston, chl_a, low secchi.  
+
+
 ```{r save_pca_water_sand_all_LUSI_red}
 write_rds(water.sand.all.LUSI.red.pca, 
           here(save.dir, "pca_water_sand_all_LUSI_red.RDS"))
@@ -1412,6 +1414,16 @@ ggsave(here(figures.dir, "pca_water_LUSI_zostera_2.png"),
 ```
 
 Again with the aspect ratio... hm!  
+
+Make a nice table with the PCA outputs.  
+First, get the data we want: the PCs eigenvalues, the proportion explained variance and the cumulative explained variance, the variable loadings (= correlations with the PCs), and the cos2 (= quality of representation of the variables on the PCs).   
+```{r extract_data_water_zostera_all_LUSI_red_pca}
+# table.data.water.zostera.all.LUSI.pca <- 
+
+water.zostera.LUSI.red.pca$var$contrib
+
+```
+
 
 
 ```{r plot_sediments_zostera_no_red_pca}
