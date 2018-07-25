@@ -1,6 +1,6 @@
 ---
 title: "Environmental parameters - analysis & variable selection"
-date: "2018-07-23"
+date: "2018-07-25"
 output: 
   html_notebook:
     theme: paper
@@ -1307,6 +1307,56 @@ ggsave(here(figures.dir, "pca_water_LUSI_sand_2.png"),
 ```
 For some strange reason, the first plot is very high (17.8 cm), while the second one is only 8.8 cm.. Some weird aspect ratio thingie, although the only difference is the colours.  
 
+Plot the qualitative variable map - to see what it looks like and if it's worth including in the results at all.  
+```{r plot_qualit_water_sand_all_LUSI_red_pca}
+## the data we need from the PCA result is the coordinates of the supplementary qualitative variable on the first two PCs.
+## NB we also want them in a nice tibble, so we need to make sure to keep the row names
+qual.coord.sand <- rownames_to_column(as.data.frame(water.sand.all.LUSI.red.pca$quali.sup$coord), var = "station")
+
+(qual.coord.sand <- qual.coord.sand %>% 
+    ## only keep the first 2 PCs in this case...
+    select(station, Dim.1, Dim.2) %>% 
+    ## ..and recode station, to make plotting less painful
+    mutate(station = recode(station,
+                            Kraimorie = "S1", Chukalya = "S2", Akin = "S3",
+                            Sozopol = "S4", Agalina = "S5", Paraskeva = "S6")) %>% 
+    ## make station a factor..  
+    mutate(station = factor(station,
+                            levels = c("S1", "S2", "S3", "S4", "S5", "S6")))
+)
+
+## make the axis labels (PC + % explained variance)
+lab.x <- paste0("Dim.1 ", "(",
+                round(water.sand.all.LUSI.red.pca$eig["comp 1", "percentage of variance"], digits = 1),
+                "%)")
+
+lab.y <- paste0("Dim.2 ", "(", 
+                round(water.sand.all.LUSI.red.pca$eig["comp 2", "percentage of variance"], digits = 1),
+                "%)")
+  
+## plot them..
+(plot.qual.map.water.sand.LUSI.pca <- ggplot(qual.coord.sand,
+                                             aes(x = Dim.1, y = Dim.2)) + 
+    geom_text(label = qual.coord.sand$station) + 
+    geom_hline(yintercept = 0, linetype = "dotted") + 
+    geom_vline(xintercept = 0, linetype = "dotted") + 
+    labs(x = lab.x, y = lab.y)
+)
+
+## save, in case needed separately
+ggsave(here(figures.dir, "pca_qual_water_LUSI_sand.png"), 
+       plot.qual.map.water.sand.LUSI.pca, 
+       width = 15, units = "cm", dpi = 300)
+```
+
+Combine the PCA water parameter plots for the sand stations (library cowplot)..
+```{r plot_composite_water_sand_pca}
+cowplot::plot_grid(plot.water.sand.all.LUSI.red.pca2, 
+                                                    plot.qual.map.water.sand.LUSI.pca, 
+                                                    axis = "b", nrow = 2,
+                                                    labels = c("A", "B"), rel_widths = 5.5)
+```
+Ok, I don't like it... The axes dont' match too well. I'll just insert them as sequential figures.  
 
 
 ```{r plot_sediments_sand_all_pca}
@@ -1414,6 +1464,50 @@ ggsave(here(figures.dir, "pca_water_LUSI_zostera_2.png"),
 ```
 
 Again with the aspect ratio... hm!  
+
+
+Plot the qualitative variable map for the seagrass samples, too.  
+```{r plot_qualit_water_zostera_all_LUSI_red_pca}
+## the data we need from the PCA result is the coordinates of the supplementary qualitative variable on the first two PCs.
+## NB we also want them in a nice tibble, so we need to make sure to keep the row names
+qual.coord.zostera <- rownames_to_column(as.data.frame(water.zostera.LUSI.red.pca$quali.sup$coord), var = "station")
+
+(qual.coord.zostera <- qual.coord.zostera %>% 
+    ## only keep the first 2 PCs in this case...
+    select(station, Dim.1, Dim.2) %>% 
+    ## ..and recode station, to make plotting less painful
+    mutate(station = recode(station,
+                            Poda = "Z1", Otmanli = "Z2", Vromos = "Z3",
+                            Gradina = "Z4", Ropotamo = "Z5")) %>% 
+    ## make station a factor..  
+    mutate(station = factor(station,
+                            levels = c("Z1", "Z2", "Z3", "Z4", "Z5")))
+)
+
+## make the axis labels (PC + % explained variance)
+lab.x.zostera <- paste0("Dim.1 ", "(",
+                round(water.zostera.LUSI.red.pca$eig["comp 1", "percentage of variance"], digits = 1),
+                "%)")
+
+lab.y.zostera <- paste0("Dim.2 ", "(", 
+                round(water.zostera.LUSI.red.pca$eig["comp 2", "percentage of variance"], digits = 1),
+                "%)")
+  
+## plot them..
+(plot.qual.map.water.zostera.LUSI.pca <- ggplot(qual.coord.zostera,
+                                             aes(x = Dim.1, y = Dim.2)) + 
+    geom_text(label = qual.coord.zostera$station) + 
+    geom_hline(yintercept = 0, linetype = "dotted") + 
+    geom_vline(xintercept = 0, linetype = "dotted") + 
+    labs(x = lab.x.zostera, y = lab.y.zostera)
+)
+
+## save, in case needed separately
+ggsave(here(figures.dir, "pca_qual_water_LUSI_zostera.png"), 
+       plot.qual.map.water.zostera.LUSI.pca, 
+       width = 15, units = "cm", dpi = 300)
+```
+
 
 Make a nice table with the PCA outputs.  
 First, get the data we want: the PCs eigenvalues, the proportion explained variance and the cumulative explained variance, the variable loadings (= correlations with the PCs), and the cos2 (= quality of representation of the variables on the PCs).   
