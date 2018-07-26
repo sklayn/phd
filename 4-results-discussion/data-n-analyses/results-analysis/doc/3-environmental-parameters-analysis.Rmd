@@ -156,7 +156,7 @@ Now let's check the correlations between water column parameters. More or less i
 Hmisc::rcorr(as.matrix(water.sand %>% select(-station)), 
              type = "pearson")
 ```
-  
+
 Now we'll proceed with the variable selection for the PCA. For whatever it's worth, I don't think PCA with so few observations can be valid, but hey, all the kids are doing it.    
 We'll just eliminate the most inter-correlated variables using package caret.  
 ```{r filter_correlated_sand}
@@ -299,6 +299,14 @@ highly.cor.water.sand.all.LUSI <- findCorrelation(water.sand.all.LUSI.cors, cuto
     select(-highly.cor.water.sand.all.LUSI)
 )
 ```
+
+Visualize the correlations between the water parameters and LUSI.. 
+```{r water_sand_all_LUSI_cors_visualization}
+ggcorr(water.sand.all.LUSI %>% select(-c(station, year, month)), 
+       label = TRUE, label_round = 2, label_size = 3)
+
+```
+Not very significant, except between N species etc. which is hardly surprising.. Probably because for all the chemical concentrations, there is only one LUSI.  
 
 ```{r pca_water_sand_all_LUSI_red}
 ## scale and center the reduced dataset
