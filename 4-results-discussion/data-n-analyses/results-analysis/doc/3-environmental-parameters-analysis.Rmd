@@ -1742,4 +1742,3 @@ fviz_pca_ind(water.sand.pca.fin, col.ind = "contrib")
 ```
 Sidebar end.   
 ***  
-
