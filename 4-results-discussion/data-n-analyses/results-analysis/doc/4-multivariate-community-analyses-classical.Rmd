@@ -1,0 +1,145 @@
+---
+title: "Multivariate analyses of community structure (classical)"
+date: "2018-08-01"
+output: 
+ html_notebook: 
+  theme: paper
+---
+
+This notebook contains all (classical) multivariate analyses of zoobenthic community structure: MDS, envfit, ANOSIM & SIMPER and friends.  
+All my notebooks are intended to be as self-contained as possible, so there will be a relatively repetitive setup/data import/preparation part.  
+
+***  
+
+Setup!
+```{r setup, include = FALSE}
+library(knitr)
+
+knit_hooks$set(small.mar = function(before, options, envir) {
+    if (before) par(mar = c(2, 2, .1, 2))  # smaller margin on top
+})
+
+## set the working directory to one up (all notebooks - kept in their own subdirectory within the project directory).
+opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+
+## set knitr options for knitting code into the report.
+opts_chunk$set(cache = TRUE, # save results so that code blocks aren't re-run unless code changes
+               autodep = TRUE, # ..or unless a relevant earlier code block changed
+               cache.comments = FALSE, # don't re-run if the only thing that changed was the comments
+               highlight = TRUE, 
+               small.mar = TRUE)
+```
+
+Define the working subdirectories.  
+```{r workspace_setup}
+## print the working directory, just to be on the safe side
+paste("You are here: ", getwd())
+
+data.dir <- "data"    # input data files
+functions.dir <- "R"  # functions & scripts
+save.dir <- "output"  # clean data, output from models & more complex calculations
+figures.dir <- "figs" # plots & figures 
+```
+
+Import libraries.  
+```{r import_packages, results = FALSE}
+library(here) # painless relative paths to subdurectories, etc.
+library(tidyverse) # data manipulation, cleaning, aggregation
+library(viridis) # smart & pretty colour schemes
+library(vegan) # functions for multivariate analyses in ecology 
+```
+
+Organize some commonly-used ggplot2 modifications into a more convenient (and less repetitive) format. One day, I MUST figure out the proper way to set the theme..    
+```{r custom_ggplot_settings_helpers}
+## ggplot settings & things that I keep reusing
+# ggplot_theme <- list(
+#   theme_bw(),
+#   theme(element_text(family = "Times"))
+# )
+
+## always use black-and-white theme
+theme_set(theme_bw())
+
+## helper to adjust ggplot text size & avoid repetitions 
+text_size <- function(text.x = NULL,
+                      text.y = NULL,
+                      title.x = NULL,
+                      title.y = NULL,
+                      legend.text = NULL,
+                      legend.title = NULL, 
+                      strip.x = NULL, 
+                      strip.y = NULL) {
+  theme(axis.text.x = element_text(size = text.x),
+        axis.text.y = element_text(size = text.y),
+        axis.title.x = element_text(size = title.x),
+        axis.title.y = element_text(size = title.y),
+        legend.text = element_text(size = legend.text), 
+        legend.title = element_text(size = legend.title), 
+        strip.text.x = element_text(size = strip.x), 
+        strip.text.y = element_text(size = strip.y)
+        )
+}
+
+```
+
+Import some custom functions for MDS, envfit and ordisurf plotting in ggplot (or just plain easier plotting).  
+```{r import_custom_functions}
+source(here(functions.dir, "plot_mds_revised.R")) # plot MDS in ggplot; extract envfit scores and overlay on MDS plot in ggplot
+
+
+```
+
+***  
+
+##### Sand stations (Burgas Bay, 2013-2014)  
+Import zoobenthic abundance data (cleaned and prepared).  
+```{r import_zoo_abnd_sand}
+zoo.abnd.sand <- read_csv(here(save.dir, "abnd_sand_orig_clean.csv"))
+
+## convert station to factor (better safe than sorry later, when the stations are not plotted in the order I want them)
+(zoo.abnd.sand <- zoo.abnd.sand %>% 
+    mutate(station = factor(station, levels = c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva")))
+)
+```
+
+**Ordination (nMDS)** on sand stations..  (functions from library vegan)
+```{r mds_zoo_sand}
+## the vegan MDS function transforms the data (fourth root) and applies Bray-Curtis dissimilarity by default.   
+mds.sand <- metaMDS(zoo.abnd.sand %>% select(-c(station:replicate)), 
+                    distance = "bray", 
+                    autotransform = TRUE)
+
+mds.sand
+```
+
+Examine the quality of the MDS representation..  
+```{r mds_quality_sand}
+# stressplot
+stressplot(mds.sand)
+
+# goodness-of-fit plot 
+# first plot the nMDS ordination with sites
+plot(mds.sand, display = 'sites', type = 't', main = 'Goodness of fit') 
+# then, add the points with size reflecting goodness of fit (smaller = better fit)
+points(mds.sand, display = 'sites', cex = goodness(mds.sand)*200) 
+
+```
+
+Well it's not perfect, but could be lived with.. Let's call it good enough.  
+The stress is 0.15, which is fairly close to, but still below the limit (0.2) suggested in the Primer manual. 
+Save the MDS for the sand stations.  
+```{r save_mds_sand}
+write_rds(mds.sand, 
+          here(save.dir, "mds_sand.RDS"))
+```
+
+Now, let's make a pretty plot in ggplot..  
+Previously, I had written a custom MDS plotting function for ggplot, which I'm going to review and optimize now (in another notebook kept especially for that).. 
+```{r plot_mds_sand}
+(plot.mds.sand <- plot_mds(mds.sand, 
+                           groups = zoo.abnd.sand %>% pull(station))
+)
+```
+
+Well, to me at least it appears that there are **4 groups** on the MDS: 1 - combining stations Kraimorie and Chukalya; 2 - Akin, 3 - Agalina, 4 - combining Sozopol and Paraskeva (although this last one is a bit loosely associated).  
+To confirm this, the classical approach is to test the observed grouping with ANOSIM. Another more visual test is to overlay a classification tree on the ordination (?).  
