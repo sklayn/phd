@@ -1,11 +1,11 @@
 ---
 title: "New/modified functions for my R analyses"
-date: "2018-07-12"
+date: "2018-08-01"
 output: html_notebook:
     theme: paper
 ---
 
-This is a project used to keep the development of new functions (and the modification/adaptation of existing ones) organized and clear, and separate from the actual analyses fo my PhD data.  
+This is a project used to keep the development of new functions (and the modification/adaptation of existing ones) organized and clear, and separate from the actual analyses of my PhD data.  
 Necessary because the process involves a lot of testing and tweaking, especially for complicated multivariate analyses - I'd like to keep a record of my reasoning.  
 Then I'll copy the finished functions to the results analysis directory and apply them to my own data.    
 ***  
@@ -90,3 +90,52 @@ The output as a list with overall group similarities is a bit awkward. Unlike th
 There is also no p-value - I didn't implement the permutations, because this is math way, way over my head.  
 Because my function uses a ton of for loops and/or apply functions for its internal calculations, if ever it is applied on a larger dataset the computer will probably choke.  
 In any case, the within-group SIMPER now works and gives passable results; I only intend to use it once, for demonstration and comparison with the other (non-distance-based) community analysis methods in my thesis.  
+
+## MDS - extract ordination data to plot in ggplot  
+Perform MDS on the Exe nematode data.  
+```{r mds_nematodes}
+(exe.mds <- metaMDS(exe.abnd))
+```
+
+Try extracting and plotting the MDS scores..  
+```{r plot_mds_nematodes}
+plot.exe.mds <- plot_mds(exe.mds, groups = exe.groups)
+
+plot.exe.mds + 
+    scale_color_viridis_d() + 
+    theme_bw()
+```
+
+All right, it works now. No need to hard-code colour scales and other ggplot settings in the fucntion - can be added later directly to the plot, as above. 
+
+Import environmental data for the nematode dataset (yes, there is one).  
+```{r import_envir_data_nematodes}
+(exe.env.data <- read_csv(here(data.dir, "exe_environment.csv"))
+)
+```
+
+Run envfit, using this data.. 
+```{r envfit_data_nematodes}
+exe.envfit <- envfit(exe.mds, 
+                     exe.env.data %>% select(-station))
+
+exe.envfit
+```
+
+Cool! Now let's play in ggplot again.. 
+```{r plot_envfit_nematodes}
+## extract the envfit scores - easier format for plotting in ggplot.. 
+(exe.envfit.scrs <- extract_envfit_scores(exe.envfit, pval = 0.05)
+)
+
+## plot over the ordination 
+plot.exe.envfit <- plot_envfit(plot.exe.mds, 
+                               exe.envfit.scrs, 
+                               param.labels = param, 
+                               label.col = "grey35")
+
+plot.exe.envfit +
+    theme_bw() 
+```
+
+OK, that should do it.. 
