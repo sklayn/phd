@@ -97,6 +97,12 @@ Perform MDS on the Exe nematode data.
 (exe.mds <- metaMDS(exe.abnd))
 ```
 
+First, source the MDS-envfit custom functions.. 
+```{r import_mds_envfit_functions}
+source(here(functions.dir, "plot_mds_revised.R"))
+```
+
+
 Try extracting and plotting the MDS scores..  
 ```{r plot_mds_nematodes}
 plot.exe.mds <- plot_mds(exe.mds, groups = exe.groups)
@@ -122,10 +128,22 @@ exe.envfit <- envfit(exe.mds,
 exe.envfit
 ```
 
-Cool! Now let's play in ggplot again.. 
+Once upon a time, I must have found a custom function for correcting the p-values which might be biased due to the very large number of permutations performed by envfit. By default, it applies a Bonferroni correction for multiple testing.  
+Let's try it out now..  
+```{r import_envfit_p_adj_function}
+source(here(functions.dir, "p_adjust_envfit.R"))
+```
+
+Apply the p-value adjustment/correction.. 
+```{r adjust_p_envfit_nematodes}
+(exe.envfit.adj <- p_adjust_envfit(exe.envfit)
+)
+```
+Well, all right then. Let's proceed. 
+Now let's play in ggplot again.. 
 ```{r plot_envfit_nematodes}
 ## extract the envfit scores - easier format for plotting in ggplot.. 
-(exe.envfit.scrs <- extract_envfit_scores(exe.envfit, pval = 0.05)
+(exe.envfit.scrs <- extract_envfit_scores(exe.envfit.adj, pval = 0.05)
 )
 
 ## plot over the ordination 
