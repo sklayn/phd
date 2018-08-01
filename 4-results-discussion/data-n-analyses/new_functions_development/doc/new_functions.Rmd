@@ -91,7 +91,7 @@ There is also no p-value - I didn't implement the permutations, because this is 
 Because my function uses a ton of for loops and/or apply functions for its internal calculations, if ever it is applied on a larger dataset the computer will probably choke.  
 In any case, the within-group SIMPER now works and gives passable results; I only intend to use it once, for demonstration and comparison with the other (non-distance-based) community analysis methods in my thesis.  
 
-## MDS - extract ordination data to plot in ggplot  
+## MDS - plot ordination in ggplot  
 Perform MDS on the Exe nematode data.  
 ```{r mds_nematodes}
 (exe.mds <- metaMDS(exe.abnd))
@@ -114,6 +114,7 @@ plot.exe.mds +
 
 All right, it works now. No need to hard-code colour scales and other ggplot settings in the fucntion - can be added later directly to the plot, as above. 
 
+## Envfit - fit environmental parameters to ordination & plot in ggplot  
 Import environmental data for the nematode dataset (yes, there is one).  
 ```{r import_envir_data_nematodes}
 (exe.env.data <- read_csv(here(data.dir, "exe_environment.csv"))
@@ -156,4 +157,31 @@ plot.exe.envfit +
     theme_bw() 
 ```
 
-OK, that should do it.. 
+OK, that should do it..  
+
+## Ordisurf - fit & plot environmental parameters not as vectors, but as surfaces  
+When I first started digging and playing with this, I made two variations of the plotting function: one using base R plot, and the other - ggplot. In ggplot, it was diffiuclt to label the isolines prettily, so eventually I gave up.  
+Let's give it another try now, at the same time cleaning and streamlining as usual.  
+First, perform ordisurf for the ordination of the Exe nematodes and using the same environmental data - but only for the most significant envfit variables (it's a function in vegan).   
+```{r test_ordisurf_nematodes}
+## ordisurf works only on a single variable at a time, so for testing I'm going to use the variable depth of the H2S layer
+(ordi.h2s <- ordisurf(exe.mds ~ exe.env.data %>% pull(depth_H2S_layer))
+)
+```
+This is the base plot, which can and will be improved.  
+Let's try plotting in ggplot.  
+```{r test_ggplot_ordisurf_nematodes}
+## extract the data for plotting from the H2S ordisurf (using the custom function) 
+(h2s.ordi.data <- extract_ordisurf_data(ordi.h2s)
+)
+
+## plot in ggplot over the ordination - no need for separate function, it's just one additional layer.. 
+plot.exe.mds + 
+    geom_contour(data = h2s.ordi.data, 
+                 aes(x = x, y = y, z = z), 
+                 lwd = 0.7,
+                 bins = 10, 
+                 inherit.aes = FALSE)
+
+```
+

@@ -99,7 +99,7 @@ envdata_ordisurf_clean <- function(mds.obj, env.vars) {
 
 ordisurf_ggplot <- function(mds.obj, ordisurf.df, stations) {
   ## an ordination in ggplot, with environmental variables overlaid as 
-  ## surfaces (calculatedd by ordisurf in package vegan)
+  ## surfaces (calculated by ordisurf in package vegan)
   
   # extract the NMDS coordinates of the points in new columns, but in the same 
   # data frame as the environmental variables (for ease of plotting in ggplot)  
