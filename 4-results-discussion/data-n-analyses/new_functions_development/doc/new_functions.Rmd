@@ -1,8 +1,7 @@
 ---
 title: "New/modified functions for my R analyses"
-date: "2018-08-01"
-output: html_notebook:
-    theme: paper
+date: "2018-08-02"
+output: "html_notebook"
 ---
 
 This is a project used to keep the development of new functions (and the modification/adaptation of existing ones) organized and clear, and separate from the actual analyses of my PhD data.  
@@ -105,11 +104,17 @@ source(here(functions.dir, "plot_mds_revised.R"))
 
 Try extracting and plotting the MDS scores..  
 ```{r plot_mds_nematodes}
+## first try: no groups, just plot
+plot_mds(exe.mds) + 
+    theme_bw()
+
+## second try: color points by group
 plot.exe.mds <- plot_mds(exe.mds, groups = exe.groups)
 
 plot.exe.mds + 
     scale_color_viridis_d() + 
     theme_bw()
+
 ```
 
 All right, it works now. No need to hard-code colour scales and other ggplot settings in the fucntion - can be added later directly to the plot, as above. 
@@ -162,6 +167,11 @@ OK, that should do it..
 ## Ordisurf - fit & plot environmental parameters not as vectors, but as surfaces  
 When I first started digging and playing with this, I made two variations of the plotting function: one using base R plot, and the other - ggplot. In ggplot, it was diffiuclt to label the isolines prettily, so eventually I gave up.  
 Let's give it another try now, at the same time cleaning and streamlining as usual.  
+Import ordisurf-related custom functions.  
+```{r import_functions_ordisurf}
+source(here(functions.dir, "plot_ordisurf.R"))
+```
+
 First, perform ordisurf for the ordination of the Exe nematodes and using the same environmental data - but only for the most significant envfit variables (it's a function in vegan).   
 ```{r test_ordisurf_nematodes}
 ## ordisurf works only on a single variable at a time, so for testing I'm going to use the variable depth of the H2S layer
@@ -176,12 +186,29 @@ Let's try plotting in ggplot.
 )
 
 ## plot in ggplot over the ordination - no need for separate function, it's just one additional layer.. 
-plot.exe.mds + 
-    geom_contour(data = h2s.ordi.data, 
-                 aes(x = x, y = y, z = z), 
-                 lwd = 0.7,
-                 bins = 10, 
-                 inherit.aes = FALSE)
+(plot.exe.ordi.h2s <- plot_mds(exe.mds) + 
+        geom_contour(data = h2s.ordi.data, 
+                     aes(x = x, y = y, z = z, colour = ..level..), 
+                     lwd = 0.7, bins = 10, inherit.aes = FALSE) + 
+        scale_color_viridis_c(name = "Depth of H2S\nlayer (cm)") +
+        theme_bw()
+)
 
 ```
 
+If the MDS points are coloured - by station or other group - ggplot throws an error, because you can't have different colour aesthetics for two different geoms (point and contour here).  
+
+...Aaaand here's why I ended up using base R graphics: I can't find a way to label the contours that I like. I tried using package directlabels; however, I can't round the values to obtain a sensible label..  
+```{r test_ggplot_ordisurf_nematodes_labels}
+directlabels::direct.label(plot.exe.ordi.h2s, method = "top.pieces")
+
+```
+
+So, in base grahics..  
+```{r test_plot_ordisurf_nematodes_base}
+plot_mds_ordisurf(exe.mds, ordi.h2s)
+title(main = "H2S layer depth (cm)", col.main = "grey30")
+```
+
+Well, I think this is as good as it gets..  
+Let's see how it does in a loop, for ALL the selected environmental variables (p < 0.05).  

@@ -1,0 +1,15 @@
+workspace_setup	data.dir	figures.dir	functions.dir	save.dir
+import_packages	.Random.seed
+import_simper_within_gr	simper_within_group
+import_nematode_data	exe.abnd
+define_group_factor	exe.groups
+test_simper_within_gr	exe.simper.within
+mds_nematodes	exe.mds
+import_mds_envfit_functions	extract_envfit_scores	plot_envfit	plot_mds
+plot_mds_nematodes	plot.exe.mds
+import_envir_data_nematodes	exe.env.data
+envfit_data_nematodes	exe.envfit
+import_envfit_p_adj_function	p_adjust_envfit
+adjust_p_envfit_nematodes	exe.envfit.adj
+plot_envfit_nematodes	exe.envfit.scrs	plot.exe.envfit
+test_ordisurf_nematodes	ordi.h2s

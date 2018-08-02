@@ -1,4 +1,7 @@
-## source: https://oliviarata.wordpress.com/2014/07/17/ordinations-in-ggplot2-v2-ordisurf/
+#### Plot ordisurf results with ggplot
+#### Source: https://oliviarata.wordpress.com/2014/07/17/ordinations-in-ggplot2-v2-ordisurf/
+
+library(vegan)
 
 #data - from the vegan package:
 data(mite)
@@ -57,7 +60,7 @@ mite.ordisurf.ggplot
 
 ##############################################################################################################################
 
-## My cleaned-up version (unused, because want labels on contour lines, but no time to look into making them more presentable)
+## My cleaned-up version (unused, because want labels on contour lines, but no time to look into making them more presentable). Also, way too complicated and unnecessary.. 
 
 envdata_ordisurf_clean <- function(mds.obj, env.vars) {
   ## prepares environemntal data for plotting as surfaces overlaid on an 

@@ -1,0 +1,15 @@
+workspace_setup	paste	getwd	data.dir	functions.dir	save.dir	figures.dir
+import_packages	library	here	vegan	tidyverse
+import_simper_within_gr	source	here	functions.dir
+import_nematode_data	exe.abnd	read.csv	here	data.dir	t
+define_group_factor	exe.groups	as.character	c	rep
+test_simper_within_gr	exe.simper.within	simper_within_group	exe.abnd	exe.groups	attr
+mds_nematodes	exe.mds	metaMDS	exe.abnd
+import_mds_envfit_functions	source	here	functions.dir
+plot_mds_nematodes	plot_mds	exe.mds	theme_bw	plot.exe.mds	exe.groups	scale_color_viridis_d
+import_envir_data_nematodes	exe.env.data	read_csv	here	data.dir
+envfit_data_nematodes	exe.envfit	envfit	exe.mds	exe.env.data	%>%	select	station
+import_envfit_p_adj_function	source	here	functions.dir
+adjust_p_envfit_nematodes	exe.envfit.adj	p_adjust_envfit	exe.envfit
+plot_envfit_nematodes	exe.envfit.scrs	extract_envfit_scores	exe.envfit.adj	plot.exe.envfit	plot_envfit	plot.exe.mds	param	theme_bw
+test_ordisurf_nematodes	ordi.h2s	ordisurf	exe.mds	exe.env.data	%>%	pull	depth_H2S_layer
