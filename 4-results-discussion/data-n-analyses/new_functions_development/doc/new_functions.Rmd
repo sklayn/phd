@@ -1,6 +1,6 @@
 ---
 title: "New/modified functions for my R analyses"
-date: "2018-08-02"
+date: "2018-08-03"
 output: "html_notebook"
 ---
 
@@ -36,6 +36,7 @@ functions.dir <- "R"  # functions & scripts
 save.dir <- "output"  # clean data, output from models & more complex calculations
 figures.dir <- "figs" # plots & figures 
 ```
+  
   Import the necessary libraries.  
 ```{r import_packages, message = FALSE}
 library(here) ## easily find project root directory and construct relative file paths
@@ -212,3 +213,42 @@ title(main = "H2S layer depth (cm)", col.main = "grey30")
 
 Well, I think this is as good as it gets..  
 Let's see how it does in a loop, for ALL the selected environmental variables (p < 0.05).  
+```{r prepare_env_data_ordisurf}
+## get the environmental data we want (significant variables from envfit, p < 0.05)
+(exe.env.data.ordi <- exe.env.data %>% 
+     select(exe.envfit.scrs %>% pull(param))
+)
+```
+
+Apply ordisurf sequentially to all these variables (keep results in a list).  
+```{r plot_nematodes_ordisurf_all}
+## perform ordisurf on all variables in a loop
+(ordi.list.all <- apply(exe.env.data.ordi, MARGIN = 2, 
+                        FUN = function(x) ordisurf(exe.mds ~ x, plot = FALSE))
+)
+
+
+## plot all ordisurfs in one go - with one monstrous maply call, because I want plot titles, too :) 
+mapply(function(x, y) {
+    ## construct the file name 
+    plot.name <- paste0(x, ".png")
+    
+    ## open png graphical device - we're working with base graphics
+    png(here(figures.dir, plot.name), width = 1000, height = 1000, res = 200)
+    
+    ## plot ordisurf using my pretty custom function
+    plot_mds_ordisurf(exe.mds, y)
+    
+    ## add a title
+    title(main = x, col.main = "grey30", cex.main = 0.9)
+    
+    ## close the graphics device
+    dev.off()
+}, 
+names(ordi.list.all), 
+ordi.list.all, 
+SIMPLIFY = FALSE)
+
+```
+The png device (and all other image formats, for that matter - though I haven't tried pdf) doesn't like to write files in a loop. Specifically, it yells if the image size and resolution are not to its liking.. sometimes the figure margins are too big for it, sometimes it doesn't open at all, sometimes (if I switch from cairo to Xlib) it causes the session to crash completely.  
+The problem seems to be the combination of the plot size (width and height) in pixels + the resolution in ppi. I still don't really get the math involved, so I just tried various values until I reached a resolution and image size in pixels that gave me a satisfying result. I'm NOT going to play more with that.   
