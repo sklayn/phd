@@ -1,4 +1,4 @@
-## Ordintaion (nMDS) on the abundance data
+#### Ordintaion (nMDS) on the abundance data ####
 # set seed in case we have to rerun the computation
 set.seed(1)
 mds.sand <- metaMDS(num.zoo.abnd.sand)
@@ -37,9 +37,7 @@ plot_mds(mds.sand, factors.zoo.sand$stations)
 dev.off()
 
 
-## Fit environmental variables to the ordination (datasets from environmental 
-## data script)
-
+#### Fit environmental variables to the ordination (datasets from environmental data script) ####
 ## envfit (vegan) on the (imputed) environmental data. 
 # use the long-term water column data - summarized by station
 water.sand.by.st <- ddply(water.sand.imp.df[, !names(water.sand.imp.df) %in% c("year", "month")], 
@@ -102,7 +100,7 @@ envfit.sand.sign.vars <- extract_envfit_scores(envfit.mds.sand, p = 0.05, r2 = T
 envfit.sand.sign.vars <- arrange(envfit.sand.sign.vars, pvals, desc(r2))
 
 
-## PLOT VARIABLES AS SURFACES OVERLAID ON THE MDS (ORDISURF)
+#### PLOT VARIABLES AS SURFACES OVERLAID ON THE MDS (ORDISURF) ####
 
 # ordisurf needs the original numeric values of the environmental variables chosen
 # for plotting (= the significant variables from envfit, p < 0.05)
@@ -169,7 +167,7 @@ rm(envfit.sand.sign.vars,
    other.env.sand.envfit)
 
 
-## Classification of the communities 
+#### Classification of the communities ####
 
 # dendrogram of dissimilarities between samples
 set.seed(1)
@@ -206,7 +204,7 @@ anova(lm(O2.bottom ~ gr.dendr.sand, data = sign.vars.mean))
 
 
 
-## ANOSIM - groups = stations.  
+#### ANOSIM - groups = stations  ####
 ## This is a non-parametric permutation procedure applied to the rank (similarity)
 ## matrix underlying the ordination or classification of the samples. R statistic:
 ##  -1 to 1; 1 = all replicates within sites are more similar to each other than
@@ -240,8 +238,7 @@ anosim.sand2 <- apply(env.qualit, 2, function(x)
                                                              grouping = x))
 anosim.sand2
 
-## SIMPER to id the species with the highest contribution to the differences
-## between groups. 
+#### SIMPER to id the species with the highest contribution to the differences between groups #### 
 ## Good discriminating species - high contribution + small sd. 
 simper.sand <- simper(sqrt(num.zoo.abnd.sand), 
                       group = factors.zoo.sand$stations)

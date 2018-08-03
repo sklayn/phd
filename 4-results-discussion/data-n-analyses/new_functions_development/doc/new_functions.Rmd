@@ -1,12 +1,15 @@
 ---
 title: "New/modified functions for my R analyses"
 date: "2018-08-03"
-output: "html_notebook"
+output: 
+    html_notebook: 
+    theme: paper
 ---
 
 This is a project used to keep the development of new functions (and the modification/adaptation of existing ones) organized and clear, and separate from the actual analyses of my PhD data.  
 Necessary because the process involves a lot of testing and tweaking, especially for complicated multivariate analyses - I'd like to keep a record of my reasoning.  
 Then I'll copy the finished functions to the results analysis directory and apply them to my own data.    
+
 ***  
 
 Setup.  

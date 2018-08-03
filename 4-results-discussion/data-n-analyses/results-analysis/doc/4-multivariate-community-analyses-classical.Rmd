@@ -82,16 +82,16 @@ text_size <- function(text.x = NULL,
 
 ```
 
-Import some custom functions for MDS, envfit and ordisurf plotting in ggplot (or just plain easier plotting).  
+Import some custom functions for MDS, envfit and ordisurf plotting in ggplot (or just plain easier and prettier plotting).  
 ```{r import_custom_functions}
 source(here(functions.dir, "plot_mds_revised.R")) # plot MDS in ggplot; extract envfit scores and overlay on MDS plot in ggplot
-
-
+source(here(functions.dir, "p_adjust_envfit.R")) # apply Bonferroni correction for multiple comparisons on envfit results - adjusted p-values
+source(here(functions.dir, "plot_ordisurf.R")) # extract ordisurf scores; plot ordisurf in base R
 ```
 
 ***  
 
-##### Sand stations (Burgas Bay, 2013-2014)  
+#### Sand stations (Burgas Bay, 2013-2014)  
 Import zoobenthic abundance data (cleaned and prepared).  
 ```{r import_zoo_abnd_sand}
 zoo.abnd.sand <- read_csv(here(save.dir, "abnd_sand_orig_clean.csv"))
@@ -102,7 +102,8 @@ zoo.abnd.sand <- read_csv(here(save.dir, "abnd_sand_orig_clean.csv"))
 )
 ```
 
-**Ordination (nMDS)** on sand stations..  (functions from library vegan)
+##### **Ordination (nMDS) on sand stations.**  
+These are all functions from library vegan.  
 ```{r mds_zoo_sand}
 ## the vegan MDS function transforms the data (fourth root) and applies Bray-Curtis dissimilarity by default.   
 mds.sand <- metaMDS(zoo.abnd.sand %>% select(-c(station:replicate)), 
@@ -114,13 +115,15 @@ mds.sand
 
 Examine the quality of the MDS representation..  
 ```{r mds_quality_sand}
-# stressplot
+## stressplot
 stressplot(mds.sand)
 
-# goodness-of-fit plot 
-# first plot the nMDS ordination with sites
+## goodness-of-fit plot 
+
+## first plot the nMDS ordination with sites
 plot(mds.sand, display = 'sites', type = 't', main = 'Goodness of fit') 
-# then, add the points with size reflecting goodness of fit (smaller = better fit)
+
+## then, add the points with size reflecting goodness of fit (smaller = better fit)
 points(mds.sand, display = 'sites', cex = goodness(mds.sand)*200) 
 
 ```
@@ -136,10 +139,155 @@ write_rds(mds.sand,
 Now, let's make a pretty plot in ggplot..  
 Previously, I had written a custom MDS plotting function for ggplot, which I'm going to review and optimize now (in another notebook kept especially for that).. 
 ```{r plot_mds_sand}
-(plot.mds.sand <- plot_mds(mds.sand, 
-                           groups = zoo.abnd.sand %>% pull(station))
+## plot the MDS, using my custom ggplot function
+plot.mds.sand <- plot_mds(mds.sand, groups = zoo.abnd.sand %>% pull(station))
+
+## change colour scheme & labels
+(plot.mds.sand <- plot.mds.sand + 
+    scale_color_brewer(palette = "Set2", name = "station", 
+                       labels = paste0("S", as.numeric((unique(zoo.abnd.sand %>% pull(station))))))
 )
 ```
 
 Well, to me at least it appears that there are **4 groups** on the MDS: 1 - combining stations Kraimorie and Chukalya; 2 - Akin, 3 - Agalina, 4 - combining Sozopol and Paraskeva (although this last one is a bit loosely associated).  
-To confirm this, the classical approach is to test the observed grouping with ANOSIM. Another more visual test is to overlay a classification tree on the ordination (?).  
+To confirm this, the classical approach is to test the observed grouping with ANOSIM. Another more visual test is to overlay a classification tree made with the same data on the ordination, but I don't think I'll bother with it.   
+
+##### **Envfit - sand stations.**   
+Envfit can be used to determine which environmental parameters correlate best with the ordination (and thus explain best the observed dissimilarities in the zoobenthic community structure between stations).  
+As per the PCA results, from the water column parameters, I'll use the most significant ones (best correlated with PCA axes): LUSI, secchi, seston, PO4, NH4, NO3 + all sediment parameters (except the most inter-correlated): TOM, moisture content, gravel and silt_clay.  
+First, import the environmental parameters (from the cleaned files).  
+For the water column, I'll use the long-term means wherever possible (and repeat each value 9 times per station to match the number of zoobenthic replicates that I have).   
+```{r import_water_data_sand}
+water.sand.all <- read_csv(here(save.dir, "water_column_summary_LT.csv"))
+
+(water.sand <- water.sand.all %>% 
+    ## filter only the sand stations
+    filter(station %in% c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva")) %>% 
+    
+    ## get only the variables we want (significant in PCA)
+    select(station, NH4_mean, NO3_mean, PO4_mean, seston_mean, secchi_mean) %>% 
+    
+    ## remove "mean" from the column names, purely for cosmetics
+    rename_at(vars(-station), 
+              funs(gsub(pattern = "_mean", replacement =  "", x = .)))
+)
+```
+
+Now import LUSI and add it to this tibble.  
+```{r import_lusi_sand}
+lusi <- read_csv(here(save.dir, "lusi_st.csv"))
+
+## only get LUSI for the sand stations and make a new tibble with all environmental data 
+(env.data.sand <- inner_join(water.sand,
+                             lusi %>% select(-watershed),
+                             by = "station")
+)
+```
+Repeat each row 9 times to match the zoobenthic community data (stupid, but needs to be done).  
+```{r duplicate_rows_env_data_sand}
+(env.data.sand <- env.data.sand %>% 
+   slice(rep(1:n(), each = 9))
+)
+```
+
+Goody! On to the sediment data.  
+```{r import_sediments_sand}
+sediments.all <- read_csv(here(save.dir, "sediments_imputed_sand.csv"))
+
+(sediments.sand <- sediments.all %>% 
+    ## select only the desired subset of variables (reduced list for PCA)
+    select(station, TOM, moisture_content, gravel, silt_clay) %>% 
+    
+    ## repeat each row 3 times (there are 3 distinct values for the sediments, because there were 3 samplings)
+    slice(rep(1:n(), each = 3))
+)
+```
+
+Merge the sediment tibble with the rest of the environmental data.  
+```{r merge_env_data_sand}
+(env.data.sand <- bind_cols(env.data.sand,
+                            sediments.sand %>% select(-station)) %>% 
+   ## convert station to factor
+   mutate(station = factor(station, levels = c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva")))
+)
+```
+
+All right, ready to roll!  
+Envfit of all this shit & the sand MDS..  
+```{r envfit_sand}
+envfit.sand <- envfit(mds.sand,
+                      env.data.sand %>% select(-station))
+
+## apply the p-value correction.. 
+(envfit.sand.adj <- p_adjust_envfit(envfit.sand)
+)
+
+## save it for posterity
+write_rds(envfit.sand.adj, 
+          here(save.dir, "envfit_sand_adj.RDS"))
+```
+
+Plot the envfit vectors over the MDS of the sand stations.  
+```{r plot_envfit_sand}
+## extract the envfit scores - easier format for plotting in ggplot.. 
+(envfit.scrs.sand <- extract_envfit_scores(envfit.sand.adj, pval = 0.05)
+)
+
+## plot over the ordination 
+(plot.envfit.sand <- plot_envfit(plot.mds.sand,
+                                 envfit.scrs.sand,
+                                 param.labels = param,
+                                 label.col = "grey35")
+)
+
+## save plot
+ggsave(here(figures.dir, "mds_envfit_sand.png"), 
+       plot.envfit.sand,      
+       width = 15, units = "cm", dpi = 300)
+```
+
+##### **Ordisurf - sand stations.**   
+Since most environmental parameters don't vary linearly, especially in the marine environment, it's better to fit **surfaces** over the ordination (using a GAM) rather than vectors. There's a function for that in package vegan - ordisurf.  
+First, get the environmental data we want (significant variables from envfit, p < 0.05).   
+```{r ordisurf_data_sand}
+(env.data.ordi.sand <- env.data.sand %>% 
+   select(envfit.scrs.sand %>% pull(param))
+)
+```
+
+Apply ordisurf sequentially to all these variables (keep results in a list).  
+```{r ordisurf_sand_all}
+## perform ordisurf on all variables in a loop
+(ordi.list.all.sand <- apply(env.data.ordi.sand, MARGIN = 2, 
+                             FUN = function(x) ordisurf(mds.sand ~ x, plot = FALSE))
+)
+
+## save this
+write_rds(ordi.list.all.sand, 
+          here(save.dir, "ordisurf_all_sand.RDS"))
+```
+
+Plot all ordisurfs in one go - with one monstrous mapply call, because I want plot titles, too. Not sure if I'll bother with renaming the ordisurf list so that the titles are more legible/suitable for direct use in the thesis text.  
+```{r plot_ordisurf_sand_all}
+mapply(function(x, y) {
+    ## construct the file name 
+    plot.name <- paste0("ordisurf_sand_", x, ".png")
+    
+    ## open png graphical device - we're working with base graphics
+    png(here(figures.dir, plot.name), width = 1000, height = 1000, res = 200)
+    
+    ## plot ordisurf using my pretty custom function
+    plot_mds_ordisurf(mds.sand, y)
+    
+    ## add a title
+    title(main = x, col.main = "grey30", cex.main = 0.9, line = 0.5)
+    
+    ## close the graphics device
+    dev.off()
+}, 
+names(ordi.list.all.sand), 
+ordi.list.all.sand, 
+SIMPLIFY = FALSE)
+
+```
+
