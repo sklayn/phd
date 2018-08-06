@@ -87,6 +87,7 @@ Import some custom functions for MDS, envfit and ordisurf plotting in ggplot (or
 source(here(functions.dir, "plot_mds_revised.R")) # plot MDS in ggplot; extract envfit scores and overlay on MDS plot in ggplot
 source(here(functions.dir, "p_adjust_envfit.R")) # apply Bonferroni correction for multiple comparisons on envfit results - adjusted p-values
 source(here(functions.dir, "plot_ordisurf.R")) # extract ordisurf scores; plot ordisurf in base R
+source(here(functions.dir, "simper_within_group_2.R")) # SIMPER for within-group species contributions
 ```
 
 ***  
@@ -150,7 +151,24 @@ plot.mds.sand <- plot_mds(mds.sand, groups = zoo.abnd.sand %>% pull(station))
 ```
 
 Well, to me at least it appears that there are **4 groups** on the MDS: 1 - combining stations Kraimorie and Chukalya; 2 - Akin, 3 - Agalina, 4 - combining Sozopol and Paraskeva (although this last one is a bit loosely associated).  
-To confirm this, the classical approach is to test the observed grouping with ANOSIM. Another more visual test is to overlay a classification tree made with the same data on the ordination, but I don't think I'll bother with it.   
+To confirm this, the classical method is to test the observed grouping with ANOSIM. Another more visual test is to overlay a classification tree made with the same data on the ordination, but I don't think I'll bother with it.   
+
+A more statistical approach to determine the optimal number of clusters is to also run **cluster analysis (via k-means clustering)** on the abundance data.
+```{r kmeans_sand} 
+## with Hellinger transformation of the data (because k-means uses Euclidean distances which don't work well for ecological data).
+kmeans.casc.sand <- cascadeKM(decostand(zoo.abnd.sand %>% select(-c(station:replicate)),
+                                        method = "hellinger"),
+                              inf.gr = 3, sup.gr = 6) ## I want at least 3 groups and at most 6 (the number of stations)
+
+plot(kmeans.casc.sand, sortg = TRUE)
+```
+
+This result suggests 5 groups (based on the highest value of the Calinski criterion - plot on the right), but 4 groups is not much worse.. It seems more logical to use 4, because of the oridnation results: 1) S3-Akin + 2) S1-Kraimorie-S2-Chukalya + 3) S5-Agalina + 4) S4-Sozopol-S6-Paraskeva.  
+Get these clusters - we'll check them later for validity & relationship with the explanatory environmental variables.   
+```{r kmeans_clusters_sand}
+## get the partition in 4 groups 
+kmeans.clusters.sand <- as.vector(kmeans.casc.sand$partition[, 2])
+```
 
 ##### **Envfit - sand stations.**   
 Envfit can be used to determine which environmental parameters correlate best with the ordination (and thus explain best the observed dissimilarities in the zoobenthic community structure between stations).  
@@ -318,3 +336,40 @@ dev.off()
 par(mfrow = c(1, 1))
 ```
 
+The observed MDS grouping is described 1) by the eutrophication/anthropogenic pressure gradient (water column parameters + LUSI), but also 2) by the sediment parameters - grain size & organic matter. That's why S5-Agalina is separate from the others - it has coarser sediments (more gravel) + organic matter because it's close to a natural reef, but it's in the outer bay - so less nutrients and more transparent water. That's why its community structure is also very distinct.  
+This grouping should be confirmed through ANOSIM, and if deemed valid - SIMPER to see which the distinctive species are.  
+
+##### **ANOSIM - sand stations.**   
+This is a non-parametric permutation procedure applied to the rank (similarity) matrix underlying the ordination or classification of the samples.  
+R statistic: -1 to 1; 1 = all replicates within sites are more similar to each other than to any other replicate from a different site; 0 = H0 is true (the same average similarities between and within sites). Usually 0 < R < 1 => some degree of difference observed between sites.  
+Best course of analysis: 1) global ANOSIM - overall difference between groups; if significant - 2) where does the main between-group difference come from?  
+=> examine R values for each pairwise comparison: large = complete separation, small - little or no difference.  
+NB ANOSIM doesn’t really have much statistical power and tends to get confounded by higher variances!..  
+
+Let's try grouping by the apparent MDS clusters.  
+```{r anosim_mds_clusters_sand}
+anosim.kmeans.sand <- anosim(zoo.abnd.sand %>% 
+                               select(-c(station:replicate)) %>%
+                               mutate_all(sqrt),
+                             grouping = kmeans.clusters.sand)
+
+summary(anosim.kmeans.sand)
+
+```
+So the grouping is highly significant..  
+Let's proceed with SIMPER to see which are the species contributing the most to this..   
+
+##### **SIMPER - sand stations**   
+This is another one of the confused-by-high variances distance-based methods
+First - check the species contributions to the **between-group variance**.
+```{r simper_between_group_sand}
+# simper.sand <- simper(sqrt(num.zoo.abnd.sand), 
+#                       group = factors.zoo.sand$stations)
+# summary(simper.sand, ordered = TRUE)
+
+```
+
+
+
+#### Seagrass stations (Burgas Bay, 2013-2014)  
+Import zoobenthic abundance data (cleaned and prepared).  
