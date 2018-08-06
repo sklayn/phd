@@ -1,6 +1,6 @@
 ---
 title: "Multivariate analyses of community structure (classical)"
-date: "2018-08-01"
+date: "2018-08-06"
 output: 
  html_notebook: 
   theme: paper
@@ -289,5 +289,32 @@ names(ordi.list.all.sand),
 ordi.list.all.sand, 
 SIMPLIFY = FALSE)
 
+```
+
+Plot all of the variables/ordisurfs on one big plot - very fiddly, lots of guesswork with base graphics! 
+```{r plot_ordisurf_sand_all_composite}
+## open png graphics device
+png(here(figures.dir, "ordisurf_all_composite_sand"), width = 2000, height = 2000, res = 200)
+
+## divide the plotting space - manually, knowing the number of subplots that will have to be fitted on one page
+par(mfrow = c(3, 3))
+
+## plot!
+mapply(function(x, y) {
+    ## plot ordisurf using my pretty custom function
+    plot_mds_ordisurf(mds.sand, y)
+    
+    ## add a title
+    title(main = x, col.main = "grey30", cex.main = 1, line = 0.5)
+}, 
+names(ordi.list.all.sand), 
+ordi.list.all.sand, 
+SIMPLIFY = FALSE)
+
+## close the current graphics device, writing the file to disk
+dev.off()
+
+## return the plotting device settings to normal
+par(mfrow = c(1, 1))
 ```
 
