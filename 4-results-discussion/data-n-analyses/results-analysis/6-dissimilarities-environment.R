@@ -78,8 +78,7 @@ fit
 ### number of perms
 B <- 1999
 
-### setting up frame which will be populated by
-### random r2 values:
+### setting up frame which will be populated by random r2 values:
 pop <- rep(NA, B + 1)
 
 ### the first entry will be the true r2:

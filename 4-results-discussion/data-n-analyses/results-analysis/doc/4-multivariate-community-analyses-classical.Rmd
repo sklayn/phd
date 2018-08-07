@@ -167,8 +167,9 @@ This result suggests 5 groups (based on the highest value of the Calinski criter
 Get these clusters - we'll check them later for validity & relationship with the explanatory environmental variables.   
 ```{r kmeans_clusters_sand}
 ## get the partition in 4 groups 
-kmeans.clusters.sand <- as.vector(kmeans.casc.sand$partition[, 2])
+(kmeans.clusters.sand <- as.vector(kmeans.casc.sand$partition[, 2]))
 ```
+OK, the stations' communities are distinct enough that the k-means algorithm separates them well and as expected, so I'm using it..  
 
 ##### **Envfit - sand stations.**   
 Envfit can be used to determine which environmental parameters correlate best with the ordination (and thus explain best the observed dissimilarities in the zoobenthic community structure between stations).  
@@ -430,7 +431,7 @@ plot_mds(mds.sand, groups = kmeans.clusters.sand) +
 
 ```
 
-Finally, I'll do an MDS only on group 1 (S4-S6), to see if there really is grounds to make them 2 separate groups.  
+Finally, I'll do an MDS only on group 1 (S4-S6), to see if there really is grounds to divide it into 2 separate groups.  
 ```{r mds_group1_sand}
 ## subset only these stations 
 mds.sand.gr1 <- metaMDS(zoo.abnd.sand %>% 
@@ -444,9 +445,342 @@ plot_mds(mds.sand.gr1)
 
 I don't really see any sort of groups, even though the MDS is significant. I'm not going to subdivide this group after all.  
 
+##### **PERMANOVA - sand stations**  
+This is multivariate ANOVA based on dissimilarities (in package vegan - adonis).  
+From the help file: used for partitioning distance matrices among sources of variation and fitting linear models (e.g., factors, polynomial regression) to distance matrices; uses a permutation test with pseudo-F ratios.  
+
+
+
 
 
 
 
 #### Seagrass stations (Burgas Bay, 2013-2014)  
 Import zoobenthic abundance data (cleaned and prepared).  
+```{r import_zoo_abnd_zostera}
+zoo.abnd.zostera <- read_csv(here(save.dir, "abnd_zostera_orig_clean.csv"))
+
+## convert station to factor (better safe than sorry later, when the stations are not plotted in the order I want them)
+(zoo.abnd.zostera <- zoo.abnd.zostera %>% 
+    mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")))
+)
+```
+
+##### **Ordination (nMDS) on seagrass stations.**  
+These are all functions from library vegan.  
+```{r mds_zoo_zostera}
+## the vegan MDS function transforms the data (fourth root) and applies Bray-Curtis dissimilarity by default.   
+mds.zostera <- metaMDS(zoo.abnd.zostera %>% select(-c(station:replicate)), 
+                       distance = "bray", 
+                       autotransform = TRUE)
+
+mds.zostera
+```
+
+Examine the quality of the MDS representation..  
+```{r mds_quality_zostera}
+## stressplot
+stressplot(mds.zostera)
+
+## goodness-of-fit plot 
+## first, plot the nMDS ordination with sites
+plot(mds.zostera, display = 'sites', type = 't', main = 'Goodness of fit') 
+
+## then, add the points with size reflecting goodness of fit (smaller = better fit)
+points(mds.zostera, display = 'sites', cex = goodness(mds.zostera)*200) 
+
+```
+This is worse than the sand station MDS, but still within the acceptable bounds (stress = 0.17). Could be better, though..  
+Save the MDS for the seagrass stations.  
+```{r save_mds_zostera}
+write_rds(mds.zostera, 
+          here(save.dir, "mds_zostera.RDS"))
+```
+
+Make a pretty plot in ggplot..  
+```{r plot_mds_zostera}
+## plot the MDS, using my custom ggplot function
+plot.mds.zostera <- plot_mds(mds.zostera, groups = zoo.abnd.zostera %>% pull(station))
+
+## change colour scheme & labels
+(plot.mds.zostera <- plot.mds.zostera + 
+    scale_color_brewer(palette = "Set2", name = "station", 
+                       labels = paste0("Z", as.numeric((unique(zoo.abnd.zostera %>% pull(station))))))
+)
+```
+OK... they are just not so different - probably could all be considered one biotope, Zostera-associated fauna or something of the sort. There is also variation within each group (station) - especially clear in Z1 and Z2, where there were differences in commnunity composition **between years**. Interestingly, the stations stil form distinctly separate groups - could be due to anthropogenic pressure?  
+
+Let's plot the MDS, but coloured by year this time.  
+```{r plot_mds_yrs_zostera}
+(plot.mds.yr.zostera <- plot_mds(mds.zostera, 
+                                 groups = zoo.abnd.zostera %>% 
+                                   mutate(year = factor(year)) %>% 
+                                   pull(year)) + 
+   theme(legend.title = element_blank())
+)
+
+## save, in case I decide to use it.. 
+ggsave(here(figures.dir, "mds_yr_zostera.png"), 
+       plot.mds.yr.zostera, 
+       width = 15, units = "cm", dpi = 300)
+
+```
+
+There really looks to be a difference in community composition between years (of course, for those stations that were sampled 2 times, in 2013 and 2014). By the way it also appears in the biotic index assessments, with an improvement in ecological state in 2014. I don't see much reason for this in the environmental parameters, but then again, the samplings for these were not really systematic, so I can't expect significant results..  
+
+Determine the optimal number of clusters by **cluster analysis (via k-means clustering)** on the abundance data.
+```{r kmeans_zostera} 
+## with Hellinger transformation of the data (because k-means uses Euclidean distances which don't work well for ecological data).
+kmeans.casc.zostera <- cascadeKM(decostand(zoo.abnd.zostera %>% select(-c(station:replicate)),
+                                           method = "hellinger"),
+                                 inf.gr = 2, sup.gr = 5) ## I want at least 2 groups and at most 5 (the number of stations)
+
+plot(kmeans.casc.zostera, sortg = TRUE)
+```
+
+This result suggests 2 or 3 groups, but they cut over each other or something.. Not good.     
+Let's go with 2 and get - and check - them. 
+```{r kmeans_clusters_zostera}
+## get the partition in 3 groups 
+(kmeans.clusters.zostera <- as.vector(kmeans.casc.zostera$partition[, 1]))
+```
+Yeess this algorithm *tries* to separate more or less as by years, but doesn't really manage it, because the stations still have distinct enough communities, and not all were sampled both in 2013 and 2014. 
+It doesn't improve much if there are 3, 4 and 5 groups. Check it out on the MDS:     
+```{r plot_mds_kmeans_all_zostera}
+lapply(colnames(kmeans.casc.zostera$partition), 
+       function(x) {
+         plot_mds(mds.zostera, groups = factor(as.vector(kmeans.casc.zostera$partition[, x])))
+       }
+       )
+
+```
+So there is a difference in **both stations and years** in seagrass habitats. In hindsight, should have done that check beforehand - like I did for the 2012 stations, to decide if I could aggregate by site instead of by station.. Maybe will go back and do it now.  
+Since the k-means clusters are sort of useless (just illogical - the clustering algorithm has no prior knowledge of stations and years and replicates, it just sorts), I'm going with my own groupings - stations & years.  
+
+```{r clusters_zostera}
+## station is already a factor
+(clusters.st.zostera <- zoo.abnd.zostera %>% pull(station))
+
+## year must be transformed into a factor first
+(clusters.yr.zostera <- zoo.abnd.zostera %>% 
+    mutate(year = factor(year, levels = c(2013, 2014))) %>% 
+    pull(year)
+)
+```
+
+##### **Envfit - seagrass stations.**   
+As per the PCA results, from the water column parameters, I'll use the most significant ones (best correlated with PCA axes): LUSI, chl-a, Ntot, secchi + all sediment parameters (except the most inter-correlated): TOM, moisture content, mean grain size, sand, silt_clay + all seagrass parameters: shoot count, above-ground biomass, below-ground biomass.  
+
+First, import the environmental parameters (from the cleaned files).  
+For the water column, I'll use the long-term means wherever possible (and repeat each value to match the number of zoobenthic replicates that I have).   
+```{r import_water_data_zostera}
+## the long-term summaries of water column data already have the seagrass stations, too
+(water.zostera <- water.sand.all %>% 
+    ## filter only the zostera stations
+    filter(station %in% c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")) %>% 
+    
+    ## get only the variables we want (significant in PCA)
+    select(station, Ntotal_mean, chl_a_mean, secchi_mean) %>% 
+    
+    ## remove "mean" from the column names, purely for cosmetics
+    rename_at(vars(-station), 
+              funs(gsub(pattern = "_mean", replacement =  "", x = .)))
+)
+```
+
+Add LUSI to this tibble.  
+```{r import_lusi_zostera}
+## only get LUSI for the zostera stations and make a new tibble with all environmental data 
+(env.data.zostera <- inner_join(water.zostera,
+                                lusi %>% select(-watershed),
+                                by = "station")
+)
+```
+Repeat each row to match the zoobenthic community data (stupid, but needs to be done). **These will not differ by year.**  
+```{r duplicate_rows_water_zostera}
+## in two iterations: first, for the stations that have 2 samplings (= 8 replicates each)
+env.data.zostera.fin <- env.data.zostera %>% 
+   filter(station %in% c("Poda", "Otmanli", "Gradina")) %>% 
+   slice(rep(1:n(), each = 8))
+
+## second, add the other two stations (= 4 replicates each)
+env.data.zostera.fin <- bind_rows(env.data.zostera.fin, 
+                                  env.data.zostera %>% 
+                                    filter(station %in% c("Vromos", "Ropotamo")) %>% 
+                                    slice(rep(1:n(), each = 4)))
+
+## convert station to factor and order by it 
+(env.data.zostera.fin <- env.data.zostera.fin %>% 
+    mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo"))) %>% 
+    arrange(station)
+)
+```
+
+On to the sediment data. Now for this I'm keeping the years.    
+```{r import_sediments_zostera}
+sediments.zostera <- read_csv(here(save.dir, "sediments_seagrass_raw_clean.csv"))
+
+(sediments.zostera <- sediments.zostera %>% 
+    ## select only the desired subset of variables (reduced list for PCA)
+    select(station, year, TOM, moisture_content, mean_grain_size, sand, silt_clay) %>% 
+        ## convert station to factor & arrange
+    mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")), 
+           year = factor(year, levels = c(2013, 2014))) %>%
+    arrange(station, year) %>% 
+    
+    ## average them all by station and year
+    group_by(station, year) %>% 
+    select(-c(station, year)) %>%
+    summarize_all(mean)
+
+)
+```
+
+Duplicate the sediment data in the same way as before.  
+```{r duplicate_rows_sediments_zostera}
+(sediments.zostera.fin <- sediments.zostera %>% 
+   slice(rep(1:n(), each = 4))
+)
+```
+
+Import the seagrass parameter data.  
+```{r import_seagrass_data_zostera}
+(seagrass <- read_csv(here(save.dir, "seagrass_summary_2013_2014.csv"))
+)
+```
+
+Duplicate the rows - same as the sediments.  
+```{r duplicate_rows_seagrass_zostera}
+(seagrass.fin <- seagrass %>% 
+   ## convert station and year to factor.. 
+   mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")), 
+          year = factor(year, levels = c(2013, 2014))) %>% 
+   
+   ## duplicate rows as before
+   slice(rep(1:n(), each = 4)) %>% 
+   
+   ## remove "_mean" from the column names
+   rename_at(vars(-c(station, year)), 
+             funs(gsub(pattern = "_mean", replacement =  "", x = .)))
+)
+```
+
+Merge all environmental data tibbles..  
+```{r merge_env_data_zostera}
+## NB first make sure the sediment and seagrass data are arranged by station and year - as the zoobenthic community data!! 
+(env.data.zostera.all <- bind_cols(env.data.zostera.fin,
+                                   sediments.zostera.fin %>% ungroup() %>% select(-station),
+                                   seagrass.fin %>% select(-c(station, year))
+                                   ) %>%
+   ## rearrange columns
+   select(station, year, everything())
+)  
+```
+
+Finally, everything seems to be in order..  
+
+Envfit of all this shit and the seagrass MDS.  
+```{r envfit_zostera}
+envfit.zostera <- envfit(mds.zostera,
+                         env.data.zostera.all %>% select(-station), 
+                         na.rm = TRUE)
+
+## apply the p-value correction.. 
+(envfit.zostera.adj <- p_adjust_envfit(envfit.zostera)
+)
+
+## save it for posterity
+write_rds(envfit.zostera.adj, 
+          here(save.dir, "envfit_zostera_adj.RDS"))
+```
+
+Plot the envfit vectors over the MDS of the seagrass stations.  
+```{r plot_envfit_zostera}
+## extract the envfit scores - easier format for plotting in ggplot 
+(envfit.scrs.zostera <- extract_envfit_scores(envfit.zostera.adj, pval = 0.05)
+)
+
+## plot over the ordination 
+(plot.envfit.zostera <- plot_envfit(plot.mds.zostera,
+                                    envfit.scrs.zostera,
+                                    param.labels = param,
+                                    label.col = "grey35")
+)
+
+## save plot
+ggsave(here(figures.dir, "mds_envfit_zostera.png"), 
+       plot.envfit.zostera,      
+       width = 15, units = "cm", dpi = 300)
+```
+
+##### **Ordisurf - seagrass stations.**   
+First, get the environmental data we want (significant variables from envfit, p < 0.05).   
+```{r ordisurf_data_zostera}
+(env.data.ordi.zostera <- env.data.zostera.all %>% 
+   select(envfit.scrs.zostera %>% pull(param))
+)
+```
+
+Apply ordisurf sequentially to all these variables (keep results in a list).  
+```{r ordisurf_zostera_all}
+## perform ordisurf on all variables in a loop
+(ordi.list.all.zostera <- apply(env.data.ordi.zostera, MARGIN = 2,
+                                FUN = function(x) ordisurf(mds.zostera ~ x, plot = FALSE))
+)
+
+## save this
+write_rds(ordi.list.all.zostera, 
+          here(save.dir, "ordisurf_all_zostera.RDS"))
+```
+
+Plot all ordisurfs in one go - with one monstrous mapply call, because I want plot titles, too. Not sure if I'll bother with renaming the ordisurf list so that the titles are more legible/suitable for direct use in the thesis text.  
+```{r plot_ordisurf_zostera_all}
+mapply(function(x, y) {
+    ## construct the file name 
+    plot.name <- paste0("ordisurf_zostera_", x, ".png")
+    
+    ## open png graphical device - we're working with base graphics
+    png(here(figures.dir, plot.name), width = 1000, height = 1000, res = 200)
+    
+    ## plot ordisurf using my pretty custom function
+    plot_mds_ordisurf(mds.zostera, y)
+    
+    ## add a title
+    title(main = x, col.main = "grey30", cex.main = 0.9, line = 0.5)
+    
+    ## close the graphics device
+    dev.off()
+}, 
+names(ordi.list.all.zostera), 
+ordi.list.all.zostera, 
+SIMPLIFY = FALSE)
+
+```
+
+Plot all of the variables/ordisurfs on one big plot.
+```{r plot_ordisurf_zostera_all_composite}
+## open png graphics device
+png(here(figures.dir, "ordisurf_all_composite_zostera"), width = 2000, height = 2000, res = 200)
+
+## divide the plotting space - manually, knowing the number of subplots that will have to be fitted on one page
+par(mfrow = c(2, 3))
+
+## plot!
+mapply(function(x, y) {
+    ## plot ordisurf using my pretty custom function
+    plot_mds_ordisurf(mds.zostera, y)
+    
+    ## add a title
+    title(main = x, col.main = "grey30", cex.main = 1, line = 0.5)
+}, 
+names(ordi.list.all.zostera), 
+ordi.list.all.zostera, 
+SIMPLIFY = FALSE)
+
+## close the current graphics device, writing the file to disk
+dev.off()
+
+## return the plotting device settings to normal
+par(mfrow = c(1, 1))
+```
+
