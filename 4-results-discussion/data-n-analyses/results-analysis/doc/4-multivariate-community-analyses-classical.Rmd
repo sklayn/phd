@@ -1,6 +1,6 @@
 ---
 title: "Multivariate analyses of community structure (classical)"
-date: "2018-08-06"
+date: "2018-08-07"
 output: 
  html_notebook: 
   theme: paper
@@ -354,20 +354,97 @@ anosim.kmeans.sand <- anosim(zoo.abnd.sand %>%
                              grouping = kmeans.clusters.sand)
 
 summary(anosim.kmeans.sand)
-
 ```
-So the grouping is highly significant..  
-Let's proceed with SIMPER to see which are the species contributing the most to this..   
+So the grouping is highly significant, while within-group variation is very small, for all it's worth given ANOSIM's properties..  
+Probably worthless, but - better safe than sorry; save this ANOSIM.  
+```{r save_anosim_mds_clusters_sand}
+write_rds(anosim.kmeans.sand, 
+          here(save.dir, "anosim_mds_clusters_sand.RDS"))
+```
 
 ##### **SIMPER - sand stations**   
 This is another one of the confused-by-high variances distance-based methods
-First - check the species contributions to the **between-group variance**.
-```{r simper_between_group_sand}
-# simper.sand <- simper(sqrt(num.zoo.abnd.sand), 
-#                       group = factors.zoo.sand$stations)
-# summary(simper.sand, ordered = TRUE)
+First - check the species contributions to the **between-group variance**, using the same groups as before (MDS clusters).  
+```{r simper_bn_group_mds_clusters_sand}
+simper.bn.gr.sand <- simper(zoo.abnd.sand %>% 
+                              select(-c(station:replicate)) %>%
+                              mutate_all(sqrt),
+                            group = kmeans.clusters.sand)
+
+simper.bn.gr.sand
 
 ```
+
+Goody.. The summary output is about 3 km long, so I'm not printing it out.  
+Save!  
+```{r save_simper_bn_group_mds_clusters_sand}
+write_rds(simper.bn.gr.sand, 
+          here(save.dir, "simper_bn_group_mds_clusters_sand.RDS"))
+```
+
+Now, the within-group SIMPER (which species are the most characteristic of each group) - custom function, because vegan doesn't provide this option, with good reason..   
+```{r simper_wn_group_mds_clusters_sand}
+simper.wn.gr.sand <- simper_within_group(zoo.abnd.sand %>%
+                                           select(-c(station:replicate)),
+                                         group = kmeans.clusters.sand)
+
+simper.wn.gr.sand
+
+```
+
+So most group similarities are around 60%. Group 1 (S4-S6) has the lowest - 48.7%. It's not very surprising; if you look at the MDS, these samples are more dispersed - there is some variation in community composition, but I'm still inclined to consider it a single group because of the sediment composition, the depth and the community dominants.  
+According to the Bulgarian national classification, the stations fall into the following biotopes:  
+* group 1 (S4-S6): “Infralittoral fine and medium sand dominated by *Chamelea gallina*, *Lentidium mediterraneum* and *Tellina tenuis*” (ILitFSCham). Only *C. gallina* is singled out by the within-group SIMPER, thanks to its dominance in the samples.. The other species are really minor, seen in only a few of the samples and only as a few individuals. So, SIMPER really does focus on species with large variance, and not necessarily on characterstic ones.  
+* group 2 (S5): I'm calling it “Infralittoral mixed sediments with diverse fauna” (ILitMSVar) - not really one of the national subtypes - since many species have significant and really close contributions to the community composition. The dominants are *Microdeutopus versiculatus*, *Protodorvillea kefersteini*, *Melita palmata*, *Eurydice dollfusi*, etc. It really is pretty unique in composition - the closest would be S3, but the sediment composition distingishes it enough..  
+* group 3 (S1-S2): “Infralittoral sandy muds dominated by *Melinna palmata*, *Anadara kagoshimensis*, *Heteromastus filiformis*” (ILitMMelin). It's not one of the national biotopes, either. Dominants according to SIMPER: *H. filiformis*, Oligochaeta, *M. palmata*, *Prionospio cirrifera*, *A. kagoshimensis*. 
+* group 4 (S3): this corresponds most closely to the subtype “Infralittoral medium and coarse sands dominated by *Upogebia pusilla*” (ILitCSUpog) (even though *U.pusilla* itself is absent from the samples). Dominants: *Protodorvillea kefersteini*, Oligochaeta, *Branchiostoma lanceolatum*, *Ophelia limacina*, *Chamelea gallina*.  
+
+Save this SIMPER! 
+```{r save_simper_wn_gr_mds_clusters_sand}
+write_rds(simper.wn.gr.sand, 
+          here(save.dir, "simper_wn_group_mds_clusters_sand.RDS"))
+```
+
+For the fun of it, let's plot the MDS again, with biotope labels on top of each group.   
+```{r plot_mds_sand_biotopes}
+## extract and calculate the centroids (mean coordinates) of the ellipses to use for label placement
+(biotope.labs.sand <- as_data_frame(scores(mds.sand, display = "sites")) %>%
+   mutate(biotope = kmeans.clusters.sand) %>% 
+   ## calculate the centroids for the labels
+   group_by(biotope) %>%
+   summarize_all(mean) %>% 
+   ## add text labels
+   mutate(lab = case_when(biotope == 1 ~ "ILitFSCham", 
+                          biotope == 2 ~ "ILitMSVar", 
+                          biotope == 3 ~ "ILitMMelin", 
+                          biotope == 4 ~ "ILitCSUpog"))
+)
+
+
+plot_mds(mds.sand, groups = kmeans.clusters.sand) +
+    stat_ellipse(aes(group = kmeans.clusters.sand), lwd = 0.2) +
+    geom_text(data = biotope.labs.sand,
+              aes(x = NMDS1, y = NMDS2, group = biotope, label = lab),  
+              inherit.aes = FALSE) + 
+  theme(legend.position = "none")
+
+```
+
+Finally, I'll do an MDS only on group 1 (S4-S6), to see if there really is grounds to make them 2 separate groups.  
+```{r mds_group1_sand}
+## subset only these stations 
+mds.sand.gr1 <- metaMDS(zoo.abnd.sand %>% 
+                          filter(station %in% c("Sozopol", "Paraskeva")) %>% 
+                          select(-c(station:replicate)))
+
+mds.sand.gr1
+
+plot_mds(mds.sand.gr1)
+```
+
+I don't really see any sort of groups, even though the MDS is significant. I'm not going to subdivide this group after all.  
+
+
 
 
 
