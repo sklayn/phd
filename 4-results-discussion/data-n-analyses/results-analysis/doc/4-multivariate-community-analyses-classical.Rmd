@@ -1,6 +1,6 @@
 ---
 title: "Multivariate analyses of community structure (classical)"
-date: "2018-08-07"
+date: "2018-08-08"
 output: 
  html_notebook: 
   theme: paper
@@ -92,7 +92,7 @@ source(here(functions.dir, "simper_within_group_2.R")) # SIMPER for within-group
 
 ***  
 
-#### Sand stations (Burgas Bay, 2013-2014)  
+#### **Sand stations (Burgas Bay, 2013-2014)**  
 Import zoobenthic abundance data (cleaned and prepared).  
 ```{r import_zoo_abnd_sand}
 zoo.abnd.sand <- read_csv(here(save.dir, "abnd_sand_orig_clean.csv"))
@@ -363,6 +363,7 @@ write_rds(anosim.kmeans.sand,
           here(save.dir, "anosim_mds_clusters_sand.RDS"))
 ```
 
+
 ##### **SIMPER - sand stations**   
 This is another one of the confused-by-high variances distance-based methods
 First - check the species contributions to the **between-group variance**, using the same groups as before (MDS clusters).  
@@ -455,7 +456,7 @@ From the help file: used for partitioning distance matrices among sources of var
 
 
 
-#### Seagrass stations (Burgas Bay, 2013-2014)  
+#### **Seagrass stations (Burgas Bay, 2013-2014)**  
 Import zoobenthic abundance data (cleaned and prepared).  
 ```{r import_zoo_abnd_zostera}
 zoo.abnd.zostera <- read_csv(here(save.dir, "abnd_zostera_orig_clean.csv"))
@@ -782,5 +783,79 @@ dev.off()
 
 ## return the plotting device settings to normal
 par(mfrow = c(1, 1))
+```
+
+##### **ANOSIM - seagrass stations.**   
+This time the grouping will be by station.. because the MDS clusters.  
+```{r anosim_mds_clusters_st_zostera}
+anosim.st.zostera <- anosim(zoo.abnd.zostera %>% 
+                              select(-c(station:replicate)) %>% 
+                              mutate_all(sqrt),
+                            grouping = clusters.st.zostera)
+
+summary(anosim.st.zostera)
+
+```
+
+The station grouping **is** significant after all, according to ANOSIM.  
+Save it!  
+```{r save_anosim_mds_clusters_st_zostera}
+write_rds(anosim.st.zostera, 
+          here(save.dir, "anosim_mds_clusters_st_zostera.RDS"))
+```
+
+
+Check the years, to be on the safe side (even though when put in envfit as a factor it's not significant).
+```{r anosim_mds_clusters_yr_zostera}
+summary(anosim(zoo.abnd.zostera %>% 
+                 select(-c(station:replicate)) %>% 
+                 mutate_all(sqrt),
+               grouping = clusters.yr.zostera))
+
+```
+
+The year grouping is not significant, according to ANOSIM.  
+
+##### **SIMPER - seagrass stations**   
+First - check the species contributions to the **between-group variance**, using the same groups as before (MDS clusters - stations).  
+```{r simper_bn_group_mds_clusters_st_zostera}
+simper.bn.gr.zostera <- simper(zoo.abnd.zostera %>%
+                                 select(-c(station:replicate)) %>%
+                                 mutate_all(sqrt),
+                               group = clusters.st.zostera)
+
+simper.bn.gr.zostera
+
+```
+
+I'm still not printing it out.   
+Save!  
+```{r save_simper_bn_group_mds_clusters_st_zostera}
+write_rds(simper.bn.gr.zostera, 
+          here(save.dir, "simper_bn_group_mds_clusters_st_zostera.RDS"))
+```
+
+Now, the within-group SIMPER.   
+```{r simper_wn_group_mds_clusters_st_zostera}
+simper.wn.gr.zostera <- simper_within_group(zoo.abnd.zostera %>%
+                                              select(-c(station:replicate)),
+                                            group = clusters.st.zostera)
+
+simper.wn.gr.zostera
+
+```
+
+So, according to SIMPER, the group similarities are around 60-70%. They are highest for Vromos and Ropotamo - could be because there are less samples in these groups and therefore less variability.   
+The 5 groups' characteristic (the ones accounting for around 70% of the group similarity) species are:  
+* group 1 (Z1-Poda): *Polyodra ciliata*, Oligochaeta, *Capitella minima*, *Ampelisca diadema*, *Bittium reticulatum*, *Abra alba*, *Heteromastus filiformis*, *Rissoa membranacea*, *Amphibalanus improvisus*.  
+* group 2 (Z2-Otmanli): *Bittium reticulatum*, Oligochaeta, *Heteromastus filiformis*, *Prionospio cirrifera*, *Capitella minima*, *Monocorophium acherusicum*, *Lagis koreni*, *Abra alba*, *Syllis gracilis*,...  
+* group 3 (Z3-Vromos): *Ampelisca diadema*, *Capitella minima*, *Monocorophium acherusicum*, *Spio filicornis*, *Rissoa membranacea*, *Platynereis dumerilii*, *Parvicardium exiguum*, *Melinna palmata*.  
+* group 4 (Z4-Gradina): *Bittium reticulatum*, *Mytilaster lineatus*, *Heteromastus filiformis*, *Capitella minima*, *Protodorvillea kefersteini*, *Cumella limicola*, *Loripes orbiculatus*, Oligochaeta, *Ampelisca diadema*, *Rissoa membranacea*..   
+* group 5 (Z5-Ropotamo): Oligochaeta, *Capitella minima*, *Apseudopsis ostroumovi*, *Bittium reticulatum*, *Capitella capitata*, *Ampelisca diadema*, *Prionospio cirrifera*, *Microdeutopus gryllotalpa*, *Polydora ciliata*, *Salvatoria clavata*...  
+
+Save this SIMPER, too.   
+```{r save_simper_wn_gr_mds_clusters_st_zostera}
+write_rds(simper.wn.gr.zostera, 
+          here(save.dir, "simper_wn_group_mds_clusters_st_zostera.RDS"))
 ```
 
