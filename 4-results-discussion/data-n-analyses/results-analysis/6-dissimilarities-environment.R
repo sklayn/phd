@@ -34,6 +34,7 @@ ordispider(meta.tst, group = gr.dendr.sand)
 #############################################################################################
 ### stratification of permutations - because repeated samplings, etc. - 
 ### have to account for that in the tests (rows are NOT independent)
+### sourcce: http://thebiobucket.blogspot.com/2011/04/repeat-measure-adonis-lately-i-had-to.html
 
 # make a data frame with the factors & abundances - all replicates (54 rows)!
 tst.permanova <- cbind(num.zoo.abnd.sand, factors.zoo.sand)
@@ -78,7 +79,7 @@ fit
 ### number of perms
 B <- 1999
 
-### setting up frame which will be populated by random r2 values:
+### setting up vector which will be populated by random r2 values:
 pop <- rep(NA, B + 1)
 
 ### the first entry will be the true r2:
@@ -105,7 +106,8 @@ shuffle(nobs, control = ctrl)
 set.seed(123)
 for(i in 2:(B+1)){
   idx <- shuffle(nobs, control = ctrl)
-  fit.rand <- adonis(num.tst.permanova ~ tst.permanova$groups[idx], permutations = 1)
+  fit.rand <- adonis(num.tst.permanova ~ tst.permanova$groups[idx], 
+                     permutations = 1)
   pop[i] <- fit.rand$aov.tab[1, 5]
 }
 
@@ -119,7 +121,8 @@ pval <- sum(pop >= pop[1])/(B + 1)
 
 #########################################################################################################
 ## using "strata" argument from within the function: 
-adonis(num.tst.permanova ~ tst.permanova$groups, strata = c(rep(1:3, times = 6)))
+adonis(num.tst.permanova ~ tst.permanova$groups, 
+       strata = c(rep(1:3, times = 6)))
 
 ## looks ok... 
 

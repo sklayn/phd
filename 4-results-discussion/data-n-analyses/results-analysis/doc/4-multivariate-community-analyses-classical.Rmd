@@ -1,6 +1,6 @@
 ---
 title: "Multivariate analyses of community structure (classical)"
-date: "2018-08-08"
+date: "2018-08-09"
 output: 
  html_notebook: 
   theme: paper
@@ -424,10 +424,10 @@ For the fun of it, let's plot the MDS again, with biotope labels on top of each 
 
 
 plot_mds(mds.sand, groups = kmeans.clusters.sand) +
-    stat_ellipse(aes(group = kmeans.clusters.sand), lwd = 0.2) +
-    geom_text(data = biotope.labs.sand,
-              aes(x = NMDS1, y = NMDS2, group = biotope, label = lab),  
-              inherit.aes = FALSE) + 
+  stat_ellipse(aes(group = kmeans.clusters.sand), lwd = 0.2) +
+  geom_text(data = biotope.labs.sand,
+            aes(x = NMDS1, y = NMDS2, group = biotope, label = lab),  
+            inherit.aes = FALSE) + 
   theme(legend.position = "none")
 
 ```
@@ -447,12 +447,35 @@ plot_mds(mds.sand.gr1)
 I don't really see any sort of groups, even though the MDS is significant. I'm not going to subdivide this group after all.  
 
 ##### **PERMANOVA - sand stations**  
-This is multivariate ANOVA based on dissimilarities (in package vegan - adonis).  
+This is multivariate ANOVA based on dissimilarities (in package vegan - function adonis).  
 From the help file: used for partitioning distance matrices among sources of variation and fitting linear models (e.g., factors, polynomial regression) to distance matrices; uses a permutation test with pseudo-F ratios.  
 
+Make a distance matrix of the communities, and check multivariate homogeneity of groups dispersions (variances) - a PERMANOVA assumption.  
+```{r check_permanova_assumptions_sand}
+## make distance matrix of the sand communities (square root transformed)
+dist.matrix.sand <- vegdist(zoo.abnd.sand %>% 
+                              select(-c(station:replicate)) %>%
+                              mutate_all(sqrt))
 
+## check the dispersion between groups - using the clusters from the MDS
+(betadisper.sand <- betadisper(dist.matrix.sand, 
+                               group = kmeans.clusters.sand)
+)
 
+anova(betadisper.sand)
 
+```
+
+So there are significant differences in dispersion between groups that might also contribute to any significant effect detected by PERMANOVA.. 
+
+Have to decide whether it makes sense to stratify by groups/clusters, or no need.. 
+```{r permanova_env_params_sand}
+## construct equation for PERMANOVA
+perm.eq.sand <- paste("dist.matrix.sand", paste(names(env.data.ordi.sand), collapse = "+"), sep = " ~ ")
+
+adonis(as.formula(perm.eq.sand), data = env.data.ordi.sand, strata = kmeans.clusters.sand)
+
+```
 
 
 
@@ -847,7 +870,7 @@ simper.wn.gr.zostera
 
 So, according to SIMPER, the group similarities are around 60-70%. They are highest for Vromos and Ropotamo - could be because there are less samples in these groups and therefore less variability.   
 The 5 groups' characteristic (the ones accounting for around 70% of the group similarity) species are:  
-* group 1 (Z1-Poda): *Polyodra ciliata*, Oligochaeta, *Capitella minima*, *Ampelisca diadema*, *Bittium reticulatum*, *Abra alba*, *Heteromastus filiformis*, *Rissoa membranacea*, *Amphibalanus improvisus*.  
+* group 1 (Z1-Poda): *Polydora ciliata*, Oligochaeta, *Capitella minima*, *Ampelisca diadema*, *Bittium reticulatum*, *Abra alba*, *Heteromastus filiformis*, *Rissoa membranacea*, *Amphibalanus improvisus*.  
 * group 2 (Z2-Otmanli): *Bittium reticulatum*, Oligochaeta, *Heteromastus filiformis*, *Prionospio cirrifera*, *Capitella minima*, *Monocorophium acherusicum*, *Lagis koreni*, *Abra alba*, *Syllis gracilis*,...  
 * group 3 (Z3-Vromos): *Ampelisca diadema*, *Capitella minima*, *Monocorophium acherusicum*, *Spio filicornis*, *Rissoa membranacea*, *Platynereis dumerilii*, *Parvicardium exiguum*, *Melinna palmata*.  
 * group 4 (Z4-Gradina): *Bittium reticulatum*, *Mytilaster lineatus*, *Heteromastus filiformis*, *Capitella minima*, *Protodorvillea kefersteini*, *Cumella limicola*, *Loripes orbiculatus*, Oligochaeta, *Ampelisca diadema*, *Rissoa membranacea*..   
