@@ -37,6 +37,6 @@ vignettes/*.pdf
 
 ## project-specific potentially sensitive stuff ##
 data/				# data directories 
-*clean*				# cleaned-up data
-**/*clean*
+#*clean*				# cleaned-up data
+#**/*clean*
 .Rproj.user
