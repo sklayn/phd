@@ -1,6 +1,6 @@
 ---
 title: "Multivariate analyses of community structure (classical)"
-date: "2018-08-10"
+date: "2018-08-30"
 output: 
  html_notebook: 
   theme: paper
@@ -473,11 +473,20 @@ Have to decide whether it makes sense to stratify by groups/clusters, or no need
 ## construct equation for PERMANOVA
 perm.eq.sand <- paste("dist.matrix.sand", paste(names(env.data.ordi.sand), collapse = "+"), sep = " ~ ")
 
-adonis(as.formula(perm.eq.sand), data = env.data.ordi.sand, strata = kmeans.clusters.sand)
+## set blocks for the permutations
+perm.sand <- how(nperm = 999)
+setBlocks(perm.sand) <- zoo.abnd.sand$station
+  
+adonis(as.formula(perm.eq.sand), data = env.data.ordi.sand, permutations = perm.sand)
 
+adonis2(as.formula(perm.eq.sand), data = env.data.ordi.sand, strata = kmeans.clusters.sand)
 ```
 
 
+
+
+
+***  
 
 #### **Seagrass stations (Burgas Bay, 2013-2014)**  
 Import zoobenthic abundance data (cleaned and prepared).  
