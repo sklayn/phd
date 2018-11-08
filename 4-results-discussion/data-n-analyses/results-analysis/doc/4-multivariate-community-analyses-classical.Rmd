@@ -1,6 +1,6 @@
 ---
 title: "Multivariate analyses of community structure (classical)"
-date: "2018-10-10"
+date: "2018-11-08"
 output: 
  html_notebook: 
   theme: paper
@@ -130,7 +130,7 @@ points(mds.sand, display = 'sites', cex = goodness(mds.sand)*200)
 ```
 
 Well it's not perfect, but could be lived with.. Let's call it good enough.  
-The stress is 0.15, which is fairly close to, but still below the limit (0.2) suggested in the Primer manual. 
+The stress is 0.16, which is fairly close to, but still below the limit (0.2) suggested in the Primer manual. 
 Save the MDS for the sand stations.  
 ```{r save_mds_sand}
 write_rds(mds.sand, 
