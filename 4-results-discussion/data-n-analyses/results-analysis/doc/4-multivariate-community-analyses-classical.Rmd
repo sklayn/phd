@@ -1,9 +1,9 @@
 ---
 title: "Multivariate analyses of community structure (classical)"
-date: "2018-11-13"
+date: "2018-11-14"
 output: 
  html_notebook: 
-  theme: paper
+   theme: paper
 ---
 
 This notebook contains all (classical) multivariate analyses of zoobenthic community structure: MDS, envfit, ANOSIM & SIMPER and friends.  
@@ -35,18 +35,18 @@ Define the working subdirectories.
 ## print the working directory, just to be on the safe side
 paste("You are here: ", getwd())
 
-data.dir <- "data"    # input data files
-functions.dir <- "R"  # functions & scripts
-save.dir <- "output"  # clean data, output from models & more complex calculations
-figures.dir <- "figs" # plots & figures 
+data.dir <- "data"    ## input data files
+functions.dir <- "R"  ## functions & scripts
+save.dir <- "output"  ## clean data, output from models & more complex calculations
+figures.dir <- "figs" ## plots & figures 
 ```
 
 Import libraries.  
 ```{r import_packages, results = FALSE}
-library(here) # painless relative paths to subdurectories, etc.
-library(tidyverse) # data manipulation, cleaning, aggregation
-library(viridis) # smart & pretty colour schemes
-library(vegan) # functions for multivariate analyses in ecology 
+library(here) ## painless relative paths to subdurectories, etc.
+library(tidyverse) ## data manipulation, cleaning, aggregation
+library(viridis) ## smart & pretty colour schemes
+library(vegan) ## functions for multivariate analyses in ecology 
 ```
 
 Organize some commonly-used ggplot2 modifications into a more convenient (and less repetitive) format. One day, I MUST figure out the proper way to set the theme..    
@@ -84,10 +84,10 @@ text_size <- function(text.x = NULL,
 
 Import some custom functions for MDS, envfit and ordisurf plotting in ggplot (or just plain easier and prettier plotting).  
 ```{r import_custom_functions}
-source(here(functions.dir, "plot_mds_revised.R")) # plot MDS in ggplot; extract envfit scores and overlay on MDS plot in ggplot
-source(here(functions.dir, "p_adjust_envfit.R")) # apply Bonferroni correction for multiple comparisons on envfit results - adjusted p-values
-source(here(functions.dir, "plot_ordisurf.R")) # extract ordisurf scores; plot ordisurf in base R
-source(here(functions.dir, "simper_within_group_2.R")) # SIMPER for within-group species contributions
+source(here(functions.dir, "plot_mds_revised.R")) ## plot MDS in ggplot; extract envfit scores and overlay on MDS plot in ggplot
+source(here(functions.dir, "p_adjust_envfit.R")) ## apply Bonferroni correction for multiple comparisons on envfit results - adjusted p-values
+source(here(functions.dir, "plot_ordisurf.R")) ## extract ordisurf scores; plot ordisurf in base R
+source(here(functions.dir, "simper_within_group_2.R")) ## SIMPER for within-group species contributions
 ```
 
 ***  
@@ -446,7 +446,7 @@ plot_mds(mds.sand.gr1)
 
 I don't really see any sort of groups, even though the MDS is significant. I'm not going to subdivide this group after all.  
 
-##### **PERMANOVA - sand stations**  
+##### **PERMANOVA - environmental parameters, sand stations**  
 This is multivariate ANOVA based on dissimilarities (in package vegan - function adonis).  
 From the help file: used for partitioning distance matrices among sources of variation and fitting linear models (e.g., factors, polynomial regression) to distance matrices; uses a permutation test with pseudo-F ratios.  
 
@@ -471,19 +471,30 @@ So there are significant differences in dispersion between groups that might als
 Have to decide whether it makes sense to stratify by groups/clusters, or no need.. 
 ```{r permanova_env_params_sand}
 ## construct equation for PERMANOVA
-perm.eq.sand <- paste("dist.matrix.sand", paste(names(env.data.ordi.sand), collapse = "+"), sep = " ~ ")
+permanova.eq.sand <- paste("dist.matrix.sand", 
+                           paste(names(env.data.ordi.sand), collapse = "+"), 
+                           sep = " ~ ")
 
 ## set blocks for the permutations
-perm.sand <- how(nperm = 999)
-setBlocks(perm.sand) <- zoo.abnd.sand$station
-  
-adonis(as.formula(perm.eq.sand), data = env.data.ordi.sand, permutations = perm.sand)
-
-adonis2(as.formula(perm.eq.sand), data = env.data.ordi.sand, strata = kmeans.clusters.sand)
+permutations.sand <- how(nperm = 999)
+setBlocks(permutations.sand) <- kmeans.clusters.sand
+ 
+## run the PERMANOVA with the parameters defined above  
+(permanova.env.sand <- adonis(as.formula(permanova.eq.sand),
+                              data = env.data.ordi.sand, 
+                              permutations = permutations.sand)
+)
 ```
-The two PERMANOVA functions give the exact same result. I'll keep reading up on the analysis and its particularities a bit more, but..
 
+Well, this looks more or less plausible..  
+The analysis singles out NH4, PO4, seston, secchi, and silt-clay content as the most significant environmental variables, with TOM lagging a bit behind, nearing the limit of significance.  
+I'm going to go with it; I just don't have more time for tinkering.  
 
+Save the PERMANOVA results.  
+```{r save_permanova_env_params_sand}
+write_rds(permanova.env.sand, 
+          here(save.dir, "permanova_env_params_sand.RDS"))
+```
 
 
 ***  
@@ -523,6 +534,7 @@ plot(mds.zostera, display = 'sites', type = 't', main = 'Goodness of fit')
 points(mds.zostera, display = 'sites', cex = goodness(mds.zostera)*200) 
 
 ```
+
 This is worse than the sand station MDS, but still within the acceptable bounds (stress = 0.17). Could be better, though..  
 Save the MDS for the seagrass stations.  
 ```{r save_mds_zostera}
@@ -541,6 +553,7 @@ plot.mds.zostera <- plot_mds(mds.zostera, groups = zoo.abnd.zostera %>% pull(sta
                        labels = paste0("Z", as.numeric((unique(zoo.abnd.zostera %>% pull(station))))))
 )
 ```
+
 OK... they are just not so different - probably could all be considered one biotope, Zostera-associated fauna or something of the sort. There is also variation within each group (station) - especially clear in Z1 and Z2, where there were differences in commnunity composition **between years**. Interestingly, the stations stil form distinctly separate groups - could be due to anthropogenic pressure?  
 
 Let's plot the MDS, but coloured by year this time.  
