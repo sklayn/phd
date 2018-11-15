@@ -1,9 +1,7 @@
 ---
 title: "Multivariate analyses of community structure (classical)"
-date: "2018-11-14"
-output: 
- html_notebook: 
-   theme: paper
+date: "2018-11-15"
+output: html_notebook
 ---
 
 This notebook contains all (classical) multivariate analyses of zoobenthic community structure: MDS, envfit, ANOSIM & SIMPER and friends.  
@@ -488,19 +486,37 @@ setBlocks(permutations.sand) <- kmeans.clusters.sand
 
 Well, this looks more or less plausible..  
 The analysis singles out NH4, PO4, seston, secchi, and silt-clay content as the most significant environmental variables, with TOM lagging a bit behind, nearing the limit of significance.  
-I'm going to go with it; I just don't have more time for tinkering.  
+After some reflection, this is all good and nice, but completely meaningless - most of the variability is gone from the environmental dataset (water column averages), or there isn't enough to begin with (sediment data). It's bound to be even worse with the seagrass data. So in the end, I'm going to drop it altogether.    
 
-Save the PERMANOVA results.  
+Save the PERMANOVA results, even though I'm not going to use it.  
 ```{r save_permanova_env_params_sand}
 write_rds(permanova.env.sand, 
           here(save.dir, "permanova_env_params_sand.RDS"))
 ```
 
+##### **bioenv - environmental parameters, sand stations**  
+This is the last thing I'm going to try - bioenv (I think it's equivalent to the PRIMER function of the same name).  
+It selects all possible subsets of environmental variables, finds the correlation between community dissimilarities and environmental distances, and for each size of subsets, saves the best result. The idea is to get the most parsimonious model that best explains the observed community differences.   
+I don't expect this to actually perform better (same underlying environmental data, same problems with grossly oversimplified variables).   
+```{r bioenv_sand}
+## use the same equation and data as for the PERMANOVA above
+bioenv.sand <- bioenv(as.formula(permanova.eq.sand), 
+                      data = env.data.ordi.sand, 
+                      method = "spearman", 
+                      metric = "euclidean")
+
+bioenv.sand
+summary(bioenv.sand)
+
+```
+
+FIGURE OUT WHICH METRIC TO USE!! 
+
 
 ***  
 
 #### **Seagrass stations (Burgas Bay, 2013-2014)**  
-Import zoobenthic abundance data (cleaned and prepared).  
+Import zoobenthic abundance data (cleaned and prepared, from the output directory).  
 ```{r import_zoo_abnd_zostera}
 zoo.abnd.zostera <- read_csv(here(save.dir, "abnd_zostera_orig_clean.csv"))
 
