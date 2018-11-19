@@ -1,6 +1,6 @@
 ---
 title: "Multivariate analyses of community structure (classical)"
-date: "2018-11-16"
+date: "2018-11-19"
 output: html_notebook
 ---
 
@@ -510,7 +510,8 @@ summary(bioenv.sand)
 
 ```
 
-FIGURE OUT WHICH METRIC TO USE!! 
+Well, as expected: one more confirmation that the observed community differences are best explained by eutrophication parameters (NH4, or other water column parameters depending on the distance metric used) AND by sediment properties (grain size, organic matter,..).  
+
 
 
 ***  
