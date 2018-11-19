@@ -444,6 +444,28 @@ plot_mds(mds.sand.gr1)
 
 I don't really see any sort of groups, even though the MDS is significant. I'm not going to subdivide this group after all.  
 
+Do a within-group SIMPER on the **biomasses**, too.. (get the biomass dominants in each group).  
+```{r simper_biomass_wn_group_mds_clusters_st_sand}
+## import biomasses in seagrass 
+(zoo.biomass.sand <- read_csv(here(save.dir, "biomass_sand_orig_clean.csv"))
+)
+
+## perform the SIMPER
+(simper.biomass.wn.gr.sand <- simper_within_group(zoo.biomass.sand %>% select(-c(station:replicate)), 
+                                                  group = kmeans.clusters.sand)
+)
+```
+
+So the groups from before are still distinct, and still the same - but the community dominants are shuffled a little.. Normal - as I've said before, biomasses are really skewed in favour of the mollusks with their shells.. 
+
+Save for later! 
+```{r save_simper_biomass_wn_gr_mds_clusters_sand}
+write_rds(simper.biomass.wn.gr.sand, 
+          here(save.dir, "simper_biomass_wn_gr_mds_clusters_sand.RDS"))
+```
+
+
+
 ##### **PERMANOVA - environmental parameters, sand stations**  
 This is multivariate ANOVA based on dissimilarities (in package vegan - function adonis).  
 From the help file: used for partitioning distance matrices among sources of variation and fitting linear models (e.g., factors, polynomial regression) to distance matrices; uses a permutation test with pseudo-F ratios.  
@@ -512,6 +534,11 @@ summary(bioenv.sand)
 
 Well, as expected: one more confirmation that the observed community differences are best explained by eutrophication parameters (NH4, or other water column parameters depending on the distance metric used) AND by sediment properties (grain size, organic matter,..).  
 
+Save this in case I decide I need it.. 
+```{r save_bioenv_sand}
+write_rds(bioenv.sand, 
+          here(save.dir, "bioenv_sand.RDS"))
+```
 
 
 ***  
@@ -920,5 +947,98 @@ Save this SIMPER, too.
 ```{r save_simper_wn_gr_mds_clusters_st_zostera}
 write_rds(simper.wn.gr.zostera, 
           here(save.dir, "simper_wn_group_mds_clusters_st_zostera.RDS"))
+```
+
+
+Do a within-group SIMPER on the **biomasses**, too.. (get the biomass dominants in each group).  
+```{r simper_biomass_wn_group_mds_clusters_st_zostera}
+## import biomasses in seagrass 
+(zoo.biomass.zostera <- read_csv(here(save.dir, "biomass_zostera_orig_clean.csv"))
+)
+
+## perform the SIMPER
+(simper.biomass.wn.gr.zostera <- simper_within_group(zoo.biomass.zostera %>% select(-c(station:replicate)), 
+                                                     group = clusters.st.zostera)
+)
+```
+
+Great, so suspicions more or less confirmed: there aren't very great community distinctions between stations.. The biomass dominants are mollusks, most commonly *Bittium reticulatum*, *Rissoa membranacea*, *Loripes orbiculatus*.. Exception: st. Z3-Vromos: dominated by *A. diadema*, *R. membranacea*, *S. filicornis*..   
+There is a shift towards species more tolerant to organic pollution/accumulation in the inner Burgas Bay stations - *Polydora ciliata*, *Prionospio cirrifera*, oligochaetes.  
+However, as a whole, I think it would be appropriate to consider the seagrass-associated zoobenthic species as one single community.    
+
+Save this biomass SIMPER, too.  
+```{r save_simper_biomass_wn_gr_mds_clusters_st_zostera}
+write_rds(simper.biomass.wn.gr.zostera, 
+          here(save.dir, "simper_biomass_wn_gr_mds_clusters_st_zostera.RDS"))
+```
+
+
+##### **PERMANOVA - environmental parameters, seagrass stations**  
+Same as for the sand stations.. 
+Make a distance matrix of the communities, and check multivariate homogeneity of groups dispersions (variances) - a PERMANOVA assumption.  
+```{r check_permanova_assumptions_zostera}
+## make distance matrix of the seagrass communities (square root transformed)
+dist.matrix.zostera <- vegdist(zoo.abnd.zostera %>% 
+                                 select(-c(station:replicate)) %>%
+                                 mutate_all(sqrt))
+
+## check the dispersion between groups - using the clusters from the MDS
+(betadisper.zostera <- betadisper(dist.matrix.zostera, 
+                                  group = clusters.st.zostera)
+)
+
+anova(betadisper.zostera)
+
+```
+
+So again there are significant differences in dispersion between groups that might also contribute to any significant effect detected by PERMANOVA.. 
+
+```{r permanova_env_params_zostera}
+## construct equation for PERMANOVA. NB remove the secchi depth, because it has NaNs (for Vromos), which prevent the analysis from running - unequal matrices.. 
+permanova.eq.zostera <- paste("dist.matrix.zostera", 
+                              paste(names(env.data.ordi.zostera %>% select(-secchi)), collapse = "+"), 
+                              sep = " ~ ")
+
+## set blocks for the permutations
+permutations.zostera <- how(nperm = 999)
+setBlocks(permutations.zostera) <- clusters.st.zostera
+ 
+## run the PERMANOVA with the parameters defined above  
+(permanova.env.zostera <- adonis(as.formula(permanova.eq.zostera),
+                                 data = env.data.ordi.zostera, 
+                                 permutations = permutations.zostera)
+)
+```
+
+All right, so the most significant parameters are again eutrophication/pollution parameters - LUSI, and sediment grain size (sand and silt), and also seagrass density (shoot count).  
+
+Save the PERMANOVA for the seagrass stations.  
+```{r save_permanova_env_params_zostera}
+write_rds(permanova.env.zostera, 
+          here(save.dir, "permanova_env_params_zostera.RDS"))
+```
+
+##### **bioenv - environmental parameters, seagrass stations**  
+So, for consistency, here is bioenv on the environmental parameters at the seagrass stations.  
+It selects all possible subsets of environmental variables, finds the correlation between community dissimilarities and environmental distances, and for each size of subsets, saves the best result. The idea is to get the most parsimonious model that best explains the observed community differences.   
+I don't expect this to actually perform better (same underlying environmental data, same problems with grossly oversimplified variables).   
+```{r bioenv_zostera}
+## use the same equation and data as for the PERMANOVA above
+bioenv.zostera <- bioenv(as.formula(permanova.eq.zostera), 
+                         data = env.data.ordi.zostera, 
+                         method = "spearman", 
+                         metric = "euclidean")
+
+bioenv.zostera
+summary(bioenv.zostera)
+
+```
+
+Interestingly, here the bioenv procedure suggests that the sediment grain size (% sand) and the seagrass shoot density are the parameters that best explain the observed community differences. Could be - I wouldn't say there are much differences at all, see the MDS..   
+
+Save this, too.  
+```{r save_bioenv_zostera}
+write_rds(bioenv.zostera, 
+          here(save.dir, "bioenv_zostera.RDS"))
 ```
 
