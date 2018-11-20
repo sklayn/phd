@@ -1,6 +1,6 @@
 ---
 title: "Multivariate analyses of community structure (classical)"
-date: "2018-11-19"
+date: "2018-11-20"
 output: html_notebook
 ---
 
@@ -395,7 +395,7 @@ simper.wn.gr.sand
 So most group similarities are around 60%. Group 1 (S4-S6) has the lowest - 48.7%. It's not very surprising; if you look at the MDS, these samples are more dispersed - there is some variation in community composition, but I'm still inclined to consider it a single group because of the sediment composition, the depth and the community dominants.  
 According to the Bulgarian national classification, the stations fall into the following biotopes:  
 * group 1 (S4-S6): “Infralittoral fine and medium sand dominated by *Chamelea gallina*, *Lentidium mediterraneum* and *Tellina tenuis*” (ILitFSCham). Only *C. gallina* is singled out by the within-group SIMPER, thanks to its dominance in the samples.. The other species are really minor, seen in only a few of the samples and only as a few individuals. So, SIMPER really does focus on species with large variance, and not necessarily on characterstic ones.  
-* group 2 (S5): I'm calling it “Infralittoral mixed sediments with diverse fauna” (ILitMSVar) - not really one of the national subtypes - since many species have significant and really close contributions to the community composition. The dominants are *Microdeutopus versiculatus*, *Protodorvillea kefersteini*, *Melita palmata*, *Eurydice dollfusi*, etc. It really is pretty unique in composition - the closest would be S3, but the sediment composition distingishes it enough..  
+* group 2 (S5): “Infralittoral mixed sediments with diverse fauna” (ILitMSVar) - also one of the national subtypes, from the latest report, but without ecological state limits - with many species having significant and really close contributions to the community composition. The dominants are *Microdeutopus versiculatus*, *Protodorvillea kefersteini*, *Melita palmata*, *Eurydice dollfusi*, etc. It really is pretty unique in composition - the closest would be S3, but the sediment composition distingishes it enough..  
 * group 3 (S1-S2): “Infralittoral sandy muds dominated by *Melinna palmata*, *Anadara kagoshimensis*, *Heteromastus filiformis*” (ILitMMelin). It's not one of the national biotopes, either. Dominants according to SIMPER: *H. filiformis*, Oligochaeta, *M. palmata*, *Prionospio cirrifera*, *A. kagoshimensis*. 
 * group 4 (S3): this corresponds most closely to the subtype “Infralittoral medium and coarse sands dominated by *Upogebia pusilla*” (ILitCSUpog) (even though *U.pusilla* itself is absent from the samples). Dominants: *Protodorvillea kefersteini*, Oligochaeta, *Branchiostoma lanceolatum*, *Ophelia limacina*, *Chamelea gallina*.  
 
