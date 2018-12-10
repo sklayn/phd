@@ -1,6 +1,6 @@
 ---
 title: "Multivariate analyses of community structure (classical)"
-date: "2018-11-22"
+date: "2018-12-10"
 output: html_notebook
 ---
 
@@ -1042,3 +1042,150 @@ write_rds(bioenv.zostera,
           here(save.dir, "bioenv_zostera.RDS"))
 ```
 
+
+***  
+
+#### **Sozopol Bay, 2012**  
+Import zoobenthic abundance data (cleaned and prepared, from the output directory).  
+```{r import_zoo_abnd_2012}
+zoo.abnd.2012 <- read_csv(here(save.dir, "abnd_2012_orig_clean.csv"))
+
+## convert site to factor (better safe than sorry later, when the sites are not plotted in the order I want them)
+(zoo.abnd.2012 <- zoo.abnd.2012 %>% 
+    mutate(site = factor(site, levels = c("Konski", "Ribka", "Gradina")))
+)
+```
+
+##### **Ordination (nMDS) on Sozopol Bay stations.**  
+These are all functions from library vegan.  
+```{r mds_zoo_2012}
+## the vegan MDS function transforms the data (fourth root) and applies Bray-Curtis dissimilarity by default.   
+mds.2012 <- metaMDS(zoo.abnd.2012 %>% select(-c(site:replicate)), 
+                    distance = "bray", 
+                    autotransform = TRUE, trymax = 50)
+
+mds.2012
+```
+
+Well this is shit, as expected... To obtain a convergent solution, I had to increase the maximum number of tries (random starts of the algorithm) to 50... And the stress is still high, 0.21.
+
+Examine the quality of the MDS representation..  
+```{r mds_quality_2012}
+## stressplot
+stressplot(mds.2012)
+
+## goodness-of-fit plot 
+## first, plot the nMDS ordination with sites
+plot(mds.2012, display = 'sites', type = 't', main = 'Goodness of fit') 
+
+## then, add the points with size reflecting goodness of fit (smaller = better fit)
+points(mds.2012, display = 'sites', cex = goodness(mds.2012)*200) 
+
+```
+
+
+Save the MDS for the Sozopol Bay sites.  
+```{r save_mds_2012}
+write_rds(mds.2012, 
+          here(save.dir, "mds_2012.RDS"))
+```
+
+
+Plot the MDS, colouring the points by site.. 
+```{r plot_mds_sites_2012}
+## plot the MDS, using my custom ggplot function
+plot.mds.2012.sites <- plot_mds(mds.2012, groups = zoo.abnd.2012 %>% pull(site))
+
+## change the colour scheme & labels to keep overall consistency.. 
+plot.mds.2012.sites <- plot.mds.2012.sites +
+      scale_color_brewer(palette = "Set2", name = "site", 
+                         labels = c("K", "R", "G"))
+
+## save the plot
+ggsave(here(figures.dir, "mds_sites_2012.png"), 
+       plot.mds.2012.sites, 
+       width = 15, units = "cm", dpi = 300)
+
+## add 95% confidence intervals, for the fun of it 
+plot.mds.2012.sites + stat_ellipse()
+```
+Adding in the 95% confidence interval to make the mess somewhat clearer, it kinda-sorta seems that site K MIGHT be considered a little different - but if you squint really really hard. Mostly, I don't think the data allows to distinguish the sites; the differences in community structure are likely to be due to the habitats (with the sites contributing some secondary effects) - see the MDS plot coloured by habitat below.
+
+```{r plot_mds_habitats_2012}
+## plot the MDS, using my custom ggplot function
+plot.mds.2012.habitats <- plot_mds(mds.2012, groups = zoo.abnd.2012 %>% pull(habitat))
+
+## change colour to according to habitat (sand/zostera), and change labels
+(plot.mds.2012.habitats <- plot.mds.2012.habitats +
+      scale_color_manual(values = c("orange", "light green"), name = "habitat", 
+                         labels = c("sand", "Zostera"))
+)
+
+## save the plot
+ggsave(here(figures.dir, "mds_habitats_2012.png"), 
+       plot.mds.2012.habitats, 
+       width = 15, units = "cm", dpi = 300)
+```
+
+Now *this* picture is interesting - the seagrass samples are found compactly in the middle, with the sand samples surrounding them.. If we check the goodness-of-fit plot, the seagrass samples are also better represented (-> smaller circles). The sand samples contain very few species and individuals, therefore they are more dispersed - hence the high differences.. 
+I want to stress once again that the most likely reason for the poor species diversity, etc. is my own inexperience - I was still learning then, and it's highly likely that I missed a lot.. Should have maybe kept the samples, then I could have come back to them - but again, due to inexperience I didn't know..  
+
+All in all, it appears that in the preliminary experiment, the sand communities in Sozopol Bay are somewhat distinct from the seagrass ones, but not clearly so. One possible reason could be that the sand samples were not taken far enough from the seagrass to be "free" from its influence. Especially true in the case of site G (Gradina) - the unvegetated samples were taken from bare patches within the seagrass meadow itself (because the meadow is very large).  
+
+
+Make a combined MDS plot in ggplot - NOT using my nice custom function, because it doesn't allow for easy mapping of two factors - to colours and shapes, for example.
+```{r plot_mds_combined_2012}
+## extract MDS scores for 2012
+mds.scores.2012 <- as_data_frame(scores(mds.2012, display = "sites"))
+
+## add the sites and habitats (everything is in the same order)
+(mds.scores.2012 <- mds.scores.2012 %>%
+    mutate(site = zoo.abnd.2012 %>% pull(site), 
+           habitat = zoo.abnd.2012 %>% pull(habitat))
+)
+
+## plot 
+plot.mds.2012 <- ggplot(mds.scores.2012, 
+                        aes(x = NMDS1, y = NMDS2, colour = site, shape = habitat)) + 
+  geom_point(size = 2, position = "identity")
+
+## fix colour scheme, shapes and labels
+(plot.mds.2012 <- plot.mds.2012 + 
+    scale_shape_manual(values = c(19, 8), labels = c("sand", "Zostera")) + 
+    scale_color_brewer(palette = "Set2", labels = c("K", "R", "G"))
+)
+
+## save the plot 
+ggsave(here(figures.dir, "mds_2012.png"), 
+       plot.mds.2012, 
+       width = 15, units = "cm", dpi = 300)
+```
+
+When we examine (visually) the differences between habitats - not sure if this is a valid approach - it's clear that any strong site differences are due to the sand samples. The seagrass samples form a much more compact group at the center. Again, I think this is caused by the particular shortcomings of the 2012 samples.    
+```{r plot_mds_2012_facets}
+plot.mds.2012 + facet_wrap(~habitat)
+
+```
+
+Determine the optimal number of clusters by **k-means clustering** on the abundance data.
+```{r kmeans_2012} 
+## with Hellinger transformation of the data (because k-means uses Euclidean distances which don't work well for ecological data).
+kmeans.casc.2012 <- cascadeKM(decostand(zoo.abnd.2012 %>% select(-c(site:replicate)),
+                                        method = "hellinger"),
+                              inf.gr = 2, sup.gr = 6) ## I want at least 2 groups and at most 6 (the number of original stations)
+
+plot(kmeans.casc.2012, sortg = TRUE)
+```
+
+This result suggests 3 groups, but they cut over each other or something.. What a hot mess.     
+Let's go with 3 and check them. 
+```{r kmeans_clusters_2012}
+## get the partition in 3 groups 
+(kmeans.clusters.2012 <- as.vector(kmeans.casc.2012$partition[, 2]))
+```
+
+```{r}
+plot_mds(mds.2012, groups = as.factor(kmeans.clusters.2012))
+```
+
+As expected, it's no good at all.. Well, I had to check. 
