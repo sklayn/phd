@@ -1,6 +1,6 @@
 ---
 title: "Multivariate analyses of community structure (classical)"
-date: "2018-12-10"
+date: "2018-12-12"
 output: html_notebook
 ---
 
@@ -1182,10 +1182,76 @@ Let's go with 3 and check them.
 ```{r kmeans_clusters_2012}
 ## get the partition in 3 groups 
 (kmeans.clusters.2012 <- as.vector(kmeans.casc.2012$partition[, 2]))
-```
 
-```{r}
+## plot the MDS, colouring by these suggested groups.. 
 plot_mds(mds.2012, groups = as.factor(kmeans.clusters.2012))
+
 ```
 
 As expected, it's no good at all.. Well, I had to check. 
+
+##### **SIMPER - Sozopol Bay, 2012**
+I'm going to do a quick couple of SIMPERs on this - by site and by habitat, keeping in mind that the habitats seem to contribute much more to the group differences. 
+```{r simper_bn_gr_2012_habitats}
+simper.bn.gr.2012.habitats <- simper(zoo.abnd.2012 %>%
+                                       select(-c(site:replicate)) %>%
+                                       mutate_all(sqrt),
+                                     group = zoo.abnd.2012 %>% pull(habitat))
+
+simper.bn.gr.2012.habitats
+summary(simper.bn.gr.2012.habitats)
+```
+The overall difference is 73%. The species/taxa with the highest contributions to the differences between habitats (account for 70% of the overall difference) are B.reticulatum (Z > S); Oligochaeta (Z > S, but not by much); L.orbiculatus (Z > S); M.lineatus (Z > S); R.membranacea (Z >> S); C.gallina (S >> Z); C.capitata (Z > S); A.improvisus (Z > S); H.filiformis (Z > S, but very close); Rissoa sp. (Z >> S). 
+This is hardly very surprising at all - seagrass samples have higher abundances - in sand samples, sometimes there were only several individual organisms.. Practically the only species that's more abundant in sand is Chamelea gallina. The others are all either herbivores like Rissoa or silt-loving species - capitellid polychaetes, oligochaetes, that like the finer sediment deposits in seagrasses. L.orbiculatus is a very characteristic seagrass-associated bivalve which has endosymbiotic sulfate-reducing bacteria contributing to sometimes ~60% of its nutrition - it therefore likes the reduced sediments in seagrass beds.  
+
+Now try differences between sites.. 
+```{r simper_bn_gr_2012_sites}
+simper.bn.gr.2012.sites <- simper(zoo.abnd.2012 %>%
+                                    select(-c(site:replicate)) %>%
+                                    mutate_all(sqrt),
+                                  group = zoo.abnd.2012 %>% pull(site))
+
+simper.bn.gr.2012.sites
+summary(simper.bn.gr.2012.sites)
+```
+ 
+Yeees more or less the same thing; as I said, the sand samples are mostly responsible for the differences, so... 
+
+Do the within-group SIMPERs, as well.. 
+```{r simper_wn_gr_2012_habitats}
+simper.wn.gr.2012.habitats <- simper_within_group(zoo.abnd.2012 %>% select(-c(site:replicate)),
+                                                  group = zoo.abnd.2012 %>% pull(habitat))
+
+simper.wn.gr.2012.habitats
+```
+
+As I said before - sand samples have pretty low average group similarity, 27% (you can see that, they're dispersed around the MDS plot). This is not due to striking differences between sites, but to the taxonomic identification problems causing high variability. 
+The most characteristic species for the sand habitat are: B.reticulatum, L.orbiculatus, C.gallina, C.capitata. 
+The most characteristic species for the seagrass habitat are: B.reticulatum, L.orbiculatus, M.lineatus, R.membranacea. 
+See, they overlap; there is no clear difference sand/seagrass here.. 
+
+SIMPER within sites.. 
+```{r simper_wn_gr_2012_sites}
+simper.wn.gr.2012.sites <- simper_within_group(zoo.abnd.2012 %>% select(-c(site:replicate)),
+                                               group = zoo.abnd.2012 %>% pull(site))
+
+simper.wn.gr.2012.sites
+```
+For the site groupings, Konski seems to have more Oligochaetes and Capitellid and spionid polychaetes - consistent with its proximity to the disturbance source - more organic loading so a higher proportion of tolerant species. Ribka and Gradina, on the other hand, have mostly mollusks - B.reticulatum, L.orbiculatus, R.membranacea.. The within-group similarities here are better than at the habitat level (because the sand samples are so very different among themselves).  
+
+Save all SIMPERs, no matter how flawed. 
+```{r save_simper_2012}
+write_rds(simper.bn.gr.2012.habitats, 
+          here(save.dir, "simper_bn_group_habitats_2012.RDS"))
+
+write_rds(simper.bn.gr.2012.sites, 
+          here(save.dir, "simper_bn_group_sites_2012.RDS"))
+
+write_rds(simper.wn.gr.2012.habitats, 
+          here(save.dir, "simper_wn_group_habitats_2012.RDS"))
+
+write_rds(simper.wn.gr.2012.sites, 
+          here(save.dir, "simper_wn_group_sites_2012.RDS"))
+
+```
+
