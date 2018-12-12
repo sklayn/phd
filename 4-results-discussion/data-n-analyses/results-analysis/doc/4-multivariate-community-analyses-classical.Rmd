@@ -1177,7 +1177,7 @@ kmeans.casc.2012 <- cascadeKM(decostand(zoo.abnd.2012 %>% select(-c(site:replica
 plot(kmeans.casc.2012, sortg = TRUE)
 ```
 
-This result suggests 3 groups, but they cut over each other or something.. What a hot mess.     
+This result suggests 3 groups, but they cut over each other, again.. It's a terrible mess.     
 Let's go with 3 and check them. 
 ```{r kmeans_clusters_2012}
 ## get the partition in 3 groups 
@@ -1189,9 +1189,33 @@ plot_mds(mds.2012, groups = as.factor(kmeans.clusters.2012))
 ```
 
 As expected, it's no good at all.. Well, I had to check. 
+I'm sticking with sites and habitats as groups, then.
+
+##### **ANOSIM - Sozopol Bay, 2012**
+Let's check the significance of the groupings.. 
+```{r anosim_sites_2012}
+anosim.sites.2012 <- anosim(zoo.abnd.2012 %>% 
+                              select(-c(site:replicate)) %>% 
+                              mutate_all(sqrt),
+                            grouping = zoo.abnd.2012 %>% pull(site))
+
+summary(anosim.sites.2012)
+```
+Kind of average, and on the weak side, if you ask me.. R = 0.39, supposed to be significant. 
+
+Now between habitats.. 
+```{r anosim_habitats_2012}
+anosim.habitats.2012 <- anosim(zoo.abnd.2012 %>% 
+                                 select(-c(site:replicate)) %>% 
+                                 mutate_all(sqrt),
+                               grouping = zoo.abnd.2012 %>% pull(habitat))
+
+summary(anosim.habitats.2012)
+```
+And this is even weaker - R = 0.27 - probably because of the really, really high variability of the sand samples, which, again, is an artefact of processing and hence not to be trusted at all. 
 
 ##### **SIMPER - Sozopol Bay, 2012**
-I'm going to do a quick couple of SIMPERs on this - by site and by habitat, keeping in mind that the habitats seem to contribute much more to the group differences. 
+I'm going to do a quick couple of SIMPERs on this, despite the above ANOSIM results... 
 ```{r simper_bn_gr_2012_habitats}
 simper.bn.gr.2012.habitats <- simper(zoo.abnd.2012 %>%
                                        select(-c(site:replicate)) %>%
