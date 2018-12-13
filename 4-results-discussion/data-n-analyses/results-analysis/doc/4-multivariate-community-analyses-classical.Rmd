@@ -1,6 +1,6 @@
 ---
 title: "Multivariate analyses of community structure (classical)"
-date: "2018-12-12"
+date: "2018-12-13"
 output: html_notebook
 ---
 
@@ -1056,6 +1056,16 @@ zoo.abnd.2012 <- read_csv(here(save.dir, "abnd_2012_orig_clean.csv"))
 )
 ```
 
+Also import the biomass (again, from the save directory).  
+```{r import_zoo_biomass_2012}
+zoo.biomass.2012 <- read_csv(here(save.dir, "biomass_2012_orig_clean.csv"))
+
+## convert site to factor 
+(zoo.biomass.2012 <- zoo.biomass.2012 %>% 
+    mutate(site = factor(site, levels = c("Konski", "Ribka", "Gradina")))
+)
+```
+
 ##### **Ordination (nMDS) on Sozopol Bay stations.**  
 These are all functions from library vegan.  
 ```{r mds_zoo_2012}
@@ -1277,5 +1287,16 @@ write_rds(simper.wn.gr.2012.habitats,
 write_rds(simper.wn.gr.2012.sites, 
           here(save.dir, "simper_wn_group_sites_2012.RDS"))
 
+```
+
+Now do between-group SIMPERs using the **biomasses**.  
+```{r simper_biomass_bn_gr_2012_habitats}
+simper.biomass.bn.gr.2012.habitats <- simper(zoo.biomass.2012 %>%
+                                               select(-c(site:replicate)) %>% 
+                                               mutate_all(sqrt),
+                                             group = zoo.biomass.2012 %>% pull(habitat))
+
+simper.biomass.bn.gr.2012.habitats
+summary(simper.biomass.bn.gr.2012.habitats)
 ```
 
