@@ -1,6 +1,6 @@
 ---
 title: "Multivariate analyses of community structure (classical)"
-date: "2018-12-13"
+date: "2018-12-14"
 output: html_notebook
 ---
 
@@ -1300,3 +1300,13 @@ simper.biomass.bn.gr.2012.habitats
 summary(simper.biomass.bn.gr.2012.habitats)
 ```
 
+SIMPER with biomasses between sites, this time.. 
+```{r simper_biomass_bn_gr_2012_sites}
+simper.biomass.bn.gr.2012.sites <- simper(zoo.biomass.2012 %>%
+                                            select(-c(site:replicate)) %>%
+                                            mutate_all(sqrt),
+                                          group = zoo.biomass.2012 %>% pull(site))
+
+simper.biomass.bn.gr.2012.sites
+summary(simper.biomass.bn.gr.2012.sites)
+```
