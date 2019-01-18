@@ -1,6 +1,6 @@
 ---
 title: "Multivariate analyses of community structure (classical)"
-date: "2019-01-16"
+date: "2019-01-18"
 output: html_notebook
 ---
 
@@ -229,6 +229,12 @@ Merge the sediment tibble with the rest of the environmental data.
 )
 ```
 
+Save this - although it's wrong to do this, I don't want to repeat this disgrace of a table construction again. I'll just import it and make a note on how I arrived at it in the next notebook.  
+```{r save_env_data_sand}
+write.csv(env.data.sand, 
+          here(save.dir, "env_data_ordinations_sand.csv"))
+```
+
 All right, ready to roll!  
 Envfit of all this shit & the sand MDS..  
 ```{r envfit_sand}
@@ -408,7 +414,7 @@ write_rds(simper.wn.gr.sand,
 For the fun of it, let's plot the MDS again, with biotope labels on top of each group.   
 ```{r plot_mds_sand_biotopes}
 ## extract and calculate the centroids (mean coordinates) of the ellipses to use for label placement
-(biotope.labs.sand <- as_data_frame(scores(mds.sand, display = "sites")) %>%
+(biotope.labs.sand <- as_tibble(scores(mds.sand, display = "sites")) %>%
    mutate(biotope = kmeans.clusters.sand) %>% 
    ## calculate the centroids for the labels
    group_by(biotope) %>%
@@ -768,6 +774,12 @@ Merge all environmental data tibbles..
 ```
 
 Finally, everything seems to be in order..  
+Save this again - to avoid repeating this disgrace of a table construction again. I'll just import it and make a note on how I arrived at it in the next notebook.  
+```{r save_env_data_zostera}
+write.csv(env.data.zostera.all, 
+          here(save.dir, "env_data_ordinations_zostera.csv"))
+```
+
 
 Envfit of all this shit and the seagrass MDS.  
 ```{r envfit_zostera}
