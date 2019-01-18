@@ -1,4 +1,4 @@
-## mvabund - GLM fitting for abundance - environmental data ###
+#### mvabund - GLM fitting for abundance - environmental data ####
 library(mvabund)
 
 ## turn abundance data into mvabund object = 2D matrix (easier for mvabund 
@@ -124,7 +124,7 @@ sum(sand.anova.glm$uni.test[2, uniSorted$ix[1:50]]) / sum(sand.anova.glm$uni.tes
 
 
 
-### Relate the species abundances to environmental data  #####
+#### Relate the species abundances to environmental data  #####
 
 # prepare the environmental data (=> reduced nb of variables, because otherwise
 # fries all my computers) 
