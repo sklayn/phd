@@ -1,6 +1,6 @@
 ---
 title: "Multivariate analyses of community structure (modeling)"
-date: "2019-01-18"
+date: "2019-01-21"
 output: html_notebook
 ---
 
@@ -92,5 +92,59 @@ zoo.abnd.sand <- read_csv(here(save.dir, "abnd_sand_orig_clean.csv"))
 (zoo.abnd.sand <- zoo.abnd.sand %>% 
     mutate(station = factor(station, levels = c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva")))
 )
+```
+
+Remove the all-0 species (= not present in the current dataset).  
+Maybe also remove the singletons (species appearing only once in the whole dataset and represented by a single individual = so rare that it's unlikely they carry important information, but it would probably improve the run times).  
+```{r filter_zoo_data_sand}
+(zoo.abnd.flt.sand <- zoo.abnd.sand %>%
+   select(-c(station:replicate)) %>%
+   select(which(colSums(.) > 0))
+)
+```
+
+Perform a model-based unconstrained ordination by fiting a pure latent variable model (package boral - Hui et al., 2014). This will allow to visualize the multivariate stations x species data - similar to nMDS, can be interpreted in the same way.   
+I'm including a (fixed) row effect to account for differences in site total abundance - this way, the ordination is in terms of **species composition**.   
+NB this takes about a million years to run! 
+```{r lvm_sand}
+lvm.sand <- boral(y = zoo.abnd.flt.sand, 
+                  family = "negative.binomial",
+                  
+                  ## we want to control for site effects - there are 6 sites with 9 replicates each
+                  row.eff = "fixed", row.ids = matrix(rep(1:6, each = 9), ncol = 1),  
+                  ## 2 latent variables = 2 axes on which to represent the zoobenthic data
+                  lv.control = list(num.lv = 2) 
+                  
+     #              ## example control structure, to check if function does what I want, because otherwise it takes an intolerably long time, and I'll shoot myself if I have to wait for it again
+     #              mcmc.control = list(n.burnin = 10, n.iteration = 100,
+     # n.thin = 1)
+     #              
+     
+                  )
+
+```
+
+Check the summary and diagnostic plots for the LVM.  
+```{r summary_lvm_sand}
+summary(lvm.sand)
+
+## model fit diagnostic plots
+plot(lvm.sand) 
+```
+Even with the reduced number of iterations etc., the model fits the data pretty well.  
+
+Examine the biplot obtained by fitting the LVM.  
+```{r plot_lvm_sand}
+lvsplot(lvm.sand, jitter = T, biplot = TRUE, ind.spp = 20)
+```
+
+All in all, the final result resembles the nMDS ordination very much - same 4 clusters (Kraimorie + Chukalya, AKin, Agalina, Sozopol + Paraskeva).   
+The run time is extremely, extremely long (~1h), but the data don't need to be transformed, and the model fit can be examined and adjusted if necessary.    
+The species singled out as significant are probably somewhat different - have to check!   
+
+Save the sand LVM.  
+```{r save_lvm_sand}
+write_rds(lvm.sand, 
+          here(save.dir, "lvm_sand.RDS"))
 ```
 
