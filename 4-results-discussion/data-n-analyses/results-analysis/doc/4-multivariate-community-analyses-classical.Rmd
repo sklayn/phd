@@ -231,7 +231,7 @@ Merge the sediment tibble with the rest of the environmental data.
 
 Save this - although it's wrong to do this, I don't want to repeat this disgrace of a table construction again. I'll just import it and make a note on how I arrived at it in the next notebook.  
 ```{r save_env_data_sand}
-write.csv(env.data.sand, 
+write_csv(env.data.sand, 
           here(save.dir, "env_data_ordinations_sand.csv"))
 ```
 
@@ -776,7 +776,7 @@ Merge all environmental data tibbles..
 Finally, everything seems to be in order..  
 Save this again - to avoid repeating this disgrace of a table construction again. I'll just import it and make a note on how I arrived at it in the next notebook.  
 ```{r save_env_data_zostera}
-write.csv(env.data.zostera.all, 
+write_csv(env.data.zostera.all, 
           here(save.dir, "env_data_ordinations_zostera.csv"))
 ```
 

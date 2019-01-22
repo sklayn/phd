@@ -1,6 +1,6 @@
 ---
 title: "Multivariate analyses of community structure (modeling)"
-date: "2019-01-21"
+date: "2019-01-22"
 output: html_notebook
 ---
 
@@ -103,6 +103,8 @@ Maybe also remove the singletons (species appearing only once in the whole datas
 )
 ```
 
+
+##### **LVM - model-based ordination**
 Perform a model-based unconstrained ordination by fiting a pure latent variable model (package boral - Hui et al., 2014). This will allow to visualize the multivariate stations x species data - similar to nMDS, can be interpreted in the same way.   
 I'm including a (fixed) row effect to account for differences in site total abundance - this way, the ordination is in terms of **species composition**.   
 NB this takes about a million years to run! 
@@ -131,20 +133,99 @@ summary(lvm.sand)
 ## model fit diagnostic plots
 plot(lvm.sand) 
 ```
-Even with the reduced number of iterations etc., the model fits the data pretty well.  
-
-Examine the biplot obtained by fitting the LVM.  
-```{r plot_lvm_sand}
-lvsplot(lvm.sand, jitter = T, biplot = TRUE, ind.spp = 20)
-```
-
-All in all, the final result resembles the nMDS ordination very much - same 4 clusters (Kraimorie + Chukalya, AKin, Agalina, Sozopol + Paraskeva).   
-The run time is extremely, extremely long (~1h), but the data don't need to be transformed, and the model fit can be examined and adjusted if necessary.    
-The species singled out as significant are probably somewhat different - have to check!   
+The residuals plots look fine (no patterns in the residuals vs fitted, so variance is homogeneous, the quantile plot shows a normal distribution of the residuals) - the model fits the data pretty well.  
 
 Save the sand LVM.  
 ```{r save_lvm_sand}
 write_rds(lvm.sand, 
           here(save.dir, "lvm_sand.RDS"))
+```
+
+Examine the biplot obtained by fitting the LVM, as well as the 20 most "important" species.   
+```{r check_biplot_lvm_sand}
+lvsplot(lvm.sand, jitter = T, biplot = TRUE, ind.spp = 20)
+```
+
+All in all, the final result resembles the nMDS ordination very much - same 4 clusters (Kraimorie + Chukalya, AKin, Agalina, Sozopol + Paraskeva). Kraimorie and Chukalya are better distinguished on the LVM plot than on the MDS, but still.  
+The run time is extremely, extremely long (~1h), but the data don't need to be transformed, and the model fit can be examined and adjusted if necessary.    
+The species singled out as significant are probably somewhat different - have to check!   
+
+Redo the biplot, because this one is not very pretty. I'm not adding the species on top, first because I'm too lazy to figure out the procedure for ordering them, and second because the plot gets too busy.   
+```{r extract_lvm_coord_sand}
+## extract the LV coordinates of the stations from the model, so that the plot can be redone in ggplot 
+lvs.coord.sand <- as_tibble(lvm.sand$lv.median)
+
+## add the stations from the original zoobenthic table (order was not modified)
+(lvs.coord.sand <- lvs.coord.sand %>% 
+  bind_cols(zoo.abnd.sand %>% select(station))
+)
+
+```
+
+Make the plot and save it.  
+```{r plot_lvm_sand}
+(plot.lvm.sand <- ggplot(lvs.coord.sand) + 
+    geom_point(aes(x = lv1, y = lv2, colour = station)) + 
+    scale_color_brewer(palette = "Set2", name = "station", 
+                       labels = paste0("S", as.numeric((unique(lvs.coord.sand %>% pull(station)))))) +
+   labs(x = "LV1", y = "LV2")
+)
+
+ggsave(file = here(figures.dir, "lvm_sand.png"), 
+       plot.lvm.sand, 
+       width = 15, units = "cm", dpi = 300)
+```
+
+##### **GLM fitting for abundance - environmental data**  
+Let's fit GLMs to the sites x species matrix to try and explain the observed differences in community structure by the variation of the environmental parameters.  
+These functions all come from package **mvabund**.  
+Import the environmental data - the one cleaned, prepared and saved in the previous notebook (classical multivariate methods). It contains long-term averages for the water column data (2009-2011 + 2013-2014) at each station, repeated for each replicate, and the sediment data (2013-2014), again repeated to the same number of replicates. Only the variables determined to be significant by PCA are kept.       
+```{r import_env_data_sand} 
+env.sand <- read_csv(here(save.dir, "env_data_ordinations_sand.csv"))
+
+## convert station to factor
+(env.sand <- env.sand %>% 
+    mutate(station = factor(station,
+                            levels = c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva")))
+)
+```
+Station is a factor, the rest of the variables are numeric.  
+
+Turn the zoobenthic data (minus the all-0 taxa) into a matrix - easier for the mvabund package and methods to deal with.  
+```{r matrix_abnd_sand}
+## there is already one subset of filtered count data (54 x 147) - use it 
+zoo.mvabnd.sand <- mvabund(zoo.abnd.flt.sand)
+```
+
+###### **manyGLM by LVM clusters**
+First, let's see if the groups from the latent variable model (more or less equal to the clusters from the classical ordination) are valid, and which species exhibit a response.  
+```{r clusters_lvm_sand}
+## construct the vector of the clusters by hand, it's easier that way.. 
+lvm.clusters.sand <- c(rep(1, times = 18), rep(2:4, each = 9), rep(3, times = 9))
+
+## convert to factor
+(lvm.clusters.sand <- factor(lvm.clusters.sand))
+```
+
+Check the model assumptions. 
+1. Mean-variance assumption => determines the choice of family parameter. Can be checked by plotting residuals vs fits: if little pattern - the chosen mean-variance assumption is plausible.  
+Another way: direct plotting (variance ~ mean), for each species within each factor
+level.  
+```{r check_mean_variance_lvm_sand}
+plot(manyglm(zoo.mvabnd.sand ~ lvm.clusters.sand, family = "negative.binomial"))
+
+meanvar.plot(zoo.mvabnd.sand ~ lvm.clusters.sand, table = TRUE)
+```
+
+It's not perfect, but it's not terrible either. 
+
+2. Assumed relationship between mean abundance and environmental variables - link function and formula.
+If quantitative variables are included in the model -> if there is a trend in size of residuals at different fitted values (e.g. U-shape,..) = violation of the log-linearity assumption.
+  
+If everything looks fine, fit the model
+```{r fit_glms_lvm_sand}
+glms.sand <- manyglm(zoo.mvabnd.sand ~ lvm.clusters.sand, 
+                     family = "negative.binomial")
+
 ```
 
