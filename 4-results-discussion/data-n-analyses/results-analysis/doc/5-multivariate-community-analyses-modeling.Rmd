@@ -1,6 +1,6 @@
 ---
 title: "Multivariate analyses of community structure (modeling)"
-date: "2019-01-22"
+date: "2019-01-23"
 output: html_notebook
 ---
 
@@ -224,8 +224,67 @@ If quantitative variables are included in the model -> if there is a trend in si
   
 If everything looks fine, fit the model
 ```{r fit_glms_lvm_sand}
-glms.sand <- manyglm(zoo.mvabnd.sand ~ lvm.clusters.sand, 
-                     family = "negative.binomial")
+glms.lvm.sand <- manyglm(zoo.mvabnd.sand ~ lvm.clusters.sand, 
+                         family = "negative.binomial")
 
 ```
 
+Explore the fit (residuals, diagnostic plots, etc.).  
+```{r explore_glms_lvm_sand}
+## residuals vs fitted values
+plot(glms.lvm.sand)
+
+## all traditional lm diagnostic plots
+plot.manyglm(glms.lvm.sand, which = 1:3)
+```
+
+Well, all right then..  
+Let's see the model summary (NB takes a LOT of time if there are many resamplings!).  
+```{r summary_glms_lvm_sand}
+(glms.lvm.sand.summary <- summary(glms.lvm.sand, 
+                                  test = "LR", p.uni = "adjusted",
+                                  nBoot = 999, ## limit the number of permutations if you just want to check it out
+                                  show.time = "all")
+)
+```
+
+The factor (here - groups outlined by the LVM) is highly significant according to the models.  
+This also allows us to see which species exhibit a response to the chosen factor. 
+The LR (likelihood ratio) statistic is used as a measure of the strength of individual taxon contributions to the observed patterns. 
+```{r relative_taxon_contrib_glms_lvm_sand}
+## retrieve and plot (top 10) species with the highest contribution to the patterns tested
+
+# get 2nd row from table of univariate test stats (= change in deviance due to groups)
+uniSorted <- sort(glms.lvm.sand.summary$uni.test[2, ], decreasing = TRUE, index.return = TRUE)
+
+# get those species' names and plot them
+dimnames(sand.mvabund)[[2]][uniSorted$ix[1:10]]
+plot(sand.mvabund ~ gr.dendr.sand, var.subset = uniSorted$ix[1:10])
+
+# get the percentage of change in deviance due to this "top ten" => only about
+# 28%, so cannot focus on just them if we want the whole story
+sum(sand.anova.glm$uni.test[2, uniSorted$ix[1:10]]) / sum(sand.anova.glm$uni.test[2, ])
+
+# with 50 species, most of the change in deviance is explained (76%)
+sum(sand.anova.glm$uni.test[2, uniSorted$ix[1:50]]) / sum(sand.anova.glm$uni.test[2, ])
+
+```
+
+```{r}
+sp_univar <- as_tibble(glms.lvm.sand.summary$uni.test, rownames = "species")
+sp_p <- as_tibble(glms.lvm.sand.summary$uni.p, rownames = "species")
+
+sp_all <- left_join(sp_univar, sp_p, by = "species")  
+
+sp_all %>% 
+  select(species, contains("Inter")) %>%
+  arrange(`(Intercept).y`, desc(`(Intercept).x`))
+
+sp_all %>% 
+  select(species, contains("3")) %>%
+  arrange(lvm.clusters.sand3.y, desc(lvm.clusters.sand3.x))
+```
+
+
+
+LR expresses how many times more likely the data are under one model than the other. This likelihood ratio, or equivalently its logarithm, can then be usedto compute a p-value, or compared to a critical value to decide whether to reject the null model in favour of the alternative model.
