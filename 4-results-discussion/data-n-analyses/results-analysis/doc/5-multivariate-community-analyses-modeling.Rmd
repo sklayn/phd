@@ -1,6 +1,6 @@
 ---
 title: "Multivariate analyses of community structure (modeling)"
-date: "2019-01-29"
+date: "2019-03-05"
 output: html_notebook
 ---
 
@@ -240,7 +240,7 @@ Explore the fit (residuals, diagnostic plots, etc.).
 ## residuals vs fitted values
 plot(glms.lvm.sand)
 
-## all traditional lm diagnostic plots
+## all traditional (g)lm diagnostic plots
 plot.manyglm(glms.lvm.sand, which = 1:3)
 ```
 
@@ -277,7 +277,7 @@ Run the anova on the model.
                                     show.time = "all") 
 )
 ```
-I probably shouldn't have printed out all this, but oh well who cares.  
+I probably shouldn't have printed all this out, but oh well who cares.  
 
 NOW let's get the taxa with the highest contributions to the tested pattern (here - clusters in the LVM, which are really the different soft-bottom habitats).  
 ```{r relative_taxon_contrib_glms_lvm_sand}
@@ -366,13 +366,20 @@ sp_all <- left_join(sp_univar, sp_p, by = "species")
 
 sp_all %>% 
   select(species, contains("Inter")) %>%
+  filter(`(Intercept).y` < 0.05) %>%
   arrange(`(Intercept).y`, desc(`(Intercept).x`))
 
 sp_all %>% 
-  select(species, contains("3")) %>%
-  arrange(lvm.clusters.sand3.y, desc(lvm.clusters.sand3.x))
+  select(species, contains("4")) %>%
+  filter(lvm.clusters.sand4.y < 0.05) %>%
+  arrange(lvm.clusters.sand4.y, desc(lvm.clusters.sand4.x))
+
+
+
+sort(glms.lvm.sand.aov$uni.test[2,]/glms.lvm.sand.aov$table[2, 3], decreasing = T)
+
 ```
 
 
 
-LR expresses how many times more likely the data are under one model than the other. This likelihood ratio, or equivalently its logarithm, can then be usedto compute a p-value, or compared to a critical value to decide whether to reject the null model in favour of the alternative model.
+LR expresses how many times more likely the data are under one model than the other. This likelihood ratio, or equivalently its logarithm, can then be used to compute a p-value, or, compared to a critical value, to decide whether to reject the null model in favour of the alternative model.
