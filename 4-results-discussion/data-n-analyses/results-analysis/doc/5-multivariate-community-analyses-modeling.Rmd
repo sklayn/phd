@@ -1,6 +1,6 @@
 ---
 title: "Multivariate analyses of community structure (modeling)"
-date: "2019-03-05"
+date: "2019-03-06"
 output: html_notebook
 ---
 
@@ -240,8 +240,19 @@ Explore the fit (residuals, diagnostic plots, etc.).
 ## residuals vs fitted values
 plot(glms.lvm.sand)
 
+
 ## all traditional (g)lm diagnostic plots
 plot.manyglm(glms.lvm.sand, which = 1:3)
+
+
+### source mvabund GLM plotting functions modified to use a grey palette - I just can't redo these plots on my own, the function is doing too complicated things internally to scale the x and y axes
+source(here(functions.dir, "default.plot.manyglm_grey.R"))
+source(here(functions.dir, "plot.manyglm_grey.R"))
+
+par(mfrow = c(2,2))
+lapply(1:3, function(i) plot.manyglm.grey(glms.lvm.sand, which = i, sub.caption = ""))
+par(mfrow = c(1, 1))
+
 ```
 
 I really don't like the rainbow palette, but I would like to include these plots in my thesis results.. Will have to do something about it, just not right now.  
