@@ -1,6 +1,6 @@
 ---
 title: "Multivariate analyses of community structure (modeling)"
-date: "2019-03-06"
+date: "2019-03-11"
 output: html_notebook
 ---
 
@@ -368,26 +368,35 @@ plot_top_n <- function(top.n.sp.data, mapping, group, labs.legend, lab.y, palett
 
 Well this is a nightmarish plot.. I'll probably just put this awfulness in a table and call it a day, or play with lvsplot and the modeled ordination plot, if a plot is what's needed.  
 
+Extract the top-contributing species to each cluster (this same nightmare above, but as a table). 
+```{r table_relative_taxon_contrib_glms_lvm_sand}
+top_sp_glms_table <- function(manyglms.obj.smry, group, p = 0.05) {
+  ### extracts the top species in a group for which there is an observed effect in a manyglm test, at the specified probability level.
+  ### Returns: tibble with the top species for the specified group/cluster, sorted (descending) by univariate LR value of the species, significant at the given p level. 
+  
+  ## extract the univariate LR coefficients of the species and their p-values 
+  sp_univar <- as_tibble(manyglms.obj.smry$uni.test, rownames = "species")
+  sp_p <- as_tibble(manyglms.obj.smry$uni.p, rownames = "species")
 
-```{r}
-sp_univar <- as_tibble(glms.lvm.sand.summary$uni.test, rownames = "species")
-sp_p <- as_tibble(glms.lvm.sand.summary$uni.p, rownames = "species")
+  ## combine in the same tibble
+  sp_all <- left_join(sp_univar, sp_p, by = "species")  
+  
+  ## rename the columns
+  sp_all <- sp_all %>% 
+    rename_at(vars(contains(".x")), list(~str_replace_all(., pattern = ".x", ".LR"))) %>% 
+    rename_at(vars(contains(".y")), list(~str_replace_all(., pattern = ".y", ".p")))
+  
+  ## filter only the group/cluster we want, at the p-level we want
+  sp_all_flt <- sp_all %>% 
+    select(species, contains(group)) %>% 
+    filter_at(vars(contains(".p")), all_vars(. < p)) %>%
+    arrange_at(vars(contains(".LR")), list(~desc(.)))
 
-sp_all <- left_join(sp_univar, sp_p, by = "species")  
+}
 
-sp_all %>% 
-  select(species, contains("Inter")) %>%
-  filter(`(Intercept).y` < 0.05) %>%
-  arrange(`(Intercept).y`, desc(`(Intercept).x`))
+x <- lapply(names(glms.lvm.sand.summary$aliased), function(x) top_sp_glms_table(glms.lvm.sand.summary, x, p = 0.05)) 
 
-sp_all %>% 
-  select(species, contains("4")) %>%
-  filter(lvm.clusters.sand4.y < 0.05) %>%
-  arrange(lvm.clusters.sand4.y, desc(lvm.clusters.sand4.x))
-
-
-
-sort(glms.lvm.sand.aov$uni.test[2,]/glms.lvm.sand.aov$table[2, 3], decreasing = T)
+x
 
 ```
 
