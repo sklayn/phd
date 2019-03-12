@@ -1,6 +1,6 @@
 ---
 title: "Multivariate analyses of community structure (modeling)"
-date: "2019-03-11"
+date: "2019-03-12"
 output: html_notebook
 ---
 
@@ -396,7 +396,9 @@ top_sp_glms_table <- function(manyglms.obj.smry, group, p = 0.05) {
 
 x <- lapply(names(glms.lvm.sand.summary$aliased), function(x) top_sp_glms_table(glms.lvm.sand.summary, x, p = 0.05)) 
 
-x
+## fix species names (remove dot) 
+x <- lapply(x, function(x) x %>% mutate(species = str_replace(species, pattern = "\\.", replacement = " ")))
+
 
 ```
 
