@@ -1,6 +1,6 @@
 ---
 title: "Multivariate analyses of community structure (modeling)"
-date: "2019-03-12"
+date: "2019-03-15"
 output: html_notebook
 ---
 
@@ -368,7 +368,7 @@ plot_top_n <- function(top.n.sp.data, mapping, group, labs.legend, lab.y, palett
 
 Well this is a nightmarish plot.. I'll probably just put this awfulness in a table and call it a day, or play with lvsplot and the modeled ordination plot, if a plot is what's needed.  
 
-Extract the top-contributing species to each cluster (this same nightmare above, but as a table). 
+Extract the top-contributing species to each cluster (this same nightmare above, but as a table). This chunk is hopelessly ugly and clumsy (and I'll have to repeat it for the seagrass, too!), but I'm tired of being stuck on this. I still have many, MANY more things to do, and more time-consuming ones too..  
 ```{r table_relative_taxon_contrib_glms_lvm_sand}
 top_sp_glms_table <- function(manyglms.obj.smry, group, p = 0.05) {
   ### extracts the top species in a group for which there is an observed effect in a manyglm test, at the specified probability level.
@@ -394,14 +394,54 @@ top_sp_glms_table <- function(manyglms.obj.smry, group, p = 0.05) {
 
 }
 
-x <- lapply(names(glms.lvm.sand.summary$aliased), function(x) top_sp_glms_table(glms.lvm.sand.summary, x, p = 0.05)) 
+top.sp.abnd.glms.lvm.sand <- lapply(names(glms.lvm.sand.summary$aliased), function(x) top_sp_glms_table(glms.lvm.sand.summary, x, p = 0.05)) 
 
 ## fix species names (remove dot) 
-x <- lapply(x, function(x) x %>% mutate(species = str_replace(species, pattern = "\\.", replacement = " ")))
+top.sp.abnd.glms.lvm.sand <- lapply(top.sp.abnd.glms.lvm.sand, function(x) x %>% mutate(species = str_replace(species, pattern = "\\.", replacement = " ")))
+
+## rename columns (= group names) - right now they are something like "lvm.clusters.sand2" etc.
+top.sp.abnd.glms.lvm.sand <- lapply(top.sp.abnd.glms.lvm.sand, function(x) x %>% rename_at(vars(contains("lvm.clusters.sand")), list(~str_replace_all(., pattern = "lvm.clusters.sand", "group_"))))
+
+top.sp.abnd.glms.lvm.sand <- lapply(top.sp.abnd.glms.lvm.sand, function(x) x %>% rename_at(vars(contains("Intercept")), list(~str_replace_all(., pattern = "\\(Intercept\\)", "group_1"))))
 
 
+## pull the abundances from the original count df and add to the summary glm tables 
+## make a long df of abundances & add clusters  
+zoo.abnd.sand.long <- zoo.abnd.sand %>%
+  select(-c(month:replicate)) %>%
+  gather(key = "species", value = "count", -station) %>% 
+  mutate(group = case_when(station %in% c("Kraimorie", "Chukalya") ~ 1, 
+                           station == "Akin" ~ 2, 
+                           station %in% c("Sozopol", "Paraskeva") ~ 3, 
+                           station == "Agalina" ~ 4))
+
+## sum sp abundances by group; nest by group
+zoo.abnd.sand.long.smry <- zoo.abnd.sand.long %>% 
+  group_by(species, group) %>% 
+  summarise(total_count = sum(count)) %>% 
+  group_by(group) %>%
+  nest()
+
+## add the counts to the group dfs - wow that's an ugly, ugly hack. Wish I had more time to write this up properly.. 
+top.sp.abnd.glms.lvm.sand <- map2(top.sp.abnd.glms.lvm.sand, zoo.abnd.sand.long.smry %>% pull(group), ~left_join(.x, zoo.abnd.sand.long.smry %>% filter(group == .y) %>% unnest(), by = "species"))
+
+## since these are sum counts over all the replicates (that's why the monstrous numbers), average them to be mean counts per group. NB different groups consist of different numbers of replicates, b.c. some groups consist of more than one station
+(top.sp.abnd.glms.lvm.sand <- map2(top.sp.abnd.glms.lvm.sand, c(18, 9, 18, 9), function(x, y) x %>% mutate(mean_count = total_count/y))
+)
 ```
 
+LR expresses how many times more likely the data are under one model than the other. This likelihood ratio, or equivalently its logarithm, can then be used to compute a p-value, or, compared to a critical value, to decide whether to reject the null model in favour of the alternative model.  
 
+In this case, the model shows which species exhibit a reaction based on the chosen groups - in other words, which species are more likely to be more/less abundant in each group.  
+For **group 1** (= S1-S2), the species/taxa with significantly **higher abundance** are: Oligochaeta, H. filiformis, P. kefersteini, M. palmata, P. cirrifera, A. diadema (among others); and the ones with significantly **lower abundance** - even 0, in some cases - S. bidentata, B.lanceolatum, M. papillicornis, Melita palmata, P. jubatus, and so on.  
+For **group 2** (= S3), the species with **higher abundance** are: B. lanceolatum, O. limacina, Oligochaeta (this is this strange artifact of 2013), P. kefersteini, L. flavocapitatus. The species with **lower abundance** are: H. filiformis, A. kagoshimensis, M. stammeri, Melinna palmata, etc.
+For **group 3** (= S4-S6), the species with **higher abundance** are: C. gallina, L. mediterraneum - with very high dominance over practically all others; also Pseudocuma longicorne, Spio filicornis. The species with **lower abundance** are: H. filiformis, Oligochaetes (to a certain extent - they are still present, though), A. kagoshimensis, L. koreni,  Harmothoe reticulata, Iphinoe tenella, Leiochone leiopygos.  
+For **group 4** (= S5), the species with **higher abundance** are: Microdeutopus versiculatus, Eurydice dollfusi, Melita palmata, Polygordius neapolitanus, Polycirrus caliendrum, Polycirrus jubatus, Streptosyllis bidentata. The species with **lower abundance** are: A. kagoshimensis, Melinna palmata, P. cirrifera, P. ciliata, A. alba, I. tenella.   
+I love how the species with the highest variances (e.g. C. gallina, the most conspicuous example) are consistently pushed back - have lower LR scores. This is very good - C. gallina in particular is dominant in group 3, but is present also in all other groups - its substrate/depth preferences are very wide, so this is not uncommon. It's not automatically pushed to the top of the list, but its reaction is detected by the manyGLM test. Neat! 
+Contrast to the SIMPER results, where the species with the highest variance are consistently at the top - they contribute the most to the similarity, as per the test definition.  
 
-LR expresses how many times more likely the data are under one model than the other. This likelihood ratio, or equivalently its logarithm, can then be used to compute a p-value, or, compared to a critical value, to decide whether to reject the null model in favour of the alternative model.
+I'm going to save these as separate files (manually), then format them as tables - I know it's a shame, but I'm too frustrated to figure out how to do it programmatically.  
+I'll also put them in a word table in my final text, because I don't want to deal with a million separate ones (embedded excel tables don't split over multiple pages).  
+
+**NB In my text, I'm switching the names/places of group 3 and 4, to be consistent with the SIMPER groups (I'm NOT going to repeat all this just to have the numbers match up). So the file names, table names, etc. remain as above. But in the text, I'll have the following: group 1 = S1-S2, group 2 = S3, group 3 = S5, group 4 = S4-S6. REMEMBER THIS SO THERE IS NO CONFUSION!**
+
