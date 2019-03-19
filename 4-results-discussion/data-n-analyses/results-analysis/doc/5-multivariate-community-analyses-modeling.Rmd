@@ -1,6 +1,6 @@
 ---
 title: "Multivariate analyses of community structure (modeling)"
-date: "2019-03-15"
+date: "2019-03-19"
 output: html_notebook
 ---
 
@@ -290,6 +290,12 @@ Run the anova on the model.
 ```
 I probably shouldn't have printed all this out, but oh well who cares.  
 
+Save the ANOVA, too.  
+```{r save_anova_glms_lvm_sand}
+write_rds(glms.lvm.sand.aov, 
+          here(save.dir, "glms_lvm_sand_anova.RDS"))
+```
+
 NOW let's get the taxa with the highest contributions to the tested pattern (here - clusters in the LVM, which are really the different soft-bottom habitats).  
 ```{r relative_taxon_contrib_glms_lvm_sand}
 top_n_sp_glm <- function(glms.aov, tot.dev.expl = 0.75) {
@@ -339,29 +345,29 @@ Try to plot these top contributing species - for whatever that's worth, because 
    mutate(species = factor(species, levels = rev(names(top.sp.glms.lvm.sand))))
 )
 
-plot_top_n <- function(top.n.sp.data, mapping, group, labs.legend, lab.y, palette) {
+plot_top_n <- function(top.n.sp.data, mapping, labs.legend, lab.y, palette) {
   ## helper for plotting top n species. Was hoping to avoid repeating it from way back when, but no dice. 
   ## Arguments: top.n.sp.data - data frame (long) of top species' counts/biomasses at the different stations
   ##            mapping - mappings of the aesthetics
+  ##            labs.legend - labels the use for the legend entries
+  ##            lab.y - custom label for y axis
+  ##            palette - custom colour palette (for consistency with other plots)
   
   ggplot(top.n.sp.data, mapping) +
     geom_point(alpha = 0.75) + # make points larger & partially transparent
     scale_color_brewer(palette = palette,  labels = labs.legend) + 
     ylab(lab.y) + 
-    coord_flip() +
-    facet_wrap(group) +
-    theme_bw()
+    coord_flip() 
 }
 
 
 (plot.top.sp.glms.lvm.sand <- plot_top_n(abnd.top.sp.glms.lvm.sand,
                                          mapping = aes(x = species, y = log_y_min(count), colour = station),
-                                         group = lvm.clusters.sand,
                                          labs.legend = paste0("S", as.numeric(unique(abnd.top.sp.glms.lvm.sand$station))),
                                          lab.y = "Abundance (log(y/min + 1))",
                                          palette = "Set2"
-                                        ) 
-  + theme(legend.position = "top")
+                                        ) +
+    theme(legend.position = "top")
 
 )
 ```
@@ -430,12 +436,12 @@ top.sp.abnd.glms.lvm.sand <- map2(top.sp.abnd.glms.lvm.sand, zoo.abnd.sand.long.
 )
 ```
 
-LR expresses how many times more likely the data are under one model than the other. This likelihood ratio, or equivalently its logarithm, can then be used to compute a p-value, or, compared to a critical value, to decide whether to reject the null model in favour of the alternative model.  
+To determine the relative taxon contribution to patterns: LR statistic - a measure of strength of individual taxon contributions. LR expresses how many times more likely the data are under one model than the other. This likelihood ratio, or equivalently its logarithm, can then be used to compute a p-value, or, compared to a critical value, to decide whether to reject the null model in favour of the alternative model.  
 
 In this case, the model shows which species exhibit a reaction based on the chosen groups - in other words, which species are more likely to be more/less abundant in each group.  
 For **group 1** (= S1-S2), the species/taxa with significantly **higher abundance** are: Oligochaeta, H. filiformis, P. kefersteini, M. palmata, P. cirrifera, A. diadema (among others); and the ones with significantly **lower abundance** - even 0, in some cases - S. bidentata, B.lanceolatum, M. papillicornis, Melita palmata, P. jubatus, and so on.  
 For **group 2** (= S3), the species with **higher abundance** are: B. lanceolatum, O. limacina, Oligochaeta (this is this strange artifact of 2013), P. kefersteini, L. flavocapitatus. The species with **lower abundance** are: H. filiformis, A. kagoshimensis, M. stammeri, Melinna palmata, etc.
-For **group 3** (= S4-S6), the species with **higher abundance** are: C. gallina, L. mediterraneum - with very high dominance over practically all others; also Pseudocuma longicorne, Spio filicornis. The species with **lower abundance** are: H. filiformis, Oligochaetes (to a certain extent - they are still present, though), A. kagoshimensis, L. koreni,  Harmothoe reticulata, Iphinoe tenella, Leiochone leiopygos.  
+For **group 3** (= S4-S6), the species with **higher abundance** are: C. gallina, L. mediterraneum - with very high dominance over practically all others; also Pseudocuma longicorne, Spio filicornis. The species with **lower abundance** are: H. filiformis, Oligochaetes (to a certain extent - they are still present, though), A. kagoshimensis, L. koreni, Harmothoe reticulata, Iphinoe tenella, Leiochone leiopygos.  
 For **group 4** (= S5), the species with **higher abundance** are: Microdeutopus versiculatus, Eurydice dollfusi, Melita palmata, Polygordius neapolitanus, Polycirrus caliendrum, Polycirrus jubatus, Streptosyllis bidentata. The species with **lower abundance** are: A. kagoshimensis, Melinna palmata, P. cirrifera, P. ciliata, A. alba, I. tenella.   
 I love how the species with the highest variances (e.g. C. gallina, the most conspicuous example) are consistently pushed back - have lower LR scores. This is very good - C. gallina in particular is dominant in group 3, but is present also in all other groups - its substrate/depth preferences are very wide, so this is not uncommon. It's not automatically pushed to the top of the list, but its reaction is detected by the manyGLM test. Neat! 
 Contrast to the SIMPER results, where the species with the highest variance are consistently at the top - they contribute the most to the similarity, as per the test definition.  
@@ -444,4 +450,124 @@ I'm going to save these as separate files (manually), then format them as tables
 I'll also put them in a word table in my final text, because I don't want to deal with a million separate ones (embedded excel tables don't split over multiple pages).  
 
 **NB In my text, I'm switching the names/places of group 3 and 4, to be consistent with the SIMPER groups (I'm NOT going to repeat all this just to have the numbers match up). So the file names, table names, etc. remain as above. But in the text, I'll have the following: group 1 = S1-S2, group 2 = S3, group 3 = S5, group 4 = S4-S6. REMEMBER THIS SO THERE IS NO CONFUSION!**
+
+
+###### **manyGLM by environmental parameters**  
+Now, let's try to see a different thing - which environmental parameters best describe the species response.  
+I'm going to use the PCA-filtered environmental data - it's still going to be a slog, with 7 potential predictors..  
+First, construct the formula for the model - will do it separately in case I need to update it later, etc.  
+```{r formula_env_manyglm_sand}
+(formula.env.glms.sand <- formula(paste("zoo.mvabnd.sand ~", 
+                                        paste(env.sand %>% select(-station) %>% names(), collapse = "+")))
+)
+```
+
+Fit the GLMs to the sand abundance data. 
+```{r fit_glms_env_sand}
+env.glms.sand <- manyglm(formula.env.glms.sand,
+                         data = env.sand,
+                         family = "negative.binomial")
+
+```
+
+Explore the fit (residuals, diagnostic plots, etc.).  
+```{r explore_glms_env_sand}
+## residuals vs fitted values
+plot(env.glms.sand)
+
+
+## all traditional (g)lm diagnostic plots
+plot.manyglm(env.glms.sand, which = 1:3)
+
+
+# ### source mvabund GLM plotting functions modified to use a grey palette - I just can't redo these plots on my own, the function is doing too complicated things internally to scale the x and y axes
+# source(here(functions.dir, "default.plot.manyglm_grey.R"))
+# source(here(functions.dir, "plot.manyglm_grey.R"))
+# 
+# par(mfrow = c(2,2))
+# lapply(1:3, function(i) plot.manyglm.grey(glms.lvm.sand, which = i, sub.caption = ""))
+# par(mfrow = c(1, 1))
+
+```
+
+Well, it's good enough if you ask me (still the kinda strange "line" at lin.pred = -6; otherwise residuals are random enough).  
+
+Save the model!  
+```{r save_glms_env_sand}
+write_rds(env.glms.sand, 
+          here(save.dir, "glms_env_sand.RDS"))
+```
+
+Run the anova on the model - I want to see which predictors best explain the species abundance patterns I have. This is one function that would greatly benefit from being run in parallel.. 
+```{r anova_glms_env_sand}
+(env.glms.sand.aov <- anova.manyglm(env.glms.sand, 
+                                    test = "LR", p.uni = "adjusted", 
+                                    nBoot = 999, ## limit the number of permutations for a shorter run time   
+                                    show.time = "all") 
+)
+```
+
+The results suggest that the **long-term average water column parameters** have a major influence on the observed community structure; also the **sediment TOM**, and (marginally) the **sediment composition** (gravel content).  
+Save the ANOVA - I really, really don't want to have to repeat it.  
+```{r save_anova_glms_env_sand}
+write_rds(env.glms.sand.aov, 
+          here(save.dir, "glms_env_sand_anova.RDS"))
+```
+
+Get the taxa with the highest contributions to the tested pattern (here - species most affected by changes in water/environmental quality parameters).  
+```{r relative_taxon_contrib_glms_env_sand}
+## get the top contributing species for the environmental parameter sand GLMs 
+(top.sp.glms.env.sand <- top_n_sp_glm(env.glms.sand.aov, tot.dev.expl = 0.75)
+)
+
+## unfortunately, mvabund likes to rename my species when converting the data to matrix (no spaces in names), and since I'm going to look them up in my initial untransformed count data, I have to change them back..   
+names(top.sp.glms.env.sand) <- names(top.sp.glms.env.sand) %>% 
+  str_replace(pattern = "\\.", replacement = " ")
+
+```
+
+I'm going to plot these top contributing species, but I'm not using the plot. At least this time it's more manageable, but still not presentable enough.. 
+
+```{r plot_relative_taxon_contrib_glms_env_sand}
+## get the species and their abundances from the original count data, and transform them to long format
+(abnd.top.sp.glms.env.sand <- zoo.abnd.sand %>% 
+   select(station, names(top.sp.glms.env.sand)) %>% 
+   gather(key = "species", value = "count", -station) %>% 
+   ## turn species into a factor, or you'll be very very sorry later, when they're out of order on the plot. NB need to be in REVERSE order, because ggplot plots from bottom to top, and I want the top-contributing species on top. 
+   mutate(species = factor(species, levels = rev(names(top.sp.glms.env.sand)))) %>% 
+   ## add clusters from LVM as a column
+   mutate(group = case_when(station %in% c("Kraimorie", "Chukalya") ~ 1, 
+                            station == "Akin" ~ 2, 
+                            station %in% c("Sozopol", "Paraskeva") ~ 3, 
+                            station == "Agalina" ~ 4))
+)
+
+
+(plot.top.sp.glms.env.sand <- plot_top_n(abnd.top.sp.glms.env.sand,
+                                         mapping = aes(x = species, y = log_y_min(count), colour = factor(group)),
+                                         group = abnd.top.sp.glms.env.sand %>% pull(group), 
+                                         labs.legend = unique(abnd.top.sp.glms.env.sand$group),
+                                         lab.y = "Abundance (log(y/min + 1))",
+                                         palette = "Set2"
+                                        ) + 
+    theme(legend.position = "top")
+
+)
+```
+
+
+Maybe a bit later I'll try to get this nightmare above as a table... 
+
+
+Final analysis to try: which species respond differently to different environmental parameters?
+(= traits analysis - fit single predictive model for all species at all sites, but w/o attempting to explain the different responses using traits - the species ID is used in place of a traits matrix).  
+```{r sp_response_glms_env_sand}
+sp.response.glms.env.sand <- traitglm(L = zoo.mvabnd.sand, 
+                                      R = env.sand %>% select(NH4, NO3, PO4, seston, secchi, TOM, gravel), 
+                                      formula = ~ NH4 + NO3 + PO4 + seston + secchi + TOM + gravel, 
+                                      method = "manyglm")
+
+
+sp.response.glms.env.sand
+```
 
