@@ -1,6 +1,6 @@
 ---
 title: "Multivariate analyses of community structure (modeling)"
-date: "2019-03-19"
+date: "2019-03-20"
 output: html_notebook
 ---
 
@@ -520,7 +520,7 @@ Get the taxa with the highest contributions to the tested pattern (here - specie
 (top.sp.glms.env.sand <- top_n_sp_glm(env.glms.sand.aov, tot.dev.expl = 0.75)
 )
 
-## unfortunately, mvabund likes to rename my species when converting the data to matrix (no spaces in names), and since I'm going to look them up in my initial untransformed count data, I have to change them back..   
+## unfortunately, mvabund likes to rename my species when converting the data to matrix (no spaces in names), and since I'm going to look them up in my initial untransformed count data, I have to change them back..   DON'T BE IN A HURRY TO DO THAT IF YOU WANT TO SUBSET THE ORIGINAL MATRIX BEFORE RUNNING TRAITGLM 
 names(top.sp.glms.env.sand) <- names(top.sp.glms.env.sand) %>% 
   str_replace(pattern = "\\.", replacement = " ")
 
@@ -561,13 +561,24 @@ Maybe a bit later I'll try to get this nightmare above as a table...
 
 Final analysis to try: which species respond differently to different environmental parameters?
 (= traits analysis - fit single predictive model for all species at all sites, but w/o attempting to explain the different responses using traits - the species ID is used in place of a traits matrix).  
+NB only use the top species that exhibited a reaction in the environmental model fit (= the ones accounting for ~75% of the total variability), and only the significant predictors - to improve run times.   
 ```{r sp_response_glms_env_sand}
-sp.response.glms.env.sand <- traitglm(L = zoo.mvabnd.sand, 
-                                      R = env.sand %>% select(NH4, NO3, PO4, seston, secchi, TOM, gravel), 
-                                      formula = ~ NH4 + NO3 + PO4 + seston + secchi + TOM + gravel, 
-                                      method = "manyglm")
+sp.response.glms.env.sand <- traitglm(L = zoo.mvabnd.sand[, names(top.sp.glms.env.sand)], 
+                                      R = as.matrix(env.sand %>% select(NH4, NO3, PO4, seston, secchi, TOM, gravel)), 
+                                      method = "glm1path")
 
 
-sp.response.glms.env.sand
+sp.response.glms.env.sand$fourth.corner
+
+# plot this -> make 2 subplots w/ ~50 species each, or will be unreadable!
+a <- max(abs(sp.response.glms.env.sand$fourth.corner))
+colort <- colorRampPalette(c("blue","white","red")) 
+plot.spp <- lattice::levelplot(t(as.matrix(sp.response.glms.env.sand$fourth.corner)), xlab = "Environmental Variables",
+                     ylab = "Species", col.regions = colort(100), at = seq(-a, a, length = 100),
+                     scales = list(x = list(rot = 45)))
+print(plot.spp)
+
 ```
 
+The algorithm fails to converge - I'm not sure how to interpret it.. Maybe because the function tries to fit univariate models to each species (does it really??), and none of the explanatory environmental variables by themselves are sufficient to explain a species' response. In fact, everything points towards the conclusion that a species response is determined by a combination of eutrophication parameters in its environment (water column characteristics), and the composition of the sediments (organic matter and granulometry).  
+This is actually exactly the same thing that the PERMANOVA gives, in this particular case. However, in the future, I'm leaning more towards the modeling approach - it allows you to check the model fit to one's real data; also, there are no data reductions due to calculation of distance matrices.  
