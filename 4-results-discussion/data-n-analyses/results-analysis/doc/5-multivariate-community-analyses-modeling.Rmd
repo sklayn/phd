@@ -1,6 +1,6 @@
 ---
 title: "Multivariate analyses of community structure (modeling)"
-date: "2019-03-20"
+date: "2019-03-25"
 output: html_notebook
 ---
 
@@ -565,12 +565,13 @@ NB only use the top species that exhibited a reaction in the environmental model
 ```{r sp_response_glms_env_sand}
 sp.response.glms.env.sand <- traitglm(L = zoo.mvabnd.sand[, names(top.sp.glms.env.sand)], 
                                       R = as.matrix(env.sand %>% select(NH4, NO3, PO4, seston, secchi, TOM, gravel)), 
-                                      method = "glm1path")
+                                      method = "manyglm")
 
 
 sp.response.glms.env.sand$fourth.corner
 
-# plot this -> make 2 subplots w/ ~50 species each, or will be unreadable!
+
+# plot this 
 a <- max(abs(sp.response.glms.env.sand$fourth.corner))
 colort <- colorRampPalette(c("blue","white","red")) 
 plot.spp <- lattice::levelplot(t(as.matrix(sp.response.glms.env.sand$fourth.corner)), xlab = "Environmental Variables",
@@ -578,7 +579,110 @@ plot.spp <- lattice::levelplot(t(as.matrix(sp.response.glms.env.sand$fourth.corn
                      scales = list(x = list(rot = 45)))
 print(plot.spp)
 
+
 ```
 
-The algorithm fails to converge - I'm not sure how to interpret it.. Maybe because the function tries to fit univariate models to each species (does it really??), and none of the explanatory environmental variables by themselves are sufficient to explain a species' response. In fact, everything points towards the conclusion that a species response is determined by a combination of eutrophication parameters in its environment (water column characteristics), and the composition of the sediments (organic matter and granulometry).  
+When using LASSO (method = "glm1path"), the algorithm fails to converge - I'm not sure how to interpret it.. Maybe because the function tests each individual species:env.parameter interaction (does it really??), and none of them by themselves are sufficient to explain a species' response. Not to mention the fact that the samples are not really independent (they are replicates at 6 sites, repeated 3 times).  
+When using method = "manyglm", the result is the one shown above. It's still a bitch to interpret - for example, what is the interpretation of an increase in abundance with both high PO4 and Secchi? Or with high NH4, but low NO3? Where are these conditions ever met?   
+
+In fact, everything points towards the conclusion that a species response is determined by a combination of eutrophication parameters in its environment (water column characteristics), and the composition of the sediments (organic matter and granulometry).  
 This is actually exactly the same thing that the PERMANOVA gives, in this particular case. However, in the future, I'm leaning more towards the modeling approach - it allows you to check the model fit to one's real data; also, there are no data reductions due to calculation of distance matrices.  
+
+
+
+
+#### **Seagrass stations (Burgas Bay, 2013-2014)**  
+Import zoobenthic abundance data (cleaned and prepared).  
+```{r import_zoo_abnd_zostera}
+zoo.abnd.zostera <- read_csv(here(save.dir, "abnd_zostera_orig_clean.csv"))
+
+## convert station to factor (better safe than sorry later, when the stations are not plotted in the order I want them)
+(zoo.abnd.zostera <- zoo.abnd.zostera %>% 
+    mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")))
+)
+```
+
+Remove the all-0 species (= not present in the current dataset).  
+Maybe also remove the singletons (species appearing only once in the whole dataset and represented by a single individual = so rare that it's unlikely they carry important information, but it would probably improve the run times).  
+```{r filter_zoo_data_zostera}
+(zoo.abnd.flt.zostera <- zoo.abnd.zostera %>%
+   select(-c(station:replicate)) %>%
+   select(which(colSums(.) > 0))
+)
+```
+
+
+##### **LVM - model-based ordination**
+Perform a model-based unconstrained ordination by fiting a pure latent variable model (package boral - Hui et al., 2014). This will allow to visualize the multivariate stations x species data - similar to nMDS, can be interpreted in the same way.   
+I'm including a (fixed) row effect to account for differences in site total abundance - this way, the ordination is in terms of **species composition**.   
+NB this takes about a million years to run! 
+```{r lvm_zostera}
+lvm.zostera <- boral(y = zoo.abnd.flt.zostera, 
+                  family = "negative.binomial",
+                  
+                  ## we want to control for site effects - there are 6 sites with 9 replicates each
+                  row.eff = "fixed", row.ids = matrix(rep(1:5, times = c(8, 8, 4, 8, 4)), ncol = 1),  
+                  ## 2 latent variables = 2 axes on which to represent the zoobenthic data
+                  lv.control = list(num.lv = 2) 
+                  
+     #              ## example control structure, to check if function does what I want, because otherwise it takes an intolerably long time, and I'll shoot myself if I have to wait for it again
+     #              mcmc.control = list(n.burnin = 10, n.iteration = 100,
+     # n.thin = 1)
+     #              
+     
+                  )
+
+```
+
+Check the summary and diagnostic plots for the LVM.  
+```{r summary_lvm_zostera}
+summary(lvm.zostera)
+
+## model fit diagnostic plots
+plot(lvm.zostera) 
+```
+The residuals plots look fine (no patterns in the residuals vs fitted, so variance is homogeneous, the quantile plot shows a (more or less) normal distribution of the residuals) - the model fits the data pretty well.  
+
+Save the zostera LVM.  
+```{r save_lvm_zostera}
+write_rds(lvm.zostera, 
+          here(save.dir, "lvm_zostera.RDS"))
+```
+
+Examine the biplot obtained by fitting the LVM, as well as the 20 most "important" species.   
+```{r check_biplot_lvm_zostera}
+lvsplot(lvm.zostera, jitter = T, biplot = TRUE, ind.spp = 20)
+```
+
+All in all, the final result resembles the nMDS ordination very much - same stretched clusters (Poda + Otmanli, Vromos pretty much apart, Gradina +- Ropotamo). I don't see much difference with the nMDS. 
+The main difference seems to be the distance between the 2 years for Poda ana Otmanli - the LVM enlarges it. Have to remember to test for year effect! 
+The run time is actually not that bad for the seagrasses.
+The species singled out as significant are probably somewhat different - have to check!
+
+Redo the biplot, because this one is not very pretty. I'm not adding the species on top, first because I'm too lazy to figure out the procedure for ordering them, and second because the plot gets too busy.   
+```{r extract_lvm_coord_zostera}
+## extract the LV coordinates of the stations from the model, so that the plot can be redone in ggplot 
+lvs.coord.zostera <- as_tibble(lvm.zostera$lv.median)
+
+## add the stations from the original zoobenthic table (order was not modified)
+(lvs.coord.zostera <- lvs.coord.zostera %>% 
+  bind_cols(zoo.abnd.zostera %>% select(station))
+)
+
+```
+
+Make the plot and save it.  
+```{r plot_lvm_zostera}
+(plot.lvm.zostera <- ggplot(lvs.coord.zostera) + 
+    geom_point(aes(x = lv1, y = lv2, colour = station)) + 
+    scale_color_brewer(palette = "Set2", name = "station", 
+                       labels = paste0("Z", as.numeric((unique(lvs.coord.zostera %>% pull(station)))))) +
+   labs(x = "LV1", y = "LV2")
+)
+
+ggsave(file = here(figures.dir, "lvm_zostera.png"), 
+       plot.lvm.zostera, 
+       width = 15, units = "cm", dpi = 300)
+```
+
+Well, this is a weird one - this plot is flipped around 0 compared to the one that boral's plotting function gives. Otherwise nothing changes - the spatial relationships between samples are preserved. I suppose it doesn't matter much - the axes are arbitrary after all, but strange that it happens.  
