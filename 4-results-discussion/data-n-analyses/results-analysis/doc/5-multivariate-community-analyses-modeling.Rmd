@@ -1,6 +1,6 @@
 ---
 title: "Multivariate analyses of community structure (modeling)"
-date: "2019-03-25"
+date: "2019-03-26"
 output: html_notebook
 ---
 
@@ -177,10 +177,15 @@ Make the plot and save it.
    labs(x = "LV1", y = "LV2")
 )
 
+```
+
+```{r save_lvm_plot_sand}
+## save the LVM plot for the sand stations
 ggsave(file = here(figures.dir, "lvm_sand.png"), 
        plot.lvm.sand, 
        width = 15, units = "cm", dpi = 300)
 ```
+
 
 ##### **GLM fitting for abundance - environmental data**  
 Let's fit GLMs to the sites x species matrix to try and explain the observed differences in community structure by the variation of the environmental parameters.  
@@ -680,9 +685,559 @@ Make the plot and save it.
    labs(x = "LV1", y = "LV2")
 )
 
+```
+
+Well, this is a weird one - this plot is flipped around 0 compared to the one that boral's plotting function gives. Otherwise nothing changes - the spatial relationships between samples are preserved. I suppose it doesn't matter much - the axes are arbitrary after all, but strange that it happens.  
+
+```{r save_plot_lvm_zostera}
+## save the LVM plot for the seagrass
 ggsave(file = here(figures.dir, "lvm_zostera.png"), 
        plot.lvm.zostera, 
        width = 15, units = "cm", dpi = 300)
 ```
 
-Well, this is a weird one - this plot is flipped around 0 compared to the one that boral's plotting function gives. Otherwise nothing changes - the spatial relationships between samples are preserved. I suppose it doesn't matter much - the axes are arbitrary after all, but strange that it happens.  
+##### **GLM fitting for abundance - environmental data**  
+Fit GLMs to the sites x species matrix to try and explain the observed differences in community structure by the variation of the environmental parameters.  
+These functions all come from package **mvabund**.  
+Import the environmental data - the one cleaned, prepared and saved in the previous notebook (classical multivariate methods). It contains long-term averages for the water column data (as long-term as available, at least) at each station, repeated for each replicate, the sediment data (2013-2014), and the seagrass data (2013-2014), again repeated to the same number of replicates. Only the variables determined to be significant by PCA are kept.       
+```{r import_env_data_zostera} 
+env.zostera <- read_csv(here(save.dir, "env_data_ordinations_zostera.csv"))
+
+## convert station to factor
+(env.zostera <- env.zostera %>% 
+    mutate(station = factor(station,
+                            levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo")))
+)
+```
+Station is a factor, the rest of the variables are numeric.  
+
+Turn the zoobenthic data (minus the all-0 taxa) into a matrix - easier for the mvabund package and methods to deal with.  
+```{r matrix_abnd_zostera}
+## there is already one subset of filtered count data (32 x 94) - use it 
+zoo.mvabnd.zostera <- mvabund(zoo.abnd.flt.zostera)
+```
+
+###### **manyGLM by LVM clusters**
+First, let's see if the groups from the latent variable model (more or less equal to the clusters from the classical ordination) are valid, and which species exhibit a response.  
+I'm going to try something new here - 1) loose clusters from the LVM ordination, 1 = Poda-Otmanli, 2 = Vromos, 3 = Gradina-Ropotamo. 2) stations as clusters, as I did before for the seagrass data, although I don't believe it's valid/justified to do so... 3) another configuration of clusters from the LVM ordination: 1 = Z1-Z2, 2 = Z3, 3 = Z4, 4 = Z5.   
+```{r clusters_lvm_zostera}
+## construct the vectors of the clusters by hand - first, situation 1 above
+lvm.clusters.zostera.1 <- rep(1:3, times = c(16, 4, 12))
+(lvm.clusters.zostera.1 <- factor(lvm.clusters.zostera.1))
+
+## again, for case 2
+lvm.clusters.zostera.2 <- rep(1:5, times = c(8, 8, 4, 8, 4))
+(lvm.clusters.zostera.2 <- factor(lvm.clusters.zostera.2))
+
+## again, for case 3
+lvm.clusters.zostera.3 <- rep(1:4, times = c(16, 4, 8, 4))
+(lvm.clusters.zostera.3 <- factor(lvm.clusters.zostera.3))
+```
+
+**LVM clusters - case 1**
+Check the model assumptions. 
+1. Mean-variance assumption => determines the choice of family parameter. Can be checked by plotting residuals vs fits: if little pattern - the chosen mean-variance assumption is plausible.  
+Another way: direct plotting (variance ~ mean), for each species within each factor
+level.  
+```{r check_mean_variance_lvm_zostera_1}
+plot(manyglm(zoo.mvabnd.zostera ~ lvm.clusters.zostera.1, family = "negative.binomial"))
+
+meanvar.plot(zoo.mvabnd.zostera ~ lvm.clusters.zostera.1, table = TRUE)
+```
+
+It's not perfect, but it's not too terrible either. 
+
+2. Assumed relationship between mean abundance and environmental variables - link function and formula.
+When quantitative variables are included in the model (for now, not relevant - will be in the next model) -> if there is a trend in size of residuals at different fitted values (e.g. U-shape,..) = violation of the log-linearity assumption.
+  
+Everything looks more or less fine; fit the model. 
+```{r fit_glms_lvm_zostera_1}
+glms.lvm.zostera.1 <- manyglm(zoo.mvabnd.zostera ~ lvm.clusters.zostera.1, 
+                              family = "negative.binomial")
+
+```
+
+Explore the fit (residuals, diagnostic plots, etc.).  
+```{r explore_glms_lvm_zostera_1}
+## residuals vs fitted values
+plot(glms.lvm.zostera.1)
+
+## all traditional (g)lm diagnostic plots
+plot.manyglm(glms.lvm.zostera.1, which = 1:3)
+
+# ### source mvabund GLM plotting functions modified to use a grey palette - I just can't redo these plots on my own, the function is doing too complicated things internally to scale the x and y axes
+# source(here(functions.dir, "default.plot.manyglm_grey.R"))
+# source(here(functions.dir, "plot.manyglm_grey.R"))
+# 
+# par(mfrow = c(2,2))
+# lapply(1:3, function(i) plot.manyglm.grey(glms.lvm.zostera, which = i, sub.caption = ""))
+# par(mfrow = c(1, 1))
+
+```
+
+I really don't like the rainbow palette, but I would like to include these plots in my thesis results.. Will have to do something about it, just not right now.  
+Save the model!  
+```{r save_glms_lvm_zostera_1}
+write_rds(glms.lvm.zostera.1, 
+          here(save.dir, "glms_lvm_zostera_1.RDS"))
+```
+
+
+Let's see the model summary (NB takes a LOT of time if there are many resamplings!).  
+```{r summary_glms_lvm_zostera_1}
+(glms.lvm.zostera.1.summary <- summary(glms.lvm.zostera.1, 
+                                  test = "LR", p.uni = "adjusted",
+                                  nBoot = 999, ## limit the number of permutations if you just want to check it out
+                                  show.time = "all")
+)
+```
+
+The factor is highly significant according to the models.  
+This also allows us to see which species exhibit a response to the chosen factor. 
+The LR (likelihood ratio) statistic is used as a measure of the strength of individual taxon contributions to the observed patterns. 
+I'll save the summary for safekeeping, but I'll also run an anova - to get an analysis of deviance table on the model fit (also better for extracting the species contributions, or at least I know how to do it).  
+```{r save_summary_glms_lvm_zostera_1}
+write_rds(glms.lvm.zostera.1.summary, 
+          here(save.dir, "glms_lvm_zostera_1_summary.RDS"))
+```
+
+Run the anova on the model. 
+```{r anova_glms_lvm_zostera_1}
+(glms.lvm.zostera.1.aov <- anova.manyglm(glms.lvm.zostera.1, 
+                                    test = "LR", p.uni = "adjusted", 
+                                    nBoot = 999, ## limit the number of permutations for a shorter run time   
+                                    show.time = "all") 
+)
+```
+
+Save the ANOVA, too.  
+```{r save_anova_glms_lvm_zostera_1}
+write_rds(glms.lvm.zostera.1.aov, 
+          here(save.dir, "glms_lvm_zostera_1_anova.RDS"))
+```
+
+NOW let's get the taxa with the highest contributions to the tested pattern.  
+```{r relative_taxon_contrib_glms_lvm_zostera_1}
+## get the top contributing species for the initial zostera GLMs 
+(top.sp.glms.lvm.zostera.1 <- top_n_sp_glm(glms.lvm.zostera.1.aov, tot.dev.expl = 0.75)
+)
+
+## unfortunately, mvabund likes to rename my species when converting the data to matrix (no spaces in names), and since I'm going to look them up in my initial untransformed count data, I have to change them back..   
+names(top.sp.glms.lvm.zostera.1) <- names(top.sp.glms.lvm.zostera.1) %>% 
+  str_replace(pattern = "\\.", replacement = " ")
+
+top.sp.glms.lvm.zostera.1
+```
+
+Try to plot these top contributing species - for whatever that's worth, because 50 species on a plot is still a monstrosity.  
+
+```{r plot_relative_taxon_contrib_glms_lvm_zostera_1}
+## get the species and their abundances from the original count data, and transform them to long format
+(abnd.top.sp.glms.lvm.zostera.1 <- zoo.abnd.zostera %>% 
+   select(station, names(top.sp.glms.lvm.zostera.1)) %>% 
+   gather(key = "species", value = "count", -station) %>% 
+   ## turn species into a factor, or you'll be very very sorry later, when they're out of order on the plot. NB need to be in REVERSE order, because ggplot plots from bottom to top, and I want the top-contributing species on top. 
+   mutate(species = factor(species, levels = rev(names(top.sp.glms.lvm.zostera.1))))
+)
+
+
+(plot.top.sp.glms.lvm.zostera.1 <- plot_top_n(abnd.top.sp.glms.lvm.zostera.1,
+                                         mapping = aes(x = species, y = log_y_min(count), colour = station),
+                                         labs.legend = paste0("Z", as.numeric(unique(abnd.top.sp.glms.lvm.zostera.1$station))),
+                                         lab.y = "Abundance (log(y/min + 1))",
+                                         palette = "Set2"
+                                        ) +
+    theme(legend.position = "top")
+
+)
+```
+
+Well this is a nightmarish plot, but more tolerable than the sand one - there are less species here, so at least it's readable..   
+
+Extract the top-contributing species to each cluster (this same nightmare above, but as a table). This chunk is STILL hopelessly ugly and clumsy.  
+```{r table_relative_taxon_contrib_glms_lvm_zostera_1}
+top.sp.abnd.glms.lvm.zostera.1 <- lapply(names(glms.lvm.zostera.1.summary$aliased), function(x) top_sp_glms_table(glms.lvm.zostera.1.summary, x, p = 0.05)) 
+
+## fix species names (remove dot) 
+top.sp.abnd.glms.lvm.zostera.1 <- lapply(top.sp.abnd.glms.lvm.zostera.1, function(x) x %>% mutate(species = str_replace(species, pattern = "\\.", replacement = " ")))
+
+## rename columns (= group names) - right now they are something like "lvm.clusters.zostera2" etc.
+top.sp.abnd.glms.lvm.zostera.1 <- lapply(top.sp.abnd.glms.lvm.zostera.1, function(x) x %>% rename_at(vars(contains("lvm.clusters.zostera.1")), list(~str_replace_all(., pattern = "lvm.clusters.zostera.1", "group_"))))
+
+top.sp.abnd.glms.lvm.zostera.1 <- lapply(top.sp.abnd.glms.lvm.zostera.1, function(x) x %>% rename_at(vars(contains("Intercept")), list(~str_replace_all(., pattern = "\\(Intercept\\)", "group_1"))))
+
+
+## pull the abundances from the original count df and add to the summary glm tables 
+## make a long df of abundances & add clusters  
+zoo.abnd.zostera.long.1 <- zoo.abnd.zostera %>%
+  select(-c(month:replicate)) %>%
+  gather(key = "species", value = "count", -station) %>% 
+  mutate(group = case_when(station %in% c("Poda", "Otmanli") ~ 1, 
+                           station == "Vromos" ~ 2, 
+                           station %in% c("Gradina", "Ropotamo") ~ 3)
+         )
+
+## sum sp abundances by group; nest by group
+zoo.abnd.zostera.long.1.smry <- zoo.abnd.zostera.long.1 %>% 
+  group_by(species, group) %>% 
+  summarise(total_count = sum(count)) %>% 
+  group_by(group) %>%
+  nest()
+
+## add the counts to the group dfs - wow that's an ugly, ugly hack. Wish I had more time to write this up properly.. 
+top.sp.abnd.glms.lvm.zostera.1 <- map2(top.sp.abnd.glms.lvm.zostera.1, zoo.abnd.zostera.long.1.smry %>% pull(group), ~left_join(.x, zoo.abnd.zostera.long.1.smry %>% filter(group == .y) %>% unnest(), by = "species"))
+
+## since these are sum counts over all the replicates (that's why the monstrous numbers), average them to be mean counts per group. NB different groups consist of different numbers of replicates, b.c. some groups consist of more than one station
+(top.sp.abnd.glms.lvm.zostera.1 <- map2(top.sp.abnd.glms.lvm.zostera.1, c(16, 4, 12), function(x, y) x %>% mutate(mean_count = total_count/y))
+)
+```
+
+In this case, the model shows which species exhibit a reaction based on the chosen groups - in other words, which species are more likely to be more/less abundant in each group.  
+I have to say, in the case of the seagrasses and case 1 clusters, there are much fewer species that exhibit a significant response - around 10 for each group.     
+The LRs are lower for groups 2 and 3 - not sure if this means anything, but for group 1 they are much much higher..   
+For **group 1** (= Z1-Z2), the species/taxa with significantly **higher abundance** are: Bittium reticulatum, Capitella minima, Oligochaeta, H. filiformis, Polydora ciliata, Prionospio cirrifera, R. membranacea, A. alba, A.diadema, M. acherusicum; and the only one with a significantly **lower abundance** - Chamelea gallina.   
+For **group 2** (= Z3), the species with **higher abundance** are: M. acherusicum, S. filicornis, A.dadema. The species with **lower abundance** are: B. reticulatum, A. alba, Oligochaeta, S. clavata, P. ciliata, P. cirrifera, H. filiformis.  
+For **group 3** (= Z4-Z5), the species with **higher abundance** are: Cumella limicola, Apseudopsis ostroumovi, Capitella capitata, Mytilaster lineatus, Loripes orbiculatus; less so, but still present - C. gallina, S. clavata. The species with **lower abundance** are: Abra alba, Melinna palmata (totally absent).  
+
+
+I'll test each station as its own group, too (as I did before, with the classical multivariate methods) - I'm not sure how much I can trust this grouping (in particular group 3 is a bit far-fetched, if you ask me..).  
+
+
+**LVM clusters - case 2**
+Check the model assumptions.  
+```{r check_mean_variance_lvm_zostera_2}
+plot(manyglm(zoo.mvabnd.zostera ~ lvm.clusters.zostera.2, family = "negative.binomial"))
+
+meanvar.plot(zoo.mvabnd.zostera ~ lvm.clusters.zostera.2, table = TRUE)
+```
+
+It's not perfect, but it's not too terrible either. I think it's a little worse than the case 1 fit.  
+
+2. Assumed relationship between mean abundance and environmental variables - link function and formula.
+
+Everything looks more or less fine; fit the model. 
+```{r fit_glms_lvm_zostera_2}
+glms.lvm.zostera.2 <- manyglm(zoo.mvabnd.zostera ~ lvm.clusters.zostera.2, 
+                              family = "negative.binomial")
+
+```
+
+Explore the fit (residuals, diagnostic plots, etc.).  
+```{r explore_glms_lvm_zostera_2}
+## residuals vs fitted values
+plot(glms.lvm.zostera.2)
+
+## all traditional (g)lm diagnostic plots
+plot.manyglm(glms.lvm.zostera.2, which = 1:3)
+
+# ### source mvabund GLM plotting functions modified to use a grey palette - I just can't redo these plots on my own, the function is doing too complicated things internally to scale the x and y axes
+# source(here(functions.dir, "default.plot.manyglm_grey.R"))
+# source(here(functions.dir, "plot.manyglm_grey.R"))
+# 
+# par(mfrow = c(2,2))
+# lapply(2:3, function(i) plot.manyglm.grey(glms.lvm.zostera, which = i, sub.caption = ""))
+# par(mfrow = c(2, 2))
+
+```
+
+Save the model!  
+```{r save_glms_lvm_zostera_2}
+write_rds(glms.lvm.zostera.2, 
+          here(save.dir, "glms_lvm_zostera_2.RDS"))
+```
+
+
+Let's see the model summary (NB takes a LOT of time if there are many resamplings!).  
+```{r summary_glms_lvm_zostera_2}
+(glms.lvm.zostera.2.summary <- summary(glms.lvm.zostera.2, 
+                                       test = "LR", p.uni = "adjusted",
+                                       nBoot = 999, ## limit the number of permutations if you just want to check it out
+                                       show.time = "all")
+)
+```
+
+The factor is highly significant according to the models.  
+ 
+Again, save the summary for safekeeping, but also run an anova.  
+```{r save_summary_glms_lvm_zostera_2}
+write_rds(glms.lvm.zostera.2.summary, 
+          here(save.dir, "glms_lvm_zostera_2_summary.RDS"))
+```
+
+Run the anova on the model. 
+```{r anova_glms_lvm_zostera_2}
+(glms.lvm.zostera.2.aov <- anova.manyglm(glms.lvm.zostera.2, 
+                                         test = "LR", p.uni = "adjusted", 
+                                         nBoot = 999, ## limit the number of permutations for a shorter run time   
+                                         show.time = "all") 
+)
+```
+
+Save the ANOVA, too.  
+```{r save_anova_glms_lvm_zostera_2}
+write_rds(glms.lvm.zostera.2.aov, 
+          here(save.dir, "glms_lvm_zostera_2_anova.RDS"))
+```
+
+NOW let's get the taxa with the highest contributions to the tested pattern.  
+```{r relative_taxon_contrib_glms_lvm_zostera_2}
+## get the top contributing species for the initial zostera GLMs 
+(top.sp.glms.lvm.zostera.2 <- top_n_sp_glm(glms.lvm.zostera.2.aov, tot.dev.expl = 0.75)
+)
+
+## unfortunately, mvabund likes to rename my species when converting the data to matrix (no spaces in names), and since I'm going to look them up in my initial untransformed count data, I have to change them back..   
+names(top.sp.glms.lvm.zostera.2) <- names(top.sp.glms.lvm.zostera.2) %>% 
+  str_replace(pattern = "\\.", replacement = " ")
+
+top.sp.glms.lvm.zostera.2
+```
+
+Try to plot these top contributing species - for whatever that's worth, because 50 species on a plot is still a monstrosity.  
+
+```{r plot_relative_taxon_contrib_glms_lvm_zostera_2}
+## get the species and their abundances from the original count data, and transform them to long format
+(abnd.top.sp.glms.lvm.zostera.2 <- zoo.abnd.zostera %>% 
+   select(station, names(top.sp.glms.lvm.zostera.2)) %>% 
+   gather(key = "species", value = "count", -station) %>% 
+   ## turn species into a factor, or you'll be very very sorry later, when they're out of order on the plot. NB need to be in REVERSE order, because ggplot plots from bottom to top, and I want the top-contributing species on top. 
+   mutate(species = factor(species, levels = rev(names(top.sp.glms.lvm.zostera.2))))
+)
+
+
+(plot.top.sp.glms.lvm.zostera.2 <- plot_top_n(abnd.top.sp.glms.lvm.zostera.2,
+                                              mapping = aes(x = species, y = log_y_min(count), colour = station),
+                                              labs.legend = paste0("Z", as.numeric(unique(abnd.top.sp.glms.lvm.zostera.2$station))),
+                                              lab.y = "Abundance (log(y/min + 1))",
+                                              palette = "Set2"
+                                        ) +
+    theme(legend.position = "top")
+
+)
+```
+
+
+Extract the top-contributing species to each cluster (this same nightmare above, but as a table). This chunk is STILL hopelessly ugly and clumsy.  
+```{r table_relative_taxon_contrib_glms_lvm_zostera_2}
+top.sp.abnd.glms.lvm.zostera.2 <- lapply(names(glms.lvm.zostera.2.summary$aliased), function(x) top_sp_glms_table(glms.lvm.zostera.2.summary, x, p = 0.05)) 
+
+## fix species names (remove dot) 
+top.sp.abnd.glms.lvm.zostera.2 <- lapply(top.sp.abnd.glms.lvm.zostera.2, function(x) x %>% mutate(species = str_replace(species, pattern = "\\.", replacement = " ")))
+
+## rename columns (= group names) - right now they are something like "lvm.clusters.zostera2" etc.
+top.sp.abnd.glms.lvm.zostera.2 <- lapply(top.sp.abnd.glms.lvm.zostera.2, function(x) x %>% rename_at(vars(contains("lvm.clusters.zostera.2")), list(~str_replace_all(., pattern = "lvm.clusters.zostera.2", "group_"))))
+
+top.sp.abnd.glms.lvm.zostera.2 <- lapply(top.sp.abnd.glms.lvm.zostera.2, function(x) x %>% rename_at(vars(contains("Intercept")), list(~str_replace_all(., pattern = "\\(Intercept\\)", "group_1"))))
+
+
+## pull the abundances from the original count df and add to the summary glm tables 
+## make a long df of abundances & add clusters  
+zoo.abnd.zostera.long.2 <- zoo.abnd.zostera %>%
+  select(-c(month:replicate)) %>%
+  gather(key = "species", value = "count", -station) %>% 
+  mutate(group = case_when(station == "Poda" ~ 1,
+                           station == "Otmanli" ~ 2, 
+                           station == "Vromos" ~ 3, 
+                           station == "Gradina" ~ 4, 
+                           station == "Ropotamo" ~ 5)
+         )
+
+## sum sp abundances by group; nest by group
+zoo.abnd.zostera.long.2.smry <- zoo.abnd.zostera.long.2 %>% 
+  group_by(species, group) %>% 
+  summarise(total_count = sum(count)) %>% 
+  group_by(group) %>%
+  nest()
+
+## add the counts to the group dfs - wow that's an ugly, ugly hack. Wish I had more time to write this up properly.. 
+top.sp.abnd.glms.lvm.zostera.2 <- map2(top.sp.abnd.glms.lvm.zostera.2, zoo.abnd.zostera.long.2.smry %>% pull(group), ~left_join(.x, zoo.abnd.zostera.long.2.smry %>% filter(group == .y) %>% unnest(), by = "species"))
+
+## since these are sum counts over all the replicates (that's why the monstrous numbers), average them to be mean counts per group. NB different groups consist of different numbers of replicates, b.c. some groups consist of more than one station
+(top.sp.abnd.glms.lvm.zostera.2 <- map2(top.sp.abnd.glms.lvm.zostera.2, c(8, 8, 4, 8, 4), function(x, y) x %>% mutate(mean_count = total_count/y))
+)
+```
+
+In the case of the seagrasses and case 2 clusters (= stations), the picture is still more unclear.. I suppose this is in no small part because of the differences 2013-14 - very marked for Poda and Otmanli. I suspect the stations changed in these two years (we were looking for Z. noltii in 2014 in particular) - but still, there is much variability. In the future, it's probably going to be worth it to have more stations in a meadow, if we really want to have an idea of the communities there, and their variability.  
+The LRs seem to be a bit lower for groups 2, 4, maybe 5 too - still not sure if you can use that as a significance measure.  
+For now, in **group 1** (= Z1), it's hard to pick some characteristic species - because of the variability between 2013-2014, no doubt. The species/taxa with significantly **higher abundance** are: Bittium reticulatum, Capitella minima, Polydora ciliata, Prionosprio cirrifera (+ others, medium abundance); and the ones with a significantly **lower abundance** - or even absent - C. gallina, A. ostroumovi, S. clavata, C. limicola, C. costulata, S. hystrix, S. gracilis, T. pullus.   
+For **group 2** (= Z2), the species with **higher abundance** - which is not really all that high; this group is also loose, hard to distinguish from group 1 - are: S. gracilis, M. lineatus, P. ciliata. The only species with **lower abundance** - in fact 0 - is Alitta succinea.  
+For **group 3** (= Z3), the species with **higher abundance** are: M. acherusicum, S. filicornis, A. diadema. The species with **lower abundance** (or 0) are: B. reticulatum, P. ciliata, P. cirrifera, A. alba, A. succiena, S. clavata, Oligochaeta, A. improvisus.  
+For **group 4** (= Z4), the species with **higher abundance** are: M. lineatus (very much so); C. limicola, P. kefersteini, C. gallina, C. capitata. The species with **lower abundance** (or 0) are: P. ciliata, P. cirrifera, A. succinea, A. improvisus, A. alba.  
+For **group 5** (= Z5), the species with **higher abundance** are: A. ostroumovi, C. capitata, Oligochaeta. The species with **lower abundance** (or 0) are: R. splendida, T. pullus.  
+
+
+**LVM clusters - case 3**
+Last try: group 1 = Z1-Z2, group 2 = Z3, group 3 = Z4, group 4 = Z5.  
+Check the model assumptions.  
+```{r check_mean_variance_lvm_zostera_3}
+plot(manyglm(zoo.mvabnd.zostera ~ lvm.clusters.zostera.3, family = "negative.binomial"))
+
+meanvar.plot(zoo.mvabnd.zostera ~ lvm.clusters.zostera.3, table = TRUE)
+```
+
+More or less the same as case 2 before it. 
+
+2. Assumed relationship between mean abundance and environmental variables - link function and formula.
+
+Everything looks more or less fine; fit the model. 
+```{r fit_glms_lvm_zostera_3}
+glms.lvm.zostera.3 <- manyglm(zoo.mvabnd.zostera ~ lvm.clusters.zostera.3, 
+                              family = "negative.binomial")
+
+```
+
+Explore the fit (residuals, diagnostic plots, etc.).  
+```{r explore_glms_lvm_zostera_3}
+## residuals vs fitted values
+plot(glms.lvm.zostera.3)
+
+## all traditional (g)lm diagnostic plots
+plot.manyglm(glms.lvm.zostera.3, which = 1:3)
+
+# ### source mvabund GLM plotting functions modified to use a grey palette - I just can't redo these plots on my own, the function is doing too complicated things internally to scale the x and y axes
+# source(here(functions.dir, "default.plot.manyglm_grey.R"))
+# source(here(functions.dir, "plot.manyglm_grey.R"))
+# 
+# par(mfrow = c(3,3))
+# lapply(3:3, function(i) plot.manyglm.grey(glms.lvm.zostera, which = i, sub.caption = ""))
+# par(mfrow = c(3, 3))
+
+```
+
+Save the model!  
+```{r save_glms_lvm_zostera_3}
+write_rds(glms.lvm.zostera.3, 
+          here(save.dir, "glms_lvm_zostera_3.RDS"))
+```
+
+
+Let's see the model summary (NB takes a LOT of time if there are many resamplings!).  
+```{r summary_glms_lvm_zostera_3}
+(glms.lvm.zostera.3.summary <- summary(glms.lvm.zostera.3, 
+                                       test = "LR", p.uni = "adjusted",
+                                       nBoot = 999, ## limit the number of permutations if you just want to check it out
+                                       show.time = "all")
+)
+```
+
+The factor is highly significant according to the models.  
+ 
+Again, save the summary for safekeeping, but also run an anova.  
+```{r save_summary_glms_lvm_zostera_3}
+write_rds(glms.lvm.zostera.3.summary, 
+          here(save.dir, "glms_lvm_zostera_3_summary.RDS"))
+```
+
+Run the anova on the model. 
+```{r anova_glms_lvm_zostera_3}
+(glms.lvm.zostera.3.aov <- anova.manyglm(glms.lvm.zostera.3, 
+                                         test = "LR", p.uni = "adjusted", 
+                                         nBoot = 999, ## limit the number of permutations for a shorter run time   
+                                         show.time = "all") 
+)
+```
+
+Save the ANOVA, too.  
+```{r save_anova_glms_lvm_zostera_3}
+write_rds(glms.lvm.zostera.3.aov, 
+          here(save.dir, "glms_lvm_zostera_3_anova.RDS"))
+```
+
+NOW let's get the taxa with the highest contributions to the tested pattern.  
+```{r relative_taxon_contrib_glms_lvm_zostera_3}
+## get the top contributing species for the initial zostera GLMs 
+(top.sp.glms.lvm.zostera.3 <- top_n_sp_glm(glms.lvm.zostera.3.aov, tot.dev.expl = 0.75)
+)
+
+## unfortunately, mvabund likes to rename my species when converting the data to matrix (no spaces in names), and since I'm going to look them up in my initial untransformed count data, I have to change them back..   
+names(top.sp.glms.lvm.zostera.3) <- names(top.sp.glms.lvm.zostera.3) %>% 
+  str_replace(pattern = "\\.", replacement = " ")
+
+top.sp.glms.lvm.zostera.3
+```
+
+Try to plot these top contributing species - for whatever that's worth, because 50 species on a plot is still a monstrosity.  
+
+```{r plot_relative_taxon_contrib_glms_lvm_zostera_3}
+## get the species and their abundances from the original count data, and transform them to long format
+(abnd.top.sp.glms.lvm.zostera.3 <- zoo.abnd.zostera %>% 
+   select(station, names(top.sp.glms.lvm.zostera.3)) %>% 
+   gather(key = "species", value = "count", -station) %>% 
+   ## turn species into a factor, or you'll be very very sorry later, when they're out of order on the plot. NB need to be in REVERSE order, because ggplot plots from bottom to top, and I want the top-contributing species on top. 
+   mutate(species = factor(species, levels = rev(names(top.sp.glms.lvm.zostera.3))))
+)
+
+
+(plot.top.sp.glms.lvm.zostera.3 <- plot_top_n(abnd.top.sp.glms.lvm.zostera.3,
+                                              mapping = aes(x = species, y = log_y_min(count), colour = station),
+                                              labs.legend = paste0("Z", as.numeric(unique(abnd.top.sp.glms.lvm.zostera.3$station))),
+                                              lab.y = "Abundance (log(y/min + 1))",
+                                              palette = "Set2"
+                                        ) +
+    theme(legend.position = "top")
+
+)
+```
+
+
+Extract the top-contributing species to each cluster (this same nightmare above, but as a table). This chunk is STILL hopelessly ugly and clumsy.  
+```{r table_relative_taxon_contrib_glms_lvm_zostera_3}
+top.sp.abnd.glms.lvm.zostera.3 <- lapply(names(glms.lvm.zostera.3.summary$aliased), function(x) top_sp_glms_table(glms.lvm.zostera.3.summary, x, p = 0.05)) 
+
+## fix species names (remove dot) 
+top.sp.abnd.glms.lvm.zostera.3 <- lapply(top.sp.abnd.glms.lvm.zostera.3, function(x) x %>% mutate(species = str_replace(species, pattern = "\\.", replacement = " ")))
+
+## rename columns (= group names) - right now they are something like "lvm.clusters.zostera3" etc.
+top.sp.abnd.glms.lvm.zostera.3 <- lapply(top.sp.abnd.glms.lvm.zostera.3, function(x) x %>% rename_at(vars(contains("lvm.clusters.zostera.3")), list(~str_replace_all(., pattern = "lvm.clusters.zostera.3", "group_"))))
+
+top.sp.abnd.glms.lvm.zostera.3 <- lapply(top.sp.abnd.glms.lvm.zostera.3, function(x) x %>% rename_at(vars(contains("Intercept")), list(~str_replace_all(., pattern = "\\(Intercept\\)", "group_1"))))
+
+
+## pull the abundances from the original count df and add to the summary glm tables 
+## make a long df of abundances & add clusters  
+zoo.abnd.zostera.long.3 <- zoo.abnd.zostera %>%
+  select(-c(month:replicate)) %>%
+  gather(key = "species", value = "count", -station) %>% 
+  mutate(group = case_when(station %in% c("Poda", "Otmanli") ~ 1,
+                           station == "Vromos" ~ 2, 
+                           station == "Gradina" ~ 3, 
+                           station == "Ropotamo" ~ 4)
+         )
+
+## sum sp abundances by group; nest by group
+zoo.abnd.zostera.long.3.smry <- zoo.abnd.zostera.long.3 %>% 
+  group_by(species, group) %>% 
+  summarise(total_count = sum(count)) %>% 
+  group_by(group) %>%
+  nest()
+
+## add the counts to the group dfs - wow that's an ugly, ugly hack. Wish I had more time to write this up properly.. 
+top.sp.abnd.glms.lvm.zostera.3 <- map2(top.sp.abnd.glms.lvm.zostera.3, zoo.abnd.zostera.long.3.smry %>% pull(group), ~left_join(.x, zoo.abnd.zostera.long.3.smry %>% filter(group == .y) %>% unnest(), by = "species"))
+
+## since these are sum counts over all the replicates (that's why the monstrous numbers), average them to be mean counts per group. NB different groups consist of different numbers of replicates, b.c. some groups consist of more than one station
+(top.sp.abnd.glms.lvm.zostera.3 <- map2(top.sp.abnd.glms.lvm.zostera.3, c(16, 4, 8, 4), function(x, y) x %>% mutate(mean_count = total_count/y))
+)
+```
+
+In the case of the seagrasses and case 3 clusters, the picture is still more confusing..  
+The LRs seem to be a bit lower for groups 2 and 3, maybe 4 too - still not sure if you can use that as a significance measure.  
+For now, in **group 1** (= Z1-Z2), the species/taxa with significantly **higher abundance** are: Bittium reticulatum, Capitella minima, Oligochaeta, Heteromastus filiformis, Polydora ciliata, Prionosprio cirrifera, Rissoa membranacea, Abra alba, Ampelisca diadema (+ others, medium abundance); and the ones with a significantly **lower abundance** - or even absent -  S. clavata,  A. ostroumovi, C. gallina, T. pullus.   
+There are more species singled out for this cluster, probably because of the variability between the two years of sampling.  
+For **group 2** (= Z3), the species with **higher abundance** are: M. acherusicum, S. filicornis, A. diadema. The species with **lower abundance** - in fact 0 - are B. reticulatum, P. cirrifera, S. clavata, A. alba, P. ciliata, oligochaetes, H. filiformis, R. splendida.  
+For **group 3** (= Z4), the species with **higher abundance** are: M. lineatus, less so - C. limicola, L. orbiculatus, P. kefersteini, C. capitata, etc. The species with **lower abundance** (or 0) are: P. cirrifera, P. ciliata, A. alba, etc.  
+For **group 4** (= Z5), the species with **higher abundance** are: A. ostoumovi, C. capitata, oligochaetes (very abundant, but with a small LR - nice!). The species with **lower abundance** (or 0) are: R. splendida, S. clavata, C. limicola.  
+
+
+**All in all, I think that group 1 (Poda + Otmanli) holds, and so does group 2 (Vromos). The question is whether it makes sense to separate Gradina and Ropotamo into 2 groups, or if they make more sense together. Ropotamo is characterized by a very high number of oligochaetes, while Gradina's most distinguishing characteristic is the high number of M. lineatus - mostly very small ones, attached to the rhizomes, close to the sediment surface I presume. Both stations have C. limicola in medium abundance, which is not present anywhere else.** 
+
+
+Try to compare the three models.. 
+```{r compare_glms_lvm_zostera}
+(glms.lvm.zostera.comp <- anova(glms.lvm.zostera.1,
+                                glms.lvm.zostera.2, 
+                                glms.lvm.zostera.3, 
+                                p.uni = "adjusted")
+)
+
+```
+
+Well I don't know how to interpret that.. Have to check the manual first. 
