@@ -1,6 +1,6 @@
 ---
 title: "Multivariate analyses of community structure (modeling)"
-date: "2019-03-26"
+date: "2019-03-27"
 output: html_notebook
 ---
 
@@ -460,15 +460,15 @@ I'll also put them in a word table in my final text, because I don't want to dea
 ###### **manyGLM by environmental parameters**  
 Now, let's try to see a different thing - which environmental parameters best describe the species response.  
 I'm going to use the PCA-filtered environmental data - it's still going to be a slog, with 7 potential predictors..  
-First, construct the formula for the model - will do it separately in case I need to update it later, etc.  
-```{r formula_env_manyglm_sand}
+First, construct the formula for the model - will do it separately in case I need to update it later, etc. This is the full formula with all explanatory variables.    
+```{r formula_env_manyglm_full_sand}
 (formula.env.glms.sand <- formula(paste("zoo.mvabnd.sand ~", 
                                         paste(env.sand %>% select(-station) %>% names(), collapse = "+")))
 )
 ```
 
 Fit the GLMs to the sand abundance data. 
-```{r fit_glms_env_sand}
+```{r fit_glms_env_full_sand}
 env.glms.sand <- manyglm(formula.env.glms.sand,
                          data = env.sand,
                          family = "negative.binomial")
@@ -476,7 +476,7 @@ env.glms.sand <- manyglm(formula.env.glms.sand,
 ```
 
 Explore the fit (residuals, diagnostic plots, etc.).  
-```{r explore_glms_env_sand}
+```{r explore_glms_env_full_sand}
 ## residuals vs fitted values
 plot(env.glms.sand)
 
@@ -498,48 +498,130 @@ plot.manyglm(env.glms.sand, which = 1:3)
 Well, it's good enough if you ask me (still the kinda strange "line" at lin.pred = -6; otherwise residuals are random enough).  
 
 Save the model!  
-```{r save_glms_env_sand}
+```{r save_glms_env_full_sand}
 write_rds(env.glms.sand, 
           here(save.dir, "glms_env_sand.RDS"))
 ```
 
-Run the anova on the model - I want to see which predictors best explain the species abundance patterns I have. This is one function that would greatly benefit from being run in parallel.. 
-```{r anova_glms_env_sand}
-(env.glms.sand.aov <- anova.manyglm(env.glms.sand, 
-                                    test = "LR", p.uni = "adjusted", 
-                                    nBoot = 999, ## limit the number of permutations for a shorter run time   
-                                    show.time = "all") 
+
+Before anything else, I want to try and reduce the model a little - to improve the fit/reduce run time.  
+The automatic step functions that eliminate/add model terms sequentially don't work - they fail at the last step with a cryptic error about differing numbers of rows - I assume because manyglm has as left side term the whole community abundance matrix, and the functions don't really know how to deal with that. I don't understand enough about their internals to fix the problem, so I'm just going to write my own little automation based on the function drop1.  
+```{r evaluate_glms_env_function}
+evaluate_glms_env <- function(full.mod) {
+  ### sequentially eliminate model terms in manyglms vs environmental parameters, and find the best model based on lowest AIC score.
+  ### Arguments: full.mod - full model fit
+  ### Returns: best manyglm model of environmental parameters; prints out the best model formula
+  ### Dependencies: tidyverse   
+  
+
+  ## get the starting formula (= full model with all variables)
+  start.formula <- formula(full.mod)
+
+  drop_var <- function(mod) {
+    ### helper picking the next variable to drop from a model to improve the fit (based on AIC)
+    
+    ## check the model AICs if variables are dropped one by one
+    drop1.df <- as_tibble(drop1(mod), rownames = "drop_var") %>% arrange(AIC)
+    
+    ## pick the variable to drop next - the one resulting in the largest decrease in AIC
+    drop.var <- drop1.df %>% filter(AIC == min(AIC)) %>% pull(drop_var)
+    return(drop.var)
+  }
+  
+  ## pick the variable to drop next
+  drop.var <- drop_var(full.mod)
+
+  if(drop.var != "<none>") {
+     ## update the model formula, dropping the variable resulting in the largest decrease in AIC; then apply it to the model.
+    new.formula <- update.formula(start.formula, paste0("~. -", drop.var))
+    new.mod <- update(full.mod, new.formula)
+
+    ## identify a new variable to drop that lowers the AIC
+    drop.var <- drop_var(new.mod)
+    
+    ## repeat the steps above until the function can no longer find such a variable (i.e., dropping more variables doesn't improve the model fit)
+    while(drop.var != "<none>") {
+      new.formula <- update.formula(new.formula, paste0("~. -", drop.var))
+      new.mod <- update(full.mod, new.formula)
+      drop.var <- drop_var(new.mod)
+    }
+    
+    ## print out the best model formula
+    print(paste("Best model: ", paste(deparse(new.formula), collapse = "")))
+    return(new.mod)
+    
+  } else {
+    ## if the starting model is the best, print its formula (fat chance!)
+    print(paste("Best model: ", paste(deparse(start.formula), collapse = "")))
+    return(full.mod)
+  }
+  
+}
+
+```
+
+
+Select the best reduced model of environmental variables for the sand stations.  
+```{r select_top_glm_env_sand}
+top.env.glm.red.sand <- evaluate_glms_env(env.glms.sand)
+
+```
+
+Check its fit. 
+```{r explore_top_glm_env_red_sand}
+## residuals vs fitted values
+plot(top.env.glm.red.sand)
+
+## all traditional (g)lm diagnostic plots
+plot.manyglm(top.env.glm.red.sand, which = 1:3)
+```
+
+I think it's fine; might even be better than the full model.. 
+Save it, too. 
+```{r save_top_glm_env_red_sand}
+write_rds(top.env.glm.red.sand, 
+          here(save.dir, "glms_top_env_red_sand.RDS"))
+```
+
+
+Run ANOVA on this model.
+```{r anova_top_glm_env_red_sand}
+(top.env.glm.red.sand.aov <- anova.manyglm(top.env.glm.red.sand,
+                                           test = "LR", p.uni = "adjusted",
+                                           nBoot = 999, ## limit the number of permutations for a shorter run time   
+                                           show.time = "all") 
 )
 ```
 
-The results suggest that the **long-term average water column parameters** have a major influence on the observed community structure; also the **sediment TOM**, and (marginally) the **sediment composition** (gravel content).  
+So, it turns out that the long-term water column eutrophication (PO4, seston), the anthropogenic pressure in general (LUSI), and the sediment composition (gravel) explain the observed community patterns best. 
+
 Save the ANOVA - I really, really don't want to have to repeat it.  
-```{r save_anova_glms_env_sand}
-write_rds(env.glms.sand.aov, 
-          here(save.dir, "glms_env_sand_anova.RDS"))
+```{r save_anova_top_glm_env_red_sand}
+write_rds(top.env.glm.red.sand.aov, 
+          here(save.dir, "glms_top_env_red_sand_anova.RDS"))
 ```
 
 Get the taxa with the highest contributions to the tested pattern (here - species most affected by changes in water/environmental quality parameters).  
-```{r relative_taxon_contrib_glms_env_sand}
+```{r relative_taxon_contrib_top_glm_env_red_sand}
 ## get the top contributing species for the environmental parameter sand GLMs 
-(top.sp.glms.env.sand <- top_n_sp_glm(env.glms.sand.aov, tot.dev.expl = 0.75)
+(top.sp.glms.env.red.sand <- top_n_sp_glm(top.env.glm.red.sand.aov, tot.dev.expl = 0.75)
 )
 
 ## unfortunately, mvabund likes to rename my species when converting the data to matrix (no spaces in names), and since I'm going to look them up in my initial untransformed count data, I have to change them back..   DON'T BE IN A HURRY TO DO THAT IF YOU WANT TO SUBSET THE ORIGINAL MATRIX BEFORE RUNNING TRAITGLM 
-names(top.sp.glms.env.sand) <- names(top.sp.glms.env.sand) %>% 
+names(top.sp.glms.env.red.sand) <- names(top.sp.glms.env.red.sand) %>% 
   str_replace(pattern = "\\.", replacement = " ")
 
 ```
 
 I'm going to plot these top contributing species, but I'm not using the plot. At least this time it's more manageable, but still not presentable enough.. 
 
-```{r plot_relative_taxon_contrib_glms_env_sand}
+```{r plot_relative_taxon_contrib_top_glm_env_red_sand}
 ## get the species and their abundances from the original count data, and transform them to long format
-(abnd.top.sp.glms.env.sand <- zoo.abnd.sand %>% 
-   select(station, names(top.sp.glms.env.sand)) %>% 
+(abnd.top.sp.glms.env.red.sand <- zoo.abnd.sand %>% 
+   select(station, names(top.sp.glms.env.red.sand)) %>% 
    gather(key = "species", value = "count", -station) %>% 
    ## turn species into a factor, or you'll be very very sorry later, when they're out of order on the plot. NB need to be in REVERSE order, because ggplot plots from bottom to top, and I want the top-contributing species on top. 
-   mutate(species = factor(species, levels = rev(names(top.sp.glms.env.sand)))) %>% 
+   mutate(species = factor(species, levels = rev(names(top.sp.glms.env.red.sand)))) %>% 
    ## add clusters from LVM as a column
    mutate(group = case_when(station %in% c("Kraimorie", "Chukalya") ~ 1, 
                             station == "Akin" ~ 2, 
@@ -548,15 +630,12 @@ I'm going to plot these top contributing species, but I'm not using the plot. At
 )
 
 
-(plot.top.sp.glms.env.sand <- plot_top_n(abnd.top.sp.glms.env.sand,
-                                         mapping = aes(x = species, y = log_y_min(count), colour = factor(group)),
-                                         group = abnd.top.sp.glms.env.sand %>% pull(group), 
-                                         labs.legend = unique(abnd.top.sp.glms.env.sand$group),
-                                         lab.y = "Abundance (log(y/min + 1))",
-                                         palette = "Set2"
-                                        ) + 
+(plot.top.sp.glms.env.red.sand <- plot_top_n(abnd.top.sp.glms.env.red.sand,
+                                             mapping = aes(x = species, y = log_y_min(count), colour = factor(group)),
+                                             labs.legend = unique(abnd.top.sp.glms.env.red.sand$group),
+                                             lab.y = "Abundance (log(y/min + 1))",
+                                             palette = "Set2") + 
     theme(legend.position = "top")
-
 )
 ```
 
@@ -567,32 +646,31 @@ Maybe a bit later I'll try to get this nightmare above as a table...
 Final analysis to try: which species respond differently to different environmental parameters?
 (= traits analysis - fit single predictive model for all species at all sites, but w/o attempting to explain the different responses using traits - the species ID is used in place of a traits matrix).  
 NB only use the top species that exhibited a reaction in the environmental model fit (= the ones accounting for ~75% of the total variability), and only the significant predictors - to improve run times.   
-```{r sp_response_glms_env_sand}
-sp.response.glms.env.sand <- traitglm(L = zoo.mvabnd.sand[, names(top.sp.glms.env.sand)], 
-                                      R = as.matrix(env.sand %>% select(NH4, NO3, PO4, seston, secchi, TOM, gravel)), 
-                                      method = "manyglm")
+```{r sp_response_top_glm_env_red_sand}
+sp.response.glms.env.red.sand <- traitglm(L = mvabund(zoo.abnd.flt.sand[, names(top.sp.glms.env.red.sand)]), 
+                                          R = as.matrix(env.sand %>% select(PO4, seston, LUSI, gravel)), 
+                                          method = "manyglm")
 
 
-sp.response.glms.env.sand$fourth.corner
+sp.response.glms.env.red.sand$fourth.corner
 
 
 # plot this 
-a <- max(abs(sp.response.glms.env.sand$fourth.corner))
+a <- max(abs(sp.response.glms.env.red.sand$fourth.corner))
 colort <- colorRampPalette(c("blue","white","red")) 
-plot.spp <- lattice::levelplot(t(as.matrix(sp.response.glms.env.sand$fourth.corner)), xlab = "Environmental Variables",
+plot.spp <- lattice::levelplot(t(as.matrix(sp.response.glms.env.red.sand$fourth.corner)), xlab = "Environmental Variables",
                      ylab = "Species", col.regions = colort(100), at = seq(-a, a, length = 100),
                      scales = list(x = list(rot = 45)))
 print(plot.spp)
-
-
 ```
 
 When using LASSO (method = "glm1path"), the algorithm fails to converge - I'm not sure how to interpret it.. Maybe because the function tests each individual species:env.parameter interaction (does it really??), and none of them by themselves are sufficient to explain a species' response. Not to mention the fact that the samples are not really independent (they are replicates at 6 sites, repeated 3 times).  
-When using method = "manyglm", the result is the one shown above. It's still a bitch to interpret - for example, what is the interpretation of an increase in abundance with both high PO4 and Secchi? Or with high NH4, but low NO3? Where are these conditions ever met?   
+When using method = "manyglm", the result is the one shown above. It's still a bitch to interpret - for example, what is the interpretation of an increase in abundance with for ex. high PO4, but low LUSI? Where are these conditions ever met?   
 
 In fact, everything points towards the conclusion that a species response is determined by a combination of eutrophication parameters in its environment (water column characteristics), and the composition of the sediments (organic matter and granulometry).  
-This is actually exactly the same thing that the PERMANOVA gives, in this particular case. However, in the future, I'm leaning more towards the modeling approach - it allows you to check the model fit to one's real data; also, there are no data reductions due to calculation of distance matrices.  
 
+This is actually sort of similar to the PERMANOVA results, in this particular case. However, it's much more parsimonious.  
+In the future, I'm leaning more towards the modeling approach - it allows you to check the model fit to one's real data; also, there are no data reductions due to calculation of distance matrices.  
 
 
 
@@ -805,10 +883,13 @@ Run the anova on the model.
 ```{r anova_glms_lvm_zostera_1}
 (glms.lvm.zostera.1.aov <- anova.manyglm(glms.lvm.zostera.1, 
                                     test = "LR", p.uni = "adjusted", 
-                                    nBoot = 999, ## limit the number of permutations for a shorter run time   
+                                    nBoot = 999, ## limit the number of permutations for a shorter run time
+                                    pairwise.comp = ~lvm.clusters.zostera.1, ## check the pairwise comparison between clusters
                                     show.time = "all") 
 )
 ```
+
+Aaaand the differences between clusters are highly significant in this iteration.. 
 
 Save the ANOVA, too.  
 ```{r save_anova_glms_lvm_zostera_1}
@@ -837,22 +918,25 @@ Try to plot these top contributing species - for whatever that's worth, because 
    select(station, names(top.sp.glms.lvm.zostera.1)) %>% 
    gather(key = "species", value = "count", -station) %>% 
    ## turn species into a factor, or you'll be very very sorry later, when they're out of order on the plot. NB need to be in REVERSE order, because ggplot plots from bottom to top, and I want the top-contributing species on top. 
-   mutate(species = factor(species, levels = rev(names(top.sp.glms.lvm.zostera.1))))
+   mutate(species = factor(species, levels = rev(names(top.sp.glms.lvm.zostera.1)))) %>% 
+   mutate(group = factor(case_when(station %in% c("Poda", "Otmanli") ~ 1, 
+                                   station == "Vromos" ~ 2, 
+                                   station %in% c("Gradina", "Ropotamo") ~ 3))) ## add the groups to the long df 
 )
 
 
 (plot.top.sp.glms.lvm.zostera.1 <- plot_top_n(abnd.top.sp.glms.lvm.zostera.1,
-                                         mapping = aes(x = species, y = log_y_min(count), colour = station),
-                                         labs.legend = paste0("Z", as.numeric(unique(abnd.top.sp.glms.lvm.zostera.1$station))),
+                                         mapping = aes(x = species, y = log_y_min(count), colour = group),
+                                         labs.legend = paste0("group", as.character(levels(abnd.top.sp.glms.lvm.zostera.1$group))),
                                          lab.y = "Abundance (log(y/min + 1))",
                                          palette = "Set2"
                                         ) +
-    theme(legend.position = "top")
+    theme(legend.position = "top", legend.title = element_blank())
 
 )
 ```
 
-Well this is a nightmarish plot, but more tolerable than the sand one - there are less species here, so at least it's readable..   
+Well this is a nightmarish plot, but more tolerable than the one for the sand stations - there are less species here, so at least it's readable..   
 
 Extract the top-contributing species to each cluster (this same nightmare above, but as a table). This chunk is STILL hopelessly ugly and clumsy.  
 ```{r table_relative_taxon_contrib_glms_lvm_zostera_1}
@@ -969,9 +1053,12 @@ Run the anova on the model.
 (glms.lvm.zostera.2.aov <- anova.manyglm(glms.lvm.zostera.2, 
                                          test = "LR", p.uni = "adjusted", 
                                          nBoot = 999, ## limit the number of permutations for a shorter run time   
+                                         pairwise.comp = ~lvm.clusters.zostera.2, ## check the pairwise comparison between clusters
                                          show.time = "all") 
 )
 ```
+
+Again, these groups are sufficiently different from one another.. No clue here. 
 
 Save the ANOVA, too.  
 ```{r save_anova_glms_lvm_zostera_2}
@@ -1000,17 +1087,22 @@ Try to plot these top contributing species - for whatever that's worth, because 
    select(station, names(top.sp.glms.lvm.zostera.2)) %>% 
    gather(key = "species", value = "count", -station) %>% 
    ## turn species into a factor, or you'll be very very sorry later, when they're out of order on the plot. NB need to be in REVERSE order, because ggplot plots from bottom to top, and I want the top-contributing species on top. 
-   mutate(species = factor(species, levels = rev(names(top.sp.glms.lvm.zostera.2))))
+   mutate(species = factor(species, levels = rev(names(top.sp.glms.lvm.zostera.2)))) %>% 
+   mutate(group = factor(case_when(station == "Poda" ~ 1,
+                                   station == "Otmanli" ~ 2,
+                                   station == "Vromos" ~ 3, 
+                                   station == "Gradina" ~ 4, 
+                                   station == "Ropotamo" ~ 5)))
 )
 
 
 (plot.top.sp.glms.lvm.zostera.2 <- plot_top_n(abnd.top.sp.glms.lvm.zostera.2,
-                                              mapping = aes(x = species, y = log_y_min(count), colour = station),
-                                              labs.legend = paste0("Z", as.numeric(unique(abnd.top.sp.glms.lvm.zostera.2$station))),
+                                              mapping = aes(x = species, y = log_y_min(count), colour = group),
+                                              labs.legend = paste0("group", as.character(levels(abnd.top.sp.glms.lvm.zostera.2$group))),
                                               lab.y = "Abundance (log(y/min + 1))",
                                               palette = "Set2"
                                         ) +
-    theme(legend.position = "top")
+    theme(legend.position = "top", legend.title = element_blank())
 
 )
 ```
@@ -1132,9 +1224,12 @@ Run the anova on the model.
 (glms.lvm.zostera.3.aov <- anova.manyglm(glms.lvm.zostera.3, 
                                          test = "LR", p.uni = "adjusted", 
                                          nBoot = 999, ## limit the number of permutations for a shorter run time   
+                                         pairwise.comp = ~lvm.clusters.zostera.3, ## check the pairwise comparisons between clusters
                                          show.time = "all") 
 )
 ```
+
+According to the pairwise comparison, the case 3 clusters are significantly different from one another.. apparently sufficiently so.  
 
 Save the ANOVA, too.  
 ```{r save_anova_glms_lvm_zostera_3}
@@ -1163,17 +1258,21 @@ Try to plot these top contributing species - for whatever that's worth, because 
    select(station, names(top.sp.glms.lvm.zostera.3)) %>% 
    gather(key = "species", value = "count", -station) %>% 
    ## turn species into a factor, or you'll be very very sorry later, when they're out of order on the plot. NB need to be in REVERSE order, because ggplot plots from bottom to top, and I want the top-contributing species on top. 
-   mutate(species = factor(species, levels = rev(names(top.sp.glms.lvm.zostera.3))))
+   mutate(species = factor(species, levels = rev(names(top.sp.glms.lvm.zostera.3)))) %>% 
+   mutate(group = factor(case_when(station %in% c("Poda", "Otmanli") ~ 1,
+                                   station == "Vromos" ~ 2, 
+                                   station == "Gradina" ~ 3, 
+                                   station == "Ropotamo" ~ 4)) ## add the groups
+          )
 )
 
-
 (plot.top.sp.glms.lvm.zostera.3 <- plot_top_n(abnd.top.sp.glms.lvm.zostera.3,
-                                              mapping = aes(x = species, y = log_y_min(count), colour = station),
-                                              labs.legend = paste0("Z", as.numeric(unique(abnd.top.sp.glms.lvm.zostera.3$station))),
+                                              mapping = aes(x = species, y = log_y_min(count), colour = group),
+                                              labs.legend = paste0("group", as.character(levels(abnd.top.sp.glms.lvm.zostera.3$group))),
                                               lab.y = "Abundance (log(y/min + 1))",
                                               palette = "Set2"
                                         ) +
-    theme(legend.position = "top")
+    theme(legend.position = "top", legend.title = element_blank())
 
 )
 ```
@@ -1227,11 +1326,11 @@ For **group 3** (= Z4), the species with **higher abundance** are: M. lineatus, 
 For **group 4** (= Z5), the species with **higher abundance** are: A. ostoumovi, C. capitata, oligochaetes (very abundant, but with a small LR - nice!). The species with **lower abundance** (or 0) are: R. splendida, S. clavata, C. limicola.  
 
 
-**All in all, I think that group 1 (Poda + Otmanli) holds, and so does group 2 (Vromos). The question is whether it makes sense to separate Gradina and Ropotamo into 2 groups, or if they make more sense together. Ropotamo is characterized by a very high number of oligochaetes, while Gradina's most distinguishing characteristic is the high number of M. lineatus - mostly very small ones, attached to the rhizomes, close to the sediment surface I presume. Both stations have C. limicola in medium abundance, which is not present anywhere else.** 
+**All in all, I think that group 1 (Poda + Otmanli) holds, and so does group 2 (Vromos). The question is whether to separate Gradina and Ropotamo into 2 groups, or if they make more sense together. Ropotamo is characterized by a very high number of oligochaetes, while Gradina's most distinguishing characteristic is the high number of M. lineatus - mostly very small ones, attached to the rhizomes, close to the sediment surface I presume. Both stations have C. limicola in medium abundance, a species that is not present anywhere else (is it?).** 
 
 
 Try to compare the three models.. 
-```{r compare_glms_lvm_zostera}
+```{r compare_glms_lvm_zostera_1}
 (glms.lvm.zostera.comp <- anova(glms.lvm.zostera.1,
                                 glms.lvm.zostera.2, 
                                 glms.lvm.zostera.3, 
@@ -1240,4 +1339,148 @@ Try to compare the three models..
 
 ```
 
-Well I don't know how to interpret that.. Have to check the manual first. 
+Well this is tough to interpret.. Multivariate test table's Dev is decrement from upper model, so each p-value indicates the difference between the model and upper one is statistically significant... But no info on which model represents the species matrix best.  
+
+I'll go with the model with the lowest AIC, since there is no other objective criterion to go with.. This happens to be model 2 (groups = stations). Exactly the same result as from the classical methods.  
+```{r compare_glms_lvm_zostera_2}
+glms.lvm.zostera.1$AICsum
+glms.lvm.zostera.2$AICsum
+glms.lvm.zostera.3$AICsum
+```
+
+
+###### **manyGLM by environmental parameters**  
+Now, let's try to see a different thing - which environmental parameters best describe the species response.  
+I'm going to use the PCA-filtered environmental data - it's still going to be a slog, with 7 potential predictors..  
+First, construct the formula for the model - will do it separately in case I need to update it later, etc.  
+NB there is year here - I want to try with it first!! And I don't want the Secchi depth - it has NAs for Vromos.  
+```{r formula_env_manyglm_full_zostera}
+(formula.env.glms.zostera <- formula(paste("zoo.mvabnd.zostera ~",
+                                           paste(env.zostera %>% select(-c(station, secchi)) %>% names(), collapse = "+")))
+)
+```
+
+Fit the GLMs - including all environmental parameters - to the zostera abundance data. 
+```{r fit_glms_env_full_zostera}
+env.glms.zostera <- manyglm(formula.env.glms.zostera,
+                            data = env.zostera,
+                            family = "negative.binomial")
+
+```
+
+Explore the fit (residuals, diagnostic plots, etc.).  
+```{r explore_glms_env_full_zostera}
+## residuals vs fitted values
+plot(env.glms.zostera)
+
+
+## all traditional (g)lm diagnostic plots
+plot.manyglm(env.glms.zostera, which = 1:3)
+
+
+# ### source mvabund GLM plotting functions modified to use a grey palette - I just can't redo these plots on my own, the function is doing too complicated things internally to scale the x and y axes
+# source(here(functions.dir, "default.plot.manyglm_grey.R"))
+# source(here(functions.dir, "plot.manyglm_grey.R"))
+# 
+# par(mfrow = c(2,2))
+# lapply(1:3, function(i) plot.manyglm.grey(glms.lvm.zostera, which = i, sub.caption = ""))
+# par(mfrow = c(1, 1))
+
+```
+
+Well, it's good enough if you ask me (still the kinda strange "line" at lin.pred = -6; otherwise residuals are random enough).  
+
+Save the model!  
+```{r save_glms_env_full_zostera}
+write_rds(env.glms.zostera, 
+          here(save.dir, "glms_env_zostera.RDS"))
+```
+
+Before going off and running an ANOVA to check which predictors best explain the species abundance patterns, I'll try to reduce the model a little - it might even improve the fit, not to mention the run time.  
+```{r select_top_glm_env_zostera}
+## selection function defined in the sand section 
+top.env.glm.red.zostera <- evaluate_glms_env(env.glms.zostera)
+
+```
+
+Check its fit. 
+```{r explore_top_glm_env_red_zostera}
+## residuals vs fitted values
+plot(top.env.glm.red.zostera)
+
+
+## all traditional (g)lm diagnostic plots
+plot.manyglm(top.env.glm.red.zostera, which = 1:3)
+```
+
+I think it's fine; might even be better than the full model.. 
+Save it, too. 
+```{r save_top_glm_env_red_zostera}
+write_rds(top.env.glm.red.zostera, 
+          here(save.dir, "glms_top_env_red_zostera.RDS"))
+```
+
+
+Run ANOVA on this model.
+```{r anova_top_glm_env_red_zostera}
+(top.env.glm.red.zostera.aov <- anova.manyglm(top.env.glm.red.zostera,
+                                              test = "LR", p.uni = "adjusted", 
+                                              nBoot = 999, ## limit the number of permutations for a shorter run time   
+                                              show.time = "all") 
+)
+```
+
+Nice, all terms are significant now! 
+Again, as with the sand samples, there is one eutrophication term + one sediment composition + seagrass parameters. Seems reasonable enough.  
+
+Save this ANOVA (takes too long to run anew).  
+```{r save_anova_top_glm_env_red_zostera}
+write_rds(top.env.glm.red.zostera.aov, 
+          here(save.dir, "glms_top_env_red_zostera_anova.RDS"))
+```
+
+
+Get the taxa with the highest contributions to the tested pattern (here - species most affected by changes in water/environmental quality parameters).  
+```{r relative_taxon_contrib_top_glm_env_red_zostera}
+## get the top contributing species for the environmental parameter zostera GLMs 
+(top.sp.glms.env.red.zostera <- top_n_sp_glm(top.env.glm.red.zostera.aov, tot.dev.expl = 0.75)
+)
+
+## unfortunately, mvabund likes to rename my species when converting the data to matrix (no spaces in names), and since I'm going to look them up in my initial untransformed count data, I have to change them back..   DON'T BE IN A HURRY TO DO THAT IF YOU WANT TO SUBSET THE ORIGINAL MATRIX BEFORE RUNNING TRAITGLM 
+names(top.sp.glms.env.red.zostera) <- names(top.sp.glms.env.red.zostera) %>% 
+  str_replace(pattern = "\\.", replacement = " ")
+
+```
+
+I'm going to plot these top contributing species, but I'm not using the plot. At least this time it's more manageable, but still not presentable enough.. 
+
+```{r plot_relative_taxon_contrib_top_glm_env_red_zostera}
+## get the species and their abundances from the original count data, and transform them to long format
+(abnd.top.sp.glms.env.red.zostera <- zoo.abnd.zostera %>% 
+   select(station, names(top.sp.glms.env.red.zostera)) %>% 
+   gather(key = "species", value = "count", -station) %>% 
+   ## turn species into a factor, or you'll be very very sorry later, when they're out of order on the plot. NB need to be in REVERSE order, because ggplot plots from bottom to top, and I want the top-contributing species on top. 
+   mutate(species = factor(species, levels = rev(names(top.sp.glms.env.red.zostera)))) %>% 
+   ## add clusters from LVM as a column
+   mutate(group = case_when(station == "Poda" ~ 1, 
+                            station == "Otmanli" ~ 2, 
+                            station == "Vromos" ~ 3, 
+                            station == "Gradina" ~ 4, 
+                            station == "Ropotamo" ~ 5))
+)
+
+
+(plot.top.sp.glms.env.red.zostera <- plot_top_n(abnd.top.sp.glms.env.red.zostera,
+                                         mapping = aes(x = species, y = log_y_min(count), colour = factor(group)),
+                                         labs.legend = unique(abnd.top.sp.glms.env.red.zostera$group),
+                                         lab.y = "Abundance (log(y/min + 1))",
+                                         palette = "Set2"
+                                        ) + 
+    theme(legend.position = "top")
+
+)
+```
+
+
+
+
