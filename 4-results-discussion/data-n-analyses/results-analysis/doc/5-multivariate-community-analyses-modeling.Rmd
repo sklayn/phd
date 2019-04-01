@@ -1,6 +1,6 @@
 ---
 title: "Multivariate analyses of community structure (modeling)"
-date: "2019-03-29"
+date: "2019-04-01"
 output: html_notebook
 ---
 
@@ -621,16 +621,24 @@ I'm going to plot these top contributing species, but I'm not using the plot. At
 
 ```{r plot_relative_taxon_contrib_top_glm_env_red_sand}
 ## get the species and their abundances from the original count data, and transform them to long format
-(abnd.top.sp.glms.env.red.sand <- zoo.abnd.sand %>% 
-   select(station, names(top.sp.glms.env.red.sand)) %>% 
-   gather(key = "species", value = "count", -station) %>% 
-   ## turn species into a factor, or you'll be very very sorry later, when they're out of order on the plot. NB need to be in REVERSE order, because ggplot plots from bottom to top, and I want the top-contributing species on top. 
-   mutate(species = factor(species, levels = rev(names(top.sp.glms.env.red.sand)))) %>% 
-   ## add clusters from LVM as a column
-   mutate(group = case_when(station %in% c("Kraimorie", "Chukalya") ~ 1, 
-                            station == "Akin" ~ 2, 
-                            station %in% c("Sozopol", "Paraskeva") ~ 3, 
-                            station == "Agalina" ~ 4))
+abnd.top.sp.glms.env.red.sand <- zoo.abnd.sand %>% 
+  select(station, names(top.sp.glms.env.red.sand)) %>% 
+  gather(key = "species", value = "count", -station) %>% 
+  ## turn species into a factor, or you'll be very very sorry later, when they're out of order on the plot. NB need to be in REVERSE order, because ggplot plots from bottom to top, and I want the top-contributing species on top. 
+  mutate(species = factor(species, levels = rev(names(top.sp.glms.env.red.sand)))) %>% 
+  ## add clusters from LVM as a column
+  mutate(group = case_when(station %in% c("Kraimorie", "Chukalya") ~ 1,
+                           station == "Akin" ~ 2, 
+                           station %in% c("Sozopol", "Paraskeva") ~ 3, 
+                           station == "Agalina" ~ 4))
+
+
+
+## add the significant environmental parameters from the model
+(abnd.top.sp.glms.env.red.sand <- left_join(abnd.top.sp.glms.env.red.sand, 
+                                            env.sand %>% select(station, PO4, seston, LUSI, gravel), 
+                                            by = "station") 
+    
 )
 
 
@@ -642,6 +650,20 @@ I'm going to plot these top contributing species, but I'm not using the plot. At
     theme(legend.position = "top")
 )
 ```
+
+Try another type of chart - to start, a parallel coordinates chart, maybe.  
+```{r parcoord_plot_relative_taxon_contrib_top_glm_env_sand}
+# You need the MASS library
+
+# Vector color
+my_colors=colors()[as.numeric(unique(abnd.top.sp.glms.env.red.sand$species))]
+ 
+# Make the graph !
+MASS::parcoord(abnd.top.sp.glms.env.red.sand %>% select(PO4:gravel), col = my_colors)
+```
+
+This is terrible, not to mention non-informative.. 
+
 
 Extract the taxon information (univariate tests) from the model ANOVA to present as a table (probably better than this plot, although it's informative).  
 ```{r table_relative_taxon_contrib_top_glm_env_red_sand}
