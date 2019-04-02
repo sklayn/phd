@@ -1,6 +1,6 @@
 ---
 title: "Multivariate analyses of community structure (modeling)"
-date: "2019-04-01"
+date: "`r Sys.Date()`"
 output: html_notebook
 ---
 
@@ -651,18 +651,54 @@ abnd.top.sp.glms.env.red.sand <- zoo.abnd.sand %>%
 )
 ```
 
-Try another type of chart - to start, a parallel coordinates chart, maybe.  
-```{r parcoord_plot_relative_taxon_contrib_top_glm_env_sand}
-# You need the MASS library
+Try another thing - manually, unfortunately: this same nightmare, but colored by the values of each model term. Since there are 4 terms, I'll make a 2 x 2 plot grid. There will be one (manual) facet per term, with the y-axis present only on the left-most plots. 
 
-# Vector color
-my_colors=colors()[as.numeric(unique(abnd.top.sp.glms.env.red.sand$species))]
- 
-# Make the graph !
-MASS::parcoord(abnd.top.sp.glms.env.red.sand %>% select(PO4:gravel), col = my_colors)
+```{r composite_plot_relative_taxon_contrib_top_glm_env_sand}
+p1 <- ggplot(abnd.top.sp.glms.env.red.sand,
+             mapping = aes(x = log_y_min(count), y = species, colour = PO4)) + 
+  geom_point() +
+  theme(legend.position = "top") + 
+  labs(x = "", y = "")
+
+p2 <- ggplot(abnd.top.sp.glms.env.red.sand,
+             mapping = aes(x = log_y_min(count), y = species, colour = seston)) + 
+  geom_point() +
+  theme(legend.position = "top", 
+        axis.text.y=element_blank(),
+        axis.title.y=element_blank(),
+        axis.ticks.y=element_blank()) + 
+  labs(x = "", y = "")
+
+p3 <- ggplot(abnd.top.sp.glms.env.red.sand,
+             mapping = aes(x = log_y_min(count), y = species, colour = LUSI)) + 
+  geom_point() +
+  theme(legend.position = "top", 
+        axis.text.y=element_blank(),
+        axis.title.y=element_blank(),
+        axis.ticks.y=element_blank()) + 
+  labs(x = "", y = "")
+
+
+p4 <- ggplot(abnd.top.sp.glms.env.red.sand,
+             mapping = aes(x = log_y_min(count), y = species, colour = gravel)) + 
+  geom_point() +
+  theme(legend.position = "top", 
+        axis.text.y=element_blank(),
+        axis.title.y=element_blank(),
+        axis.ticks.y=element_blank(), 
+        plot.margin=margin(b = -5)) + 
+  labs(x = "", y = "")
+
+
+pp <- gridExtra::arrangeGrob(egg::ggarrange(plots = list(p1, p2, p3, p4), ncol = 4),
+                grid::textGrob("Abundance"), heights=c(30,1))
+grid::grid.newpage()
+grid::grid.draw(pp)
+
+# ggsave(here(figures.dir, "monstr.png"), width = 25, height = 20, units = "cm", dpi = 300)
 ```
 
-This is terrible, not to mention non-informative.. 
+This is just terrible.. 
 
 
 Extract the taxon information (univariate tests) from the model ANOVA to present as a table (probably better than this plot, although it's informative).  
