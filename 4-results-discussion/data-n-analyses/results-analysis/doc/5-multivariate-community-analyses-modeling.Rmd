@@ -698,7 +698,7 @@ grid::grid.draw(pp)
 # ggsave(here(figures.dir, "monstr.png"), width = 25, height = 20, units = "cm", dpi = 300)
 ```
 
-This is just terrible.. 
+
 
 
 Extract the taxon information (univariate tests) from the model ANOVA to present as a table (probably better than this plot, although it's informative).  
