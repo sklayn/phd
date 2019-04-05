@@ -651,53 +651,14 @@ abnd.top.sp.glms.env.red.sand <- zoo.abnd.sand %>%
 )
 ```
 
-Try another thing - manually, unfortunately: this same nightmare, but colored by the values of each model term. Since there are 4 terms, I'll make a 2 x 2 plot grid. There will be one (manual) facet per term, with the y-axis present only on the left-most plots. 
-
+FIXME>>>
+Try another thing - manually, unfortunately: this same nightmare, but colored by the values of each model term. 
 ```{r composite_plot_relative_taxon_contrib_top_glm_env_sand}
-p1 <- ggplot(abnd.top.sp.glms.env.red.sand,
-             mapping = aes(x = log_y_min(count), y = species, colour = PO4)) + 
-  geom_point() +
-  theme(legend.position = "top") + 
-  labs(x = "", y = "")
-
-p2 <- ggplot(abnd.top.sp.glms.env.red.sand,
-             mapping = aes(x = log_y_min(count), y = species, colour = seston)) + 
-  geom_point() +
-  theme(legend.position = "top", 
-        axis.text.y=element_blank(),
-        axis.title.y=element_blank(),
-        axis.ticks.y=element_blank()) + 
-  labs(x = "", y = "")
-
-p3 <- ggplot(abnd.top.sp.glms.env.red.sand,
-             mapping = aes(x = log_y_min(count), y = species, colour = LUSI)) + 
-  geom_point() +
-  theme(legend.position = "top", 
-        axis.text.y=element_blank(),
-        axis.title.y=element_blank(),
-        axis.ticks.y=element_blank()) + 
-  labs(x = "", y = "")
-
-
-p4 <- ggplot(abnd.top.sp.glms.env.red.sand,
-             mapping = aes(x = log_y_min(count), y = species, colour = gravel)) + 
-  geom_point() +
-  theme(legend.position = "top", 
-        axis.text.y=element_blank(),
-        axis.title.y=element_blank(),
-        axis.ticks.y=element_blank(), 
-        plot.margin=margin(b = -5)) + 
-  labs(x = "", y = "")
-
-
-pp <- gridExtra::arrangeGrob(egg::ggarrange(plots = list(p1, p2, p3, p4), ncol = 4),
-                grid::textGrob("Abundance"), heights=c(30,1))
-grid::grid.newpage()
-grid::grid.draw(pp)
-
-# ggsave(here(figures.dir, "monstr.png"), width = 25, height = 20, units = "cm", dpi = 300)
+ggplot(abnd.top.sp.glms.env.red.sand,
+       mapping = aes(x = species, y = log_y_min(count), colour = gravel)) + 
+  geom_point() + 
+  coord_flip()
 ```
-
 
 
 
@@ -706,7 +667,7 @@ Extract the taxon information (univariate tests) from the model ANOVA to present
 ## extract the univariate test coefficients (LR) from the environmental model ANOVA. NB keep the row names when converting the matrix to tibble! 
 table.top.sp.glms.env.red.sand <- as_tibble(top.env.glm.red.sand.aov$uni.test, rownames = "var")
 
-## fix the species names - remove first dor  
+## fix the species names - remove first dot  
 names(table.top.sp.glms.env.red.sand) <- names(table.top.sp.glms.env.red.sand) %>% 
   str_replace(pattern = "\\.", replacement = " ")
 
@@ -730,6 +691,33 @@ write_csv(table.top.sp.glms.env.red.sand,
           here(save.dir, "taxa_contrib_glms_top_env_red_sand.csv"))
 ```
 
+
+Calculate the percentage contribution of each of these species to each of the model terms (Dev(term) = Sum-of-LR - sum of the LRs for the individual univariate species tests).. 
+```{r table_prop_relative_taxon_contrib_top_glm_env_red_sand}
+## get the total deviance (Sum-of-LR) for each model term
+(dev.terms.top.glms.env.sand <- as_tibble(top.env.glm.red.sand.aov$table, rownames = "var") %>%
+   ## get rid of unnecessary variables (I only want the deviance value for each term) and intercept term 
+   select(var, Dev) %>% 
+   filter(var != "(Intercept)") %>% 
+   ## transpose 
+   gather(variable, value, -var) %>%
+   spread(var, value) %>% 
+   ## get rid of first column and rearrange columns to match table of deviances of univariate tests for species 
+   select(-variable) %>% 
+   select(PO4, seston, LUSI, gravel)
+)  
+
+## calculate the proportion contribution of each species to each parameter deviance
+prop.top.sp.glms.env.red.sand <- map2_df(table.top.sp.glms.env.red.sand %>% select(-species),
+                                         dev.terms.top.glms.env.sand, 
+                                         ~.x/.y)
+
+## add back the species 
+(prop.top.sp.glms.env.red.sand <- bind_cols(table.top.sp.glms.env.red.sand %>% select(species), 
+                                            prop.top.sp.glms.env.red.sand)
+)
+
+```
 
 
 Final analysis to try: which species respond differently to different environmental parameters?
@@ -1599,6 +1587,35 @@ Save this to a file - will have to format it as a nice table by hand, unfortunat
 write_csv(table.top.sp.glms.env.red.zostera, 
           here(save.dir, "taxa_contrib_glms_top_env_red_zostera.csv"))
 ```
+
+
+Calculate the percentage contribution of each of these species to each of the model terms (Dev(term) = Sum-of-LR - sum of the LRs for the individual univariate species tests).. 
+```{r table_prop_relative_taxon_contrib_top_glm_env_red_zostera}
+## get the total deviance (Sum-of-LR) for each model term
+(dev.terms.top.glms.env.zostera <- as_tibble(top.env.glm.red.zostera.aov$table, rownames = "var") %>%
+   ## get rid of unnecessary variables (I only want the deviance value for each term) and intercept term 
+   select(var, Dev) %>% 
+   filter(var != "(Intercept)") %>% 
+   ## transpose 
+   gather(variable, value, -var) %>%
+   spread(var, value) %>% 
+   ## get rid of first column and rearrange columns to match table of deviances of univariate tests for species 
+   select(-variable) %>% 
+   select(Ntotal, sand, shoot_count, ag_biomass_wet, bg_biomass_wet)
+)  
+
+## calculate the proportion contribution of each species to each parameter deviance
+prop.top.sp.glms.env.red.zostera <- map2_df(table.top.sp.glms.env.red.zostera %>% select(-species), 
+                                            dev.terms.top.glms.env.zostera,
+                                            ~.x/.y)
+
+## add back the species 
+(prop.top.sp.glms.env.red.zostera <- bind_cols(table.top.sp.glms.env.red.zostera %>% select(species), 
+                                               prop.top.sp.glms.env.red.zostera)
+)
+```
+
+
 
 
 I'll do the pseudo-traits analysis - fit single predictive model for all species at all sites, but w/o attempting to explain the different responses using traits - the species ID is used in place of a traits matrix), although I don't think it will amount to anything useful.   
