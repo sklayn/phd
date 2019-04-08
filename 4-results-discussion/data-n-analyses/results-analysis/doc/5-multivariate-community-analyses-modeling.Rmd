@@ -655,7 +655,7 @@ FIXME>>>
 Try another thing - manually, unfortunately: this same nightmare, but colored by the values of each model term. 
 ```{r composite_plot_relative_taxon_contrib_top_glm_env_sand}
 ggplot(abnd.top.sp.glms.env.red.sand,
-       mapping = aes(x = species, y = log_y_min(count), colour = gravel)) + 
+       mapping = aes(x = species, y = log_y_min(count), colour = seston)) + 
   geom_point() + 
   coord_flip()
 ```
@@ -848,7 +848,7 @@ Well, this is a weird one - this plot is flipped around 0 compared to the one th
 ## save the LVM plot for the seagrass
 ggsave(file = here(figures.dir, "lvm_zostera.png"), 
        plot.lvm.zostera, 
-       width = 15, units = "cm", dpi = 300)
+       width = 15, height = 10, units = "cm", dpi = 300)
 ```
 
 ##### **GLM fitting for abundance - environmental data**  
@@ -874,7 +874,7 @@ zoo.mvabnd.zostera <- mvabund(zoo.abnd.flt.zostera)
 
 ###### **manyGLM by LVM clusters**
 First, let's see if the groups from the latent variable model (more or less equal to the clusters from the classical ordination) are valid, and which species exhibit a response.  
-I'm going to try something new here - 1) loose clusters from the LVM ordination, 1 = Poda-Otmanli, 2 = Vromos, 3 = Gradina-Ropotamo. 2) stations as clusters, as I did before for the seagrass data, although I don't believe it's valid/justified to do so... 3) another configuration of clusters from the LVM ordination: 1 = Z1-Z2, 2 = Z3, 3 = Z4, 4 = Z5.   
+I'm going to try something new here - 1) loose clusters from the LVM ordination, 1 = Poda-Otmanli, 2 = Vromos, 3 = Gradina-Ropotamo. 2) stations as clusters, as I did before for the seagrass data, although I don't believe it's valid/justified to do so... 3) another possible configuration of clusters from the LVM ordination: 1 = Z1-Z2, 2 = Z3, 3 = Z4, 4 = Z5.   
 ```{r clusters_lvm_zostera}
 ## construct the vectors of the clusters by hand - first, situation 1 above
 lvm.clusters.zostera.1 <- rep(1:3, times = c(16, 4, 12))
@@ -1229,7 +1229,7 @@ In the case of the seagrasses and case 2 clusters (= stations), the picture is s
 The LRs seem to be a bit lower for groups 2, 4, maybe 5 too - still not sure if you can use that as a significance measure.  
 For now, in **group 1** (= Z1), it's hard to pick some characteristic species - because of the variability between 2013-2014, no doubt. The species/taxa with significantly **higher abundance** are: Bittium reticulatum, Capitella minima, Polydora ciliata, Prionosprio cirrifera (+ others, medium abundance); and the ones with a significantly **lower abundance** - or even absent - C. gallina, A. ostroumovi, S. clavata, C. limicola, C. costulata, S. hystrix, S. gracilis, T. pullus.   
 For **group 2** (= Z2), the species with **higher abundance** - which is not really all that high; this group is also loose, hard to distinguish from group 1 - are: S. gracilis, M. lineatus, P. ciliata. The only species with **lower abundance** - in fact 0 - is Alitta succinea.  
-For **group 3** (= Z3), the species with **higher abundance** are: M. acherusicum, S. filicornis, A. diadema. The species with **lower abundance** (or 0) are: B. reticulatum, P. ciliata, P. cirrifera, A. alba, A. succiena, S. clavata, Oligochaeta, A. improvisus.  
+For **group 3** (= Z3), the species with **higher abundance** are: M. acherusicum, S. filicornis, A. diadema. The species with **lower abundance** (or 0) are: B. reticulatum, P. ciliata, P. cirrifera, A. alba, A. succinea, S. clavata, Oligochaeta, A. improvisus.  
 For **group 4** (= Z4), the species with **higher abundance** are: M. lineatus (very much so); C. limicola, P. kefersteini, C. gallina, C. capitata. The species with **lower abundance** (or 0) are: P. ciliata, P. cirrifera, A. succinea, A. improvisus, A. alba.  
 For **group 5** (= Z5), the species with **higher abundance** are: A. ostroumovi, C. capitata, Oligochaeta. The species with **lower abundance** (or 0) are: R. splendida, T. pullus.  
 
