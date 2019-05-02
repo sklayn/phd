@@ -147,6 +147,17 @@ write_rds(lvm.sand,
           here(save.dir, "lvm_sand.RDS"))
 ```
 
+Save the diagnostic plots.  
+```{r save_diagn_plots_lvm_sand}
+png(here(figures.dir, "diagnostic_lvm_sand.png"), width = 25, height = 20, units = "cm", res = 300)
+par(mfrow = c(2, 2))
+plot(lvm.sand)
+par(mfrow = c(1, 1))
+dev.off()
+```
+
+
+
 Examine the biplot obtained by fitting the LVM, as well as the 20 most "important" species.   
 ```{r check_biplot_lvm_sand}
 lvsplot(lvm.sand, jitter = T, biplot = TRUE, ind.spp = 20)
@@ -265,6 +276,13 @@ par(mfrow = c(1, 1))
 ```
 
 I really don't like the rainbow palette, but I would like to include these plots in my thesis results.. Will have to do something about it, just not right now.  
+Update (2019/05/02): while I still think these are fugly, I have no more time or nerves to deal with it. Rainbow shit it is.  
+```{r save_diagn_plots_glms_lvm_sand}
+png(here(figures.dir, "diagnostic_glms_lvm_sand.png"), width = 25, height = 20, units = "cm", res = 300)
+plot.manyglm(glms.lvm.sand, which = 1:3)
+dev.off()
+```
+
 Save the model!  
 ```{r save_glms_lvm_sand}
 write_rds(glms.lvm.sand, 
@@ -587,6 +605,14 @@ write_rds(top.env.glm.red.sand,
           here(save.dir, "glms_top_env_red_sand.RDS"))
 ```
 
+Save the model diagnostic plots.  
+
+```{r save_diagn_plots_top_glm_env_red_sand}
+png(here(figures.dir, "diagnostic_top_glm_env_red_sand.png"), width = 25, height = 20, units = "cm", res = 300)
+plot.manyglm(top.env.glm.red.sand, which = 1:3)
+dev.off()
+```
+
 
 Run ANOVA on this model.
 ```{r anova_top_glm_env_red_sand}
@@ -808,6 +834,16 @@ Save the zostera LVM.
 write_rds(lvm.zostera, 
           here(save.dir, "lvm_zostera.RDS"))
 ```
+
+Save the diagnostic plots.  
+```{r save_diagn_plots_lvm_zostera}
+png(here(figures.dir, "diagnostic_lvm_zostera.png"), width = 25, height = 20, units = "cm", res = 300)
+par(mfrow = c(2, 2))
+plot(lvm.zostera)
+par(mfrow = c(1, 1))
+dev.off()
+```
+
 
 Examine the biplot obtained by fitting the LVM, as well as the 20 most "important" species.   
 ```{r check_biplot_lvm_zostera}
@@ -1090,21 +1126,19 @@ plot(glms.lvm.zostera.2)
 
 ## all traditional (g)lm diagnostic plots
 plot.manyglm(glms.lvm.zostera.2, which = 1:3)
-
-# ### source mvabund GLM plotting functions modified to use a grey palette - I just can't redo these plots on my own, the function is doing too complicated things internally to scale the x and y axes
-# source(here(functions.dir, "default.plot.manyglm_grey.R"))
-# source(here(functions.dir, "plot.manyglm_grey.R"))
-# 
-# par(mfrow = c(2,2))
-# lapply(2:3, function(i) plot.manyglm.grey(glms.lvm.zostera, which = i, sub.caption = ""))
-# par(mfrow = c(2, 2))
-
 ```
 
 Save the model!  
 ```{r save_glms_lvm_zostera_2}
 write_rds(glms.lvm.zostera.2, 
           here(save.dir, "glms_lvm_zostera_2.RDS"))
+```
+
+Save the model diagnostic plots - only for this one, since - spoiler alert! - I'm going with it in the end; it's marginally better than the other two options.   
+```{r save_diagn_plots_glms_lvm_zostera_2}
+png(here(figures.dir, "diagnostic_glms_lvm_zostera_2.png"), width = 25, height = 20, units = "cm", res = 300)
+plot.manyglm(glms.lvm.zostera.2, which = 1:3)
+dev.off()
 ```
 
 
@@ -1497,6 +1531,12 @@ write_rds(top.env.glm.red.zostera,
           here(save.dir, "glms_top_env_red_zostera.RDS"))
 ```
 
+Save the diagnostic plots.  
+```{r save_diagn_plots_top_glm_env_red_zostera}
+png(here(figures.dir, "diagnostic_top_glm_env_red_zostera.png"), width = 25, height = 20, units = "cm", res = 300)
+plot.manyglm(top.env.glm.red.zostera, which = 1:3)
+dev.off()
+```
 
 Run ANOVA on this model.
 ```{r anova_top_glm_env_red_zostera}
