@@ -1,0 +1,642 @@
+---
+title: "Ecological state of macrozoobenthic communities - Burgas Bay"
+date: "`r Sys.Date()`"
+output: html_notebook
+---
+
+This notebook contains the assessment and analysis of ecological state of macrozoobenthic communities in Burgas Bay (2013-14). The selected indices and statistics are the ones used for the national monitoring and assessments of soft bottom macrozoobenthos - H', AMBI, M-AMBI (both classical and simplified), and BENTIX - used in the Eastern Mediterranean (mostly Greece).   
+
+***  
+Setup!
+```{r setup, include = FALSE}
+library(knitr)
+
+knit_hooks$set(small.mar = function(before, options, envir) {
+    if (before) par(mar = c(2, 2, .1, 2))  # smaller margin on top
+})
+
+## set the working directory to one up (all notebooks - kept in their own subdirectory within the project directory).
+opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+
+## set knitr options for knitting code into the report.
+opts_chunk$set(cache = TRUE, # save results so that code blocks aren't re-run unless code changes
+               autodep = TRUE, # ..or unless a relevant earlier code block changed
+               cache.comments = FALSE, # don't re-run if the only thing that changed was the comments
+               highlight = TRUE, 
+               small.mar = TRUE)
+```
+
+Define the working subdirectories.  
+```{r workspace_setup}
+## print the working directory, just to be on the safe side
+paste("You are here: ", getwd())
+
+data.dir <- "data"    ## input data files
+functions.dir <- "R"  ## functions & scripts
+save.dir <- "output"  ## clean data, output from models & more complex calculations
+figures.dir <- "figs" ## plots & figures 
+```
+
+Import libraries.  
+```{r import_packages, results = FALSE}
+library(here) ## painless relative paths to subdurectories, etc.
+
+## NB these two import MASS, which masks dplyr::select - and I use the latter extensively, so I prefer it to be on top.. 
+library(sandwich) ## robust regression and corrections for multiple comparisons of means. 
+library(multcomp) ## robust regression and corrections for multiple comparisons of means
+
+library(tidyverse) ## data manipulation, cleaning, aggregation
+library(viridis) ## smart & pretty colour schemes
+```
+
+Import custom functions for index and EQR calculations, and for performance comparisons.  
+```{r import_custom_functions}
+source(here(functions.dir, "mambi_sigovini.R"))
+source(here(functions.dir, "bentix.R"))
+source(here(functions.dir, "eqr.R"))
+source(here(functions.dir, "indices_intercalibration.R"))
+```
+
+
+Organize some commonly-used ggplot2 modifications into a more convenient (and less repetitive) format. One day, I MUST figure out the proper way to set the theme..    
+```{r custom_ggplot_settings_helpers}
+## ggplot settings & things that I keep reusing
+# ggplot_theme <- list(
+#   theme_bw(),
+#   theme(element_text(family = "Times"))
+# )
+
+## always use black-and-white theme
+theme_set(theme_bw())
+
+## helper to adjust ggplot text size & avoid repetitions 
+text_size <- function(text.x = NULL,
+                      text.y = NULL,
+                      title.x = NULL,
+                      title.y = NULL,
+                      legend.text = NULL,
+                      legend.title = NULL, 
+                      strip.x = NULL, 
+                      strip.y = NULL) {
+  theme(axis.text.x = element_text(size = text.x),
+        axis.text.y = element_text(size = text.y),
+        axis.title.x = element_text(size = title.x),
+        axis.title.y = element_text(size = title.y),
+        legend.text = element_text(size = legend.text), 
+        legend.title = element_text(size = legend.title), 
+        strip.text.x = element_text(size = strip.x), 
+        strip.text.y = element_text(size = strip.y)
+        )
+}
+
+```
+
+***  
+
+#### **Sand stations (Burgas Bay, 2013-2014)**  
+Import zoobenthic abundance data (cleaned and prepared).  
+```{r import_zoo_abnd_sand}
+zoo.abnd.sand <- read_csv(here(save.dir, "abnd_sand_orig_clean.csv"))
+
+## a little mostly cosmetic modifications... 
+(zoo.abnd.sand <- zoo.abnd.sand %>% 
+    mutate(station = factor(station, levels = c("Kraimorie", "Chukalya", "Akin", "Sozopol", "Agalina", "Paraskeva"))) %>% 
+    ## add the biotopes manually (defined in the multivariate community structure analyses)
+    mutate(biotope = factor(rep(c("ILitMMelin", "ILitCSUpog", "ILitFSCham", "ILitMSVar", "ILitFSCham"), times = c(18, 9, 9, 9, 9)), levels = c("ILitMMelin", "ILitCSUpog", "ILitFSCham", "ILitMSVar"))) %>% 
+    select(station:replicate, biotope, everything())
+)
+```
+
+Import the ecological group classification of the species (I have a subset of the AMBI list including only the species in the current dataset).    
+```{r import_ecological_groups}
+ecol.groups <- read_csv(here(data.dir, "ecological_groups.csv"))
+
+## subset to the current species only
+ecol.groups.sand <- filter(ecol.groups, species %in% names(zoo.abnd.sand))
+```
+
+##### Calculate indices    
+###### **M-AMBI (classical)**  
+During the initial analyses, a particular behaviour of AZTI's M-AMBI software was discovered: if a species is marked as "ignored", it is dropped from **all** calculations, including richness and diversity. This is incorrect, in my opinion; it's better to put them as "not assigned" - in that case they are not included in AMBI, but are still counted for the richness and diversity - this is more logical. This way, calculation of M-AMBI by the script and by the software gives exactly the same result.  
+First, we'll do the classical calculation of M-AMBI (the others are always calculated the same): factor analysis and the old, non-specific reference values. 
+```{r mambi_classical_sand}
+## we need to jump through some hoops to use the function from Sigovini et al. (2013): it relies on row names for both the data and the ecological groups, and uses matrices.
+zoo.abnd.sand.mat <- as.matrix(zoo.abnd.sand %>% select(-c(station:biotope)))
+
+## this horror has duplicate row names, because it needs them to know how to aggregate the data by station later
+rownames(zoo.abnd.sand.mat) <- zoo.abnd.sand %>%
+    unite(station, year, month, col = "new_names") %>%
+    pull(new_names)
+
+eg.sand.ambi <- as.data.frame(ecol.groups.sand %>% select(ambi.eg))
+rownames(eg.sand.ambi) <- ecol.groups.sand %>% pull(species)
+
+## calculate the indices, using the classical formula & the old reference and classification values, and aggregating by station-sampling. This is only to get the classical M-AMBI values exactly as would be returned by the software
+(indices.classical.sand <- mambi_sigovini(zoo.abnd.sand.mat, eg.sand.ambi, 
+                                          trasf = "f", 
+                                          high = c(50, 4, 1.2), 
+                                          bad = c(15, 1.3, 5.5), 
+                                          st = factor(rownames(zoo.abnd.sand.mat), levels = unique(rownames(zoo.abnd.sand.mat))))) # this particular crap is to avoid alphabetical reordering later
+ 
+```
+
+Now, this results in a list; 1st element - total abundance, ecological group % & AMBI for each replicate; 2nd element - S, H', AMBI, M-AMBI (+ xyz coordinates if using the classical FA). In this particular instance, we only want to extract M-AMBI.     
+**NB in the first data frame in the list, the row names manage to get in alphabetical order - but the values are actually correct, I checked..**
+```{r extract_mambi_classical_sand}
+extract_index <- function(index.results, ...) {
+  ### helper to extract only what we want from the index calculation results. Unfortunately, requires knowing the exact column names.. 
+  ### Dependencies: tidyverse
+    
+    ## get the names of the columns we want to extract
+    cols_to_extract <- quos(...)
+    
+    ## convert to tibble, keeping the row names
+    index.tib <- as_tibble(rownames_to_column(index.results)) 
+    
+    index.subset <- index.tib %>%
+        select(rowname, !!!cols_to_extract) %>%
+        filter_at(vars(rowname), any_vars(. != "B" & . !="H")) # if there are two extra rows for bad and high status, drop them (not needed)
+
+    return(index.subset)    
+}
+
+## only keep M-AMBI
+mambi.classical.sand <- extract_index(indices.classical.sand[[2]], `M-AMBI`)
+mambi.classical.sand <- mambi.classical.sand %>%
+  separate(col = "rowname",
+           into = c("station", "year", "month"),
+           sep = "_") %>%
+  # convert variables back to the correct type
+  mutate(station = factor(station, levels = levels(zoo.abnd.sand$station)), 
+         year = as.numeric(year), 
+         month = as.numeric(month))
+
+## repeat each row 3 times, in order to have the same number of replicates as the other indices, even though M-AMBI is calculated over the aggregated replicates - will be needed for the index comparisons later.  
+(mambi.classical.sand <- mambi.classical.sand %>%
+    slice(rep(1:n(), each = 3))
+)
+```
+
+Look fine! Onwards.   
+
+###### **H', AMBI**  
+Now get AMBI & H' for each distinct replicate. AMBI is actually already calculated for each replicate (last column in df1 of the index result list), but then it gets averaged, and so does H'. So I'll resort to some cheating with row names to make the function think of each row as an independent station (and not a replicate).  
+```{r extract_h_ambi_sand}
+## change the row names of the data matrix to make the function think of each row as an independent station
+rownames(zoo.abnd.sand.mat) <- paste(zoo.abnd.sand %>% pull(station), 1:9, sep = "_")
+
+## calculate the indices again
+(indices.classical.sand.2 <- mambi_sigovini(zoo.abnd.sand.mat, eg.sand.ambi,
+                                            trasf = "f",
+                                            high = c(50, 4, 1.2),
+                                            bad = c(15, 1.3, 5.5),
+                                            st = factor(rownames(zoo.abnd.sand.mat), levels = unique(rownames(zoo.abnd.sand.mat))))
+)
+
+## this time, only keep S, H' and AMBI
+s.h.ambi.sand <- extract_index(indices.classical.sand.2[[2]], S, H1, AMBI)
+
+## get rid of the numbers at the end of the station names
+s.h.ambi.sand$rowname <- str_sub(s.h.ambi.sand$rowname, end = -3)
+
+## check...
+s.h.ambi.sand
+```
+
+I'll also keep the distribution of the ecological groups before getting rid of the unnecessary data frames.  
+```{r ecological_group_distribution_ambi_sand}
+## will use the 2nd iteration of the calculation, since the row names are unique and therefore preserved, and I need them to reorder the rows by station 
+(ambi.eg.distribution.sand <- extract_index(indices.classical.sand.2[[1]], `EG1(%)`, `EG2(%)`, `EG3(%)`, `EG4(%)`, `EG5(%)`, `NA`)
+)
+
+ambi.eg.distribution.sand <- ambi.eg.distribution.sand %>%
+  separate(col = "rowname",
+           into = c("station", "rep"), 
+           sep = "_")
+
+## convert station to factor & rearrange
+(ambi.eg.distribution.sand <- ambi.eg.distribution.sand %>%
+    mutate(station = factor(station, levels = levels(zoo.abnd.sand$station))) %>% 
+    arrange(station, rep) %>% 
+    select(-rep)
+)
+
+## add the year, month and replicate (for aggregations etc.)
+ambi.eg.distribution.sand <- bind_cols(ambi.eg.distribution.sand, 
+                                       zoo.abnd.sand %>% select(year, month, replicate))
+
+(ambi.eg.distribution.sand <- ambi.eg.distribution.sand %>%
+    select(station, year, month, replicate, everything())
+)
+```
+
+Save the AMBI EG distribution - who knows, I might need it some time.  
+```{r save_ambi_eg_sand}
+write_csv(ambi.eg.distribution.sand, 
+          here(save.dir, "ambi_eg_distribution_sand.csv"))
+```
+
+Summarize the AMBI EG distribution.  
+```{r summarize_ambi_eg_sand}
+## it's better to have long-format data for ggplot
+ambi.eg.sand.long <- ambi.eg.distribution.sand %>%
+    select(-c(year:replicate, `NA`)) %>%
+    gather(key = eg, value = distr, -station)
+
+## rename the EGs & convert them to factor (will color by EG)
+ambi.eg.sand.long$eg <- recode(ambi.eg.sand.long$eg, `EG1(%)` = "EG I", `EG2(%)` = "EG II", `EG3(%)` = "EG III", `EG4(%)` = "EG IV", `EG5(%)` = "EG V")
+
+ambi.eg.sand.long <- ambi.eg.sand.long %>%
+    mutate(eg = factor(eg, levels = (c("EG I", "EG II", "EG III", "EG IV", "EG V"))))
+
+## average across stations and EGs
+ambi.eg.sand.long.summary <- ambi.eg.sand.long %>%
+    group_by(station, eg) %>%
+    summarise(distr_mean = mean(distr))
+
+```
+
+Plot.. 
+```{r plot_ambi_eg_sand}
+## define custom colours for the EGs.. 
+eg.colours <- c("blue", "green", "yellow", "orange", "red")
+
+## plot as stacked bars
+(plot.ambi.eg.sand <- ggplot(ambi.eg.sand.long.summary, 
+                             aes(x = as.factor(as.numeric(station)), y = distr_mean, fill = eg)) + 
+    geom_bar(stat = "identity", colour = "grey15", size = 0.2) + 
+    scale_fill_manual(values = eg.colours, name = "") + 
+    scale_x_discrete(labels = paste0("S", unique(as.numeric(ambi.eg.sand.long.summary$station))
+)) + 
+    labs(x = "Station", y = "%") + 
+    theme(legend.position = "top") + 
+    text_size(legend.text = 14, 
+              text.x = 13, text.y = 13, 
+              title.x = 14, title.y = 14)
+)
+
+```
+
+Save the plot. I think the colours are exceptionally ugly, but I suppose there's nothing to be done, stupid standards.  
+```{r save_plot_ambi_eg_sand}
+ggsave(filename = here(figures.dir, "eg_ambi_sand.png"), 
+       plot.ambi.eg.sand, 
+       dpi = 300, width = 15, height = 15, units = "cm")
+
+```
+
+###### **BENTIX**
+On to the BENTIX calculations.  
+```{r bentix_sand}
+## get the ecological groups for BENTIX
+eg.sand.bentix <- as.data.frame(ecol.groups.sand %>% select(bentix.eg))
+rownames(eg.sand.bentix) <- ecol.groups.sand %>% pull(species)
+
+(bentix.sand <- bentix(zoo.abnd.sand.mat, ecological.groups = eg.sand.bentix))
+```
+
+Put all indices in one single tibble (to avoid excessive workspace clutter).
+```{r indices_all_sand}
+indices.all.sand <- bind_cols(mambi.classical.sand,
+                              s.h.ambi.sand %>% select(S, H1, AMBI),
+                              bentix.sand %>% select(BENTIX))
+
+## add the biotopes - will be useful for M-AMBI*n. Same as defined in the multivariate community structure analyses.  
+(indices.all.sand <- indices.all.sand %>%
+    mutate(biotope = zoo.abnd.sand$biotope) %>%
+    select(station:month, biotope, everything())
+)
+```
+
+Calculate the EQRs for AMBI, BENTIX and H'.  
+```{r calculate_eqr_sand}
+(indices.all.sand <- indices.all.sand %>%
+   mutate(AMBI.EQR = eqr(AMBI, ref.high = 0, ref.bad = 6), 
+          H.EQR = eqr(H1, ref.high = 4, ref.bad = 0),
+          BENTIX.EQR = eqr(BENTIX, ref.high = 6, ref.bad = 0))
+)
+```
+
+###### **M-AMBIn (simplified M-AMBI)**  
+M-AMBIn is a simplification of M-AMBI which is only a simple average of min-max normalized values. Each biotope is supposed to have specific reference values for all component indices; however, not all biotopes in the current dataset have them.  
+For the sake of completeness, for ILitMMelin, I'll use the reference values for ILitFSCham (there is some *C.gallina* at the sandy mud stations), and for ILitMSVar - the reference values for ILitCSUpog (they are closest in terms of species composition).     
+```{r mambi_new_sand}
+## I'm going to cheat a little and make a vector of the biotopes, which I'll use for subsetting the zoobenthos matrix by row index.. 
+biotopes.sand <- zoo.abnd.sand %>% pull(biotope)
+
+## calculate M-AMBI*n for ILitMMelin & ILitFSCham.   
+mambi.new.sand.1 <- mambi_sigovini(zoo.abnd.sand.mat[which(biotopes.sand %in% c("ILitMMelin", "ILitFSCham")), ],
+                                   eg.sand.ambi,
+                                   trasf = "n",
+                                   high = c(30, 3.4, 0.3),
+                                   bad = c(0, 0, 6)
+                                   )
+
+## for some reason, in this iteration of the calculation there is a warning - "the condition has length > 1 and only the first element will be used" - this must originate somewhere in the if branches where trasf = "n", but I couldn't find the culprit; this doesn't really affect the calculations, so it must be something relatively benign, and I don't have the nerves to track and debug it right now.
+
+## calculate M-AMBI*n for the other 2 biotopes
+mambi.new.sand.2 <- mambi_sigovini(zoo.abnd.sand.mat[which(biotopes.sand %in% c("ILitCSUpog", "ILitMSVar")), ],
+                                   eg.sand.ambi,
+                                   trasf = "n",
+                                   high = c(35, 3.4, 2.5),
+                                   bad = c(0, 0, 6)
+                                   )     
+
+## combine these to get the complete dataset
+mambi.new.sand <- bind_rows(extract_index(mambi.new.sand.1[[2]], `M-AMBI*(n)`),
+                            extract_index(mambi.new.sand.2[[2]], `M-AMBI*(n)`))
+
+(mambi.new.sand <- mambi.new.sand %>%
+    separate(col = "rowname", 
+             into = c("station", "rep"), 
+             sep = "_") %>%
+    mutate(station = factor(station, levels = levels(zoo.abnd.sand$station))) %>%
+    arrange(station)
+)
+
+## NB make sure the stations & replicates are in the correct order before proceeding!
+
+## add M-AMBI*n to the combined index dataset
+indices.all.sand <- indices.all.sand %>%
+    mutate(`M-AMBIn` = mambi.new.sand$`M-AMBI*(n)`)
+```
+
+Calculate M-AMBI*n EQRs according to biotope (same concessions as above).  
+```{r eqr_mambi_new_sand}
+indices.all.sand <- indices.all.sand %>%
+    mutate(`M-AMBIn.EQR` = case_when(biotope %in% c("ILitMMelin", "ILitFSCham") ~ eqr(`M-AMBIn`, ref.high = 0.87, ref.bad = 0), 
+                                     biotope %in% c("ILitCSUpog", "ILitMSVar") ~ eqr(`M-AMBIn`, ref.high = 0.96, ref.bad = 0)))
+
+## rearrange a little, just to appease my OCD
+(indices.all.sand <- indices.all.sand %>%
+    select(station:biotope, 
+           S, H1, AMBI, BENTIX, `M-AMBI`, `M-AMBIn`, 
+           H.EQR, AMBI.EQR, BENTIX.EQR, `M-AMBIn.EQR`)
+)
+```
+
+Save this, finally.  
+```{r save_indices_all_sand}
+write_csv(indices.all.sand, 
+          here(save.dir, "indices_all_sand.csv"))
+```
+
+
+##### Explore indices  
+Now we'll do some exploratory analyses & summaries on the indices.   
+I'll work mostly with the EQRs from now on (directly comparable).     
+```{r summarize_indices_st_sand}
+(ind.st.summary.sand <- indices.all.sand %>% 
+    group_by(station) %>%
+    select(`M-AMBI`, ends_with("EQR")) %>%
+    summarise_all(list(~mean(.), ~sd(.)))
+)
+```
+
+```{r summarize_indices_biotope_sand}
+(ind.biotope.summary <- indices.all.sand %>% 
+    group_by(biotope) %>%
+    select(`M-AMBI`, ends_with("EQR")) %>%
+    summarise_all(list(~mean(.), ~sd(.)))
+)
+```
+
+###### **Differences in assessment between stations and biotopes**
+Next, we want to see if the indices differ between **stations** - as a proxy to the anthropogenic pressure gradient, going from 1 (most impacted) to 6 (least impacted), and between **biotopes** - to see if index performance is influenced also by the structure & characteristics of the macrobenthic community.  
+Unfortunately, the distribution of the values is not normal - not really surprising for ecological data, but causes problems for parametric statistical tests such as ANOVA. This can easily be seen from the q-q plots:  
+```{r check_anova_residuals_indices_sand}
+mapply(function(x, y) car::qqPlot(aov(x ~ indices.all.sand$station)$residuals, line = "robust", main = y),
+       x = indices.all.sand %>% select(`M-AMBI`, ends_with("EQR")), 
+       y = names(indices.all.sand %>% select(`M-AMBI`, ends_with("EQR")))
+       )
+```
+
+The worst offender is, by far, AMBI (most extreme outlier - #21, Akin). In general, Akin samples are responsible for this - they have extremely high variance, with Sozopol, Paraskeva & sometimes Chukalya also contributing to the distortions.  
+```{r plot_index_variance_sand}
+mapply(function(x, y) stripchart(x ~ indices.all.sand$station, main = y),
+       x = indices.all.sand %>% select(`M-AMBI`, ends_with("EQR")), 
+       y = names(indices.all.sand %>% select(`M-AMBI`, ends_with("EQR")))
+       )
+```
+
+These outliers cannot be removed from the dataset in good conscience - they are not the result of an error of measurement, manipulation or other. Rather, they are probably a reflection of the natural variability and mosaic distribution of the zoobenthic communities. From the MDS plot & cluster analysis it's clear to which community/biotope the samples belong (there is little overlap).  
+Therefore, we have to look for **alternatives to normal ANOVA** that can deal with outliers. One such method is **robust regression** (source of original code & ideas: https://stats.idre.ucla.edu/r/dae/robust-regression/). The idea of robust regression is to weigh the observations differently based on how well behaved these observations are. Roughly speaking, it is a form of weighted and reweighted least squares regression.  
+Robust regression is done by iteratively re-weighted least squares (IRLS). There are several weighting functions that can be used for IRLS; here, we are going to use Huber weights. Side note: in OLS regression, all cases have a weight of 1. Hence, the more cases in the robust regression that have a weight close to one, the closer the results of the OLS and robust regressions. If the results are very different, we will most likely want to use the results from the robust regression. Large differences suggest that the model parameters are being highly influenced by outliers. Huber weights can have difficulties with severe outliers, and bisquare weights can have difficulties converging or may yield multiple solutions.  
+Robust regression does not address issues of heterogeneity of variance. This problem can be addressed by using functions in the sandwich package after the lm function -> estimate valid standard errors for our coefficients in linear regression, without requiring (the usual assumption) that the residual errors have constant variance.  
+Here, after much digging, reading and wondering about all that, I settled on this procedure: **multiple comparison of means using heteroscedastic consistent covariance estimation** (Herberich et al, 2010. A Robust Procedure for Comparing Multiple Means under Heteroscedasticity in Unbalanced Designs. PLoS ONE 5(3): e9788. https://doi.org/10.1371/journal.pone.0009788).  
+
+First - robust regression with station as factor.  
+```{r robust_regression_ind_station_sand}
+ind.rr.st.sand <- apply(indices.all.sand %>% dplyr::select(`M-AMBI`, ends_with("EQR")), 
+                        2,
+                        function(x) MASS::rlm(x ~ station, data = indices.all.sand)
+                        )
+
+lapply(ind.rr.st.sand, summary)
+```
+
+Now we'll do the appropriate post-hoc tests to see where the largest differences are.
+```{r posthoc_ind_station_sand}
+ind.glht.st.sand <- lapply(ind.rr.st.sand,
+                           function(x) glht(x, mcp(station = "Tukey"), vcov = vcovHC))
+
+mcp.st.labels.sand <- lapply(ind.glht.st.sand, multcomp::cld) # get some labels for the summary plots - significance of the comparisons
+
+lapply(ind.glht.st.sand, summary)
+```
+
+Now - robust regression with biotopes as factor.  
+(MASS::rlm doesn't like multiple regression with both stations and biotopes, because there are multiple duplicate combinations of the two factors, which causes multicollnearity & hence breaks the analysis).  
+```{r robust_regression_ind_biotope_sand}
+ind.rr.biotope.sand <- apply(indices.all.sand %>% dplyr::select(`M-AMBI`, ends_with("EQR")),
+                             2,
+                             function(x) MASS::rlm(x ~ biotope, data = indices.all.sand)
+                             )
+
+lapply(ind.rr.biotope.sand, summary)
+```
+
+... and the post-hoc tests:  
+```{r posthoc_ind_biotope_sand}
+ind.glht.biotope.sand <- lapply(ind.rr.biotope.sand,
+                                function(x) glht(x, mcp(biotope = "Tukey"), vcov = vcovHC))
+
+mcp.biotope.labels.sand <- lapply(ind.glht.biotope.sand, multcomp::cld) # get some labels for the summary plots - significance of the comparisons
+
+lapply(ind.glht.biotope.sand, summary)
+```
+
+Ok, now we know there are **significant differences** in index assessments between stations as well as between biotopes (+ between which pairs). Let's plot them, using the summary tables we did before (mean + sd):  
+```{r ind_summary_stations_long_sand}
+## reshape the index summary tibble - long
+ind.st.summary.sand.long <- ind.st.summary.sand %>%
+    # dplyr::select(-starts_with("M-AMBIn")) %>% # not part of the analysis here
+    gather(key = ind, value = ind_value, -station) %>%
+    ## separate the index column into 2: index and variable (mean or sd)
+    separate(ind, into = c("index", "var"), sep = "_") %>% 
+    spread(var, ind_value)
+
+## get rid of the "EQR" at the end of the index names
+ind.st.summary.sand.long <- ind.st.summary.sand.long %>%
+  mutate(index = gsub(index, pattern = ".EQR", replacement = ""))
+
+## replace H with H' and convert index to factor (to have them in the desired order)
+(ind.st.summary.sand.long <- ind.st.summary.sand.long %>%
+    mutate(index = gsub(index, pattern = "H", replacement = "H'")) %>%
+    mutate(index = factor(index, levels = c("AMBI", "BENTIX", "H'", "M-AMBI", "M-AMBIn")))
+)
+```
+
+
+We need to get and add the significance labels (will make life immensely easier if they are in the same tibble).
+```{r labels_plot_ind_summary_stations_sand}
+## extract the significance letter labels that we generated before. Don't ask how I came to this - I remember digging relentlessly through blogs and forums, and nearly going crazy with it..   
+ind.st.labels.sand <- plyr::ldply(mcp.st.labels.sand, function(x) x[[10]][[1]])
+
+## fix index names
+ind.st.labels.sand$.id <- recode(ind.st.labels.sand$.id, 
+                                 "H.EQR" = "H'", "AMBI.EQR" = "AMBI", "M-AMBI" = "M-AMBI", "BENTIX.EQR" = "BENTIX", "M-AMBIn.EQR" = "M-AMBIn")
+
+ind.st.labels.sand$.id <- factor(ind.st.labels.sand$.id, levels = c("AMBI", "BENTIX", "H'", "M-AMBI", "M-AMBIn"))
+
+ind.st.labels.sand
+
+## convert to long, rename the index column & make station a factor
+ind.st.labels.sand.long <- ind.st.labels.sand %>%
+    gather(key = station, value = label, -.id) %>%
+    rename(index = .id) %>%
+    mutate(station = factor(station, levels = levels(zoo.abnd.sand$station)))
+
+## add to the dataset for plotting
+(ind.st.summary.sand.long <- left_join(ind.st.summary.sand.long, 
+                                       ind.st.labels.sand.long, 
+                                       by = c("station", "index"))
+)
+```
+
+Make another tibble to hold the ecological class limits for the summary plots (by stations & biotopes). The idea is to make them appear as horizontal lines over the plot.    
+```{r class_limits_indices}
+## the limtis are in descending order: HG, GM, MP, PB. They will be the same for the seagrass, so I'm not attaching qualifiers to the object name. Remember that when looking for them later! 
+(ind.limits <- tibble("H'" = c(0.89, 0.69, 0.49, 0.29),
+                      "AMBI" = c(0.83, 0.53, 0.39, 0.21),
+                      "M-AMBI" = c(0.85, 0.55, 0.39, 0.2),
+                      "BENTIX" = c(0.75, 0.58, 0.42, 0), 
+                      "M-AMBIn" = c(0.87, 0.66, 0.44, 0.22))
+)
+
+## convert to long
+ind.limits.long <- ind.limits %>%
+    gather(key = index, value = limits)
+```
+
+Plot the comparison of the indices by station.  
+```{r plot_ind_summary_stations_sand}
+plot.ind.st.summary.sand <- ggplot(ind.st.summary.sand.long, 
+                                   aes(x = as.numeric(station), y = mean)) + 
+  geom_bar(position = position_dodge(), stat = "identity", fill = "grey60") +
+  ## error bars = sd
+  geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd),
+                width = 0.15, colour = "grey30", position = position_dodge(0.9)) + 
+  ## labels - significant difference pairs (above error bars)
+  geom_text(aes(x = as.numeric(station), y = mean + sd, label = label), vjust = -0.3, size = 2.5) +
+  labs(x = "Station", y = "EQR") + 
+  facet_wrap(~index) +
+  scale_y_continuous(breaks = seq(0, 1, 0.25)) + 
+  scale_x_continuous(breaks = 1:6, labels = paste0("S", unique(as.numeric(ind.st.summary.sand.long$station)))) + 
+  text_size(text.x = 12, text.y = 12, title.x = 12, title.y = 12, strip.x = 12)
+
+## add the limits of the ecological classes for each index
+## NB names of indices (facets) have to match in order for the lines to go where they should (otherwise they'll go in separate, additional facets)!
+(plot.ind.st.summary.sand <- plot.ind.st.summary.sand + 
+    geom_hline(data = ind.limits.long, aes(yintercept = limits), lwd = 0.2, colour = "grey30") 
+)
+
+```
+
+I really don't like the lines (nor the fact that I have to add labels manually later, outside of R), but I suppose it can't be helped, at least now.   
+
+Save the station summary plot. 
+```{r save_plot_ind_summary_stations_sand}
+ggsave(here(figures.dir, "ind_station_summary_sand.png"),
+       plot.ind.st.summary.sand, 
+       dpi = 300, width = 17, height = 15, units = "cm")
+
+```
+
+
+Make another summary plot for the biotopes.
+```{r ind_summary_biotopes_long_sand}
+ind.biotope.summary.sand.long <- ind.biotope.summary %>%
+    gather(key = ind, value = ind_value, -biotope) %>%
+    ## separate the index column into 2: index and variable (mean or sd)
+    separate(ind, into = c("index", "var"), sep = "_") %>% 
+    spread(var, ind_value)
+
+## get rid of the "EQR" at the end of the index names
+ind.biotope.summary.sand.long <- ind.biotope.summary.sand.long %>%
+  mutate(index = gsub(index, pattern = ".EQR", replacement = ""))
+
+## replace H with H' and convert index to factor (to have them in the desired order)
+(ind.biotope.summary.sand.long <- ind.biotope.summary.sand.long %>%
+    mutate(index = gsub(index, pattern = "H", replacement = "H'")) %>%
+    mutate(index = factor(index, levels = c("AMBI", "BENTIX", "H'", "M-AMBI", "M-AMBIn"))) %>%
+    mutate(biotope = factor(biotope, levels = levels(indices.all.sand$biotope)))
+)
+```
+
+Get the significance labels.
+```{r labels_plot_ind_summary_biotopes_sand}
+## extract the significance letter labels that we generated before. 
+ind.biotope.labels.sand <- plyr::ldply(mcp.biotope.labels.sand, function(x) x[[10]][[1]])
+
+## fix index names
+ind.biotope.labels.sand$.id <- recode(ind.biotope.labels.sand$.id,
+                                      "H.EQR" = "H'", "AMBI.EQR" = "AMBI", "M-AMBI" = "M-AMBI", "BENTIX.EQR" = "BENTIX", "M-AMBIn.EQR" = "M-AMBIn")
+
+ind.biotope.labels.sand$.id <- factor(ind.biotope.labels.sand$.id, levels = c("AMBI", "BENTIX", "H'", "M-AMBI", "M-AMBIn"))
+
+ind.biotope.labels.sand
+
+## convert to long & rename the index column
+ind.biotope.labels.sand.long <- ind.biotope.labels.sand %>%
+    gather(key = biotope, value = label, -.id) %>%
+    rename(index = .id) %>%
+    mutate(biotope = factor(biotope, levels = levels(indices.all.sand$biotope)))
+
+## add to the dataset for plotting
+(ind.biotope.summary.sand.long <- left_join(ind.biotope.summary.sand.long, 
+                                            ind.biotope.labels.sand.long, 
+                                            by = c("biotope", "index"))
+)
+```
+
+Plot, keeping the x axis numeric, because the biotope codes take up too much space otherwise, and making them readable is a hassle. For the record, they are in order of the factor levels: 1 - ILitMMelin, 2 - ILitCSUpog, 3 - ILitFSCham, 4 - ILitMSVar.  
+```{r plot_ind_summary_biotopes_sand}
+plot.ind.biotope.summary.sand <- ggplot(ind.biotope.summary.sand.long, 
+                                        aes(x = as.numeric(biotope), y = mean)) + 
+  geom_bar(position = position_dodge(), stat = "identity", fill = "grey60") +
+  ## error bars = sd  
+  geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd),
+                width = 0.15, colour = "grey30", position = position_dodge(0.9)) +
+  ## labels - significant differences between pairs
+  geom_text(aes(x = as.numeric(biotope), y = mean + sd, label = label), vjust = -0.3, size = 2.5) +
+  labs(x = "Biotope", y = "EQR") + 
+  facet_wrap(~index) +
+  scale_y_continuous(breaks = seq(0, 1, 0.25)) + 
+  scale_x_continuous(breaks = 1:4) + 
+  text_size(text.x = 12, text.y = 12, title.x = 12, title.y = 12, strip.x = 12)
+
+## add the limits of the ecological classes for each index
+(plot.ind.biotope.summary.sand <- plot.ind.biotope.summary.sand + 
+    geom_hline(data = ind.limits.long, aes(yintercept = limits), lwd = 0.2, colour = "grey30") 
+)
+```
+
+Save this plot.  
+```{r save_plot_ind_summary_biotopes_sand}
+ggsave(here(figures.dir, "ind_biotope_summary_sand.png"),
+       plot.ind.biotope.summary.sand, 
+       dpi = 300, width = 17, height = 15, units = "cm")
+
+```
+

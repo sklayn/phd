@@ -506,15 +506,6 @@ plot(env.glms.sand)
 ## all traditional (g)lm diagnostic plots
 plot.manyglm(env.glms.sand, which = 1:3)
 
-
-# ### source mvabund GLM plotting functions modified to use a grey palette - I just can't redo these plots on my own, the function is doing too complicated things internally to scale the x and y axes
-# source(here(functions.dir, "default.plot.manyglm_grey.R"))
-# source(here(functions.dir, "plot.manyglm_grey.R"))
-# 
-# par(mfrow = c(2,2))
-# lapply(1:3, function(i) plot.manyglm.grey(glms.lvm.sand, which = i, sub.caption = ""))
-# par(mfrow = c(1, 1))
-
 ```
 
 Well, it's good enough if you ask me (still the kinda strange "line" at lin.pred = -6; otherwise residuals are random enough).  
@@ -677,7 +668,6 @@ abnd.top.sp.glms.env.red.sand <- zoo.abnd.sand %>%
 )
 ```
 
-FIXME>>>
 Try another thing - manually, unfortunately: this same nightmare, but colored by the values of each model term. 
 ```{r composite_plot_relative_taxon_contrib_top_glm_env_sand}
 ggplot(abnd.top.sp.glms.env.red.sand,
@@ -955,15 +945,6 @@ plot(glms.lvm.zostera.1)
 
 ## all traditional (g)lm diagnostic plots
 plot.manyglm(glms.lvm.zostera.1, which = 1:3)
-
-# ### source mvabund GLM plotting functions modified to use a grey palette - I just can't redo these plots on my own, the function is doing too complicated things internally to scale the x and y axes
-# source(here(functions.dir, "default.plot.manyglm_grey.R"))
-# source(here(functions.dir, "plot.manyglm_grey.R"))
-# 
-# par(mfrow = c(2,2))
-# lapply(1:3, function(i) plot.manyglm.grey(glms.lvm.zostera, which = i, sub.caption = ""))
-# par(mfrow = c(1, 1))
-
 ```
 
 I really don't like the rainbow palette, but I would like to include these plots in my thesis results.. Will have to do something about it, just not right now.  
@@ -1295,15 +1276,6 @@ plot(glms.lvm.zostera.3)
 
 ## all traditional (g)lm diagnostic plots
 plot.manyglm(glms.lvm.zostera.3, which = 1:3)
-
-# ### source mvabund GLM plotting functions modified to use a grey palette - I just can't redo these plots on my own, the function is doing too complicated things internally to scale the x and y axes
-# source(here(functions.dir, "default.plot.manyglm_grey.R"))
-# source(here(functions.dir, "plot.manyglm_grey.R"))
-# 
-# par(mfrow = c(3,3))
-# lapply(3:3, function(i) plot.manyglm.grey(glms.lvm.zostera, which = i, sub.caption = ""))
-# par(mfrow = c(3, 3))
-
 ```
 
 Save the model!  
@@ -1484,19 +1456,8 @@ Explore the fit (residuals, diagnostic plots, etc.).
 ## residuals vs fitted values
 plot(env.glms.zostera)
 
-
 ## all traditional (g)lm diagnostic plots
 plot.manyglm(env.glms.zostera, which = 1:3)
-
-
-# ### source mvabund GLM plotting functions modified to use a grey palette - I just can't redo these plots on my own, the function is doing too complicated things internally to scale the x and y axes
-# source(here(functions.dir, "default.plot.manyglm_grey.R"))
-# source(here(functions.dir, "plot.manyglm_grey.R"))
-# 
-# par(mfrow = c(2,2))
-# lapply(1:3, function(i) plot.manyglm.grey(glms.lvm.zostera, which = i, sub.caption = ""))
-# par(mfrow = c(1, 1))
-
 ```
 
 Well, it's good enough if you ask me (still the kinda strange "line" at lin.pred = -6; otherwise residuals are random enough).  
@@ -1518,7 +1479,6 @@ Check its fit.
 ```{r explore_top_glm_env_red_zostera}
 ## residuals vs fitted values
 plot(top.env.glm.red.zostera)
-
 
 ## all traditional (g)lm diagnostic plots
 plot.manyglm(top.env.glm.red.zostera, which = 1:3)
