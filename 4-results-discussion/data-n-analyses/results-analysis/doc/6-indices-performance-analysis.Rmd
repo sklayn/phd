@@ -115,7 +115,7 @@ ecol.groups <- read_csv(here(data.dir, "ecological_groups.csv"))
 ecol.groups.sand <- filter(ecol.groups, species %in% names(zoo.abnd.sand))
 ```
 
-##### Calculate indices    
+##### Index calculation   
 ###### **M-AMBI (classical)**  
 During the initial analyses, a particular behaviour of AZTI's M-AMBI software was discovered: if a species is marked as "ignored", it is dropped from **all** calculations, including richness and diversity. This is incorrect, in my opinion; it's better to put them as "not assigned" - in that case they are not included in AMBI, but are still counted for the richness and diversity - this is more logical. This way, calculation of M-AMBI by the script and by the software gives exactly the same result.  
 First, we'll do the classical calculation of M-AMBI (the others are always calculated the same): factor analysis and the old, non-specific reference values. 
@@ -382,7 +382,7 @@ write_csv(indices.all.sand,
 ```
 
 
-##### Explore indices  
+##### Exploratory analysis  
 Now we'll do some exploratory analyses & summaries on the indices.   
 I'll work mostly with the EQRs from now on (directly comparable).     
 ```{r summarize_indices_st_sand}
@@ -640,3 +640,707 @@ ggsave(here(figures.dir, "ind_biotope_summary_sand.png"),
 
 ```
 
+
+##### Index performance vs environmental parameters  
+###### **Normalize indices (MEDGIG)**    
+We'll normalize the index EQRs before going on to compare them among themselves & with the environmental parameters, as was done in the MEDGIG intercalibrations (van de Bund et al. 2008).  
+```{r normalize_indices_sand}
+## uses my custom function for the normalization 
+(indices.all.norm.sand <- as_tibble(mapply(normalize_index,
+                                           indices.all.sand %>% dplyr::select(`M-AMBI`, ends_with("EQR")) %>% dplyr::select(H.EQR, AMBI.EQR, `M-AMBI`, BENTIX.EQR, `M-AMBIn.EQR`),
+                                           ind.limits,
+                                           SIMPLIFY = FALSE))    
+)    
+```
+
+###### **Correlation with environmental parameters**  
+Good, useful biotic indices respond to changes in community structure related to pressure (natural or anthropogenic). Therefore, in a pressure gradient such as the one in Burgas Bay (demonstrated by the change in environmental variables & LUSI), they are expected to be correlated with the the environmental parameters: negatively with the eutrophication & pollution indicators & LUSI, positively with parameters such as dissolved O2, water transparency etc. The performance won't be terribly good anyway because of the natural variability of the communities (see previous analyses by biotope).   
+
+Import environmental data for sand.  
+Again, as before, I'll use the most significant ones determined by PCA: LUSI, secchi, seston, PO4, NH4, NO3 + all sediment parameters (except the most inter-correlated): TOM, moisture content, gravel and silt_clay.  
+Import the environmental parameters (from the cleaned files; see multivariate analyses notebook).  
+```{r import_env_data_sand}
+(env.data.sand <- read_csv(here(save.dir, "env_data_ordinations_sand.csv"))
+)
+```
+
+Calculate the correlations.. 
+```{r ind_correlations_env_sand}
+ind.corr.env.sand <- Hmisc::rcorr(as.matrix(bind_cols(indices.all.norm.sand, S = indices.all.sand$S)), # also include S - as suggested by article review
+                                  as.matrix(env.data.sand %>% dplyr::select(-station)), 
+                                  type = "spearman")
+
+
+corstars <- function(corr.result) {
+  ### helper to label the significant correlations with the corresponding number of stars (source: http://myowelt.blogspot.bg/2008/04/beautiful-correlation-tables-in-r.html)
+  ### Arguments: corr.result - list of correlation results obtained by Hmisc::corr
+    
+    ## extract the correlation coefficients and p-values from the list  
+    r <- corr.result$r
+    p <- corr.result$P ## mind the capital P!
+
+    ## define notions for significance levels; spacing is important.
+    stars <- ifelse(p < 0.001, "***", 
+                    ifelse(p < 0.01, "**", 
+                           ifelse(p < 0.05, "*", "")))
+
+    ## truncate the matrix that holds the correlations to two decimals
+    r <- round(r, 2)
+
+    ## build a new matrix that includes the correlations with their appropriate stars
+    rstars <- matrix(paste(as.character(r), stars, sep = ""), ncol = ncol(r))
+    
+    diag(rstars) <- diag(r)
+    rownames(rstars) <- rownames(r)
+    colnames(rstars) <- colnames(r)
+
+    ## remove upper triangle
+    rstars[upper.tri(rstars, diag = TRUE)] <- ""
+    rstars <- as.data.frame(rstars)
+
+    ## remove last column and return the now-data frame
+    rstars <- rstars[1:length(rstars) - 1]
+    return(rstars)
+} 
+
+corstars(ind.corr.env.sand)
+
+## kable(corstars(ind.corr.env.sand)) # better-looking table
+```
+
+**NB M-AMBIn**   
+M-AMBI*n is a special case: it has superceded M-AMBI in the national monitoring since 2015, but does not yet have ecological class limits for all biotopes. Case in point - in this study, two biotopes have limits, and two do not.  
+To prove that when the limits **are** adjusted for the particular characteristics of the biotope, the index functions well, we'll calculate its correlations with the environmental parameters; however, we'll only include the high-confidence samples (those from biotopes with adapted ES limits - st. 3, 4, 6) - and recalculate.  
+
+NB The index values here are NOT normalized (still not sure if they should be - as far as I can tell, it's only useful/justified for pairwise comparisons of indices as in the intercalibration). If this is the case, then the previous correlation matrix is wrong and should be redone using non-normalized index values.  
+```{r mambi_new_correlations_env_sand}
+mambin.corr.env.sand <- Hmisc::rcorr(as.matrix(indices.all.sand %>% filter(station %in% c("Akin", "Sozopol", "Paraskeva")) %>% dplyr::select(`M-AMBIn.EQR`)), 
+                                     as.matrix(env.data.sand %>% filter(station %in% c("Akin", "Sozopol", "Paraskeva")) %>% dplyr::select(-station)), 
+                                     type = "spearman")
+
+
+corstars(mambin.corr.env.sand) 
+```
+
+This is much, much better than before - significant negative correlations with the eutrophication parameteres & LUSI and sediment silt-clay, and significant positive with water transparency. Not good - significant correlation with TOM, but it has only been measured 3 times during this study, and not even that sometimes, so not much can be expected. Also a bit strange - inclusion of the other sediment parameters (gravel, moisture content) - they're not really indicative of any sort of pressure (in fact, they're a remnant of the community structure analyses, where they do serve a purpose).  
+
+###### **Index agreement analyses**  
+Not only are indices supposed to react to changes in benthic community structure, they should also agree with each other, so that they can be applied with good confidence in the study area, and the assessments are comparable with those coming from other areas (i.e., "good" means the same thing everywhere).  
+This was the principle behind the various intercalibrations - make sure all assessments mean the same thing. To test it here, the suggested procedures / indicators from van de Bund et al. (2008) will be applied: the absolute average class difference and the percentage agreement (as supporting measure).  
+```{r index_absolute_class_difference_sand}
+## calculate the absolute class difference - NB this is NOT the average - will have to be calculated later. Uses custom function
+(ind.abs.class.diff.sand <- ind_abs_diff(indices.all.norm.sand, nb.classes = 5))
+```
+
+```{r plot_index_absolute_aver_diff_sand}
+## calculate the average class difference, and prepare data for plotting
+ind.abs.av.class.diff.sand <- bind_rows(colMeans(ind.abs.class.diff.sand)) ## THIS actually calculates the average class difference - by column 
+
+## convert to long and prepare for plotting (fix names and labels,..)
+ind.abs.av.class.diff.sand.long <- ind.abs.av.class.diff.sand %>%
+  gather(key = ind, value = diff)
+
+(ind.abs.av.class.diff.sand.long <- ind.abs.av.class.diff.sand.long %>%
+    arrange(desc(diff)) %>%
+    mutate(ind = gsub(".EQR", "", x = ind)) %>%
+    mutate(ind = gsub("H", "H'", x = ind)) %>%
+    mutate(ind = factor(ind, levels = ind)) ## this order is necessary, because I want indices on the y axis, and ggplot will plot them bottom to top, alphabetically, regardless of what I tell it
+)
+
+(plot.ind.abs.av.class.diff.sand <- ggplot(ind.abs.av.class.diff.sand.long, 
+                                           aes(x = ind, y = diff)) + 
+    geom_bar(stat = "identity") + 
+    geom_hline(yintercept = 0.5) + # the acceptable difference limit according to the intercalibration
+    coord_flip() + 
+    labs(x = "", y = "Absolute class difference") + 
+    text_size(text.x = 12, text.y = 12, title.y = 12)
+)   
+```
+
+This is interesting..  
+The highest agreement is between M-AMBI and M-AMBIn - the only acceptable one, really.. Didn't much expect that. Might be due to the lack of appropriate ES boundaries for half the biotopes in my dataset.  
+Then, H' and M-AMBIn have a relatively low agreement - same as AMBI and M-AMBI, actually. This is cool - H' is no longer the dominant component in the formation of the assessment by M-AMBIn Considering its shortcomings (non-linear reaction to community changes, susceptibility to dominance in the communities, dependence on sampling effort), this is a good thing.  
+M-AMBIn and BENTIX also don't really agree at all - it's even worse than the agreement with M-AMBI. BENTIX really only likes to play with AMBI - understandable, since it's an AMBI variation.  
+
+Save the plot.  
+```{r save_plot_index_absolute_aver_diff_sand}
+ggsave(here(figures.dir, "ind_abs_class_diff_sand.png"), 
+       plot.ind.abs.av.class.diff.sand, 
+       dpi = 300, width = 16, height = 15, units = "cm")
+```
+
+Calculate the percentage agreement between indices.
+```{r index_percentage_agreement_sand}
+## summarize the calculated class differences (for 5 classes)
+ind.percent.agreement.sand <- as_tibble(ind.abs.class.diff.sand) %>% 
+    gather(key = ind, value = diff) %>%
+    ## recode the class difference so that all differences of > 2 classes form a single group
+    mutate(diff = recode(diff, "0" = 0, "1" = 1, "2" = 2, "3" = 3, "4" = 3)) %>%
+    group_by(ind, diff) %>%
+    summarize(count = n()) %>%
+    ungroup()
+
+## calculate the % agreement 
+ind.percent.agreement.sand <- ind.percent.agreement.sand %>% 
+  group_by(ind) %>% 
+  mutate(percent_agr = count/sum(count) * 100)
+  
+## fix names a bit (as before)
+(ind.percent.agreement.sand <- ind.percent.agreement.sand %>%
+    ungroup() %>%
+    mutate(ind = gsub(".EQR", "", x = ind)) %>%
+    mutate(ind = gsub("H", "H'", x = ind)) %>%
+    arrange(diff, desc(percent_agr))
+)
+```
+
+```{r plot_index_percentage_agreement_sand}
+## we'll plot as stacked bar chart with fill colors by level of agreement (diff); we need to put the fill factor in descending order, because ggplot stacks bottom to top.
+ind.percent.agreement.sand <- ind.percent.agreement.sand %>%
+    mutate(diff = factor(diff, levels = rev(0:3))) %>%
+    mutate(ind = factor(ind, levels = rev(unique(ind)))) # in reverse order, so that on the plot, they'll come out arranged by highest % perfect agreement (diff = 0)
+
+## plot 
+(plot.ind.percent.agr.sand <- ggplot(ind.percent.agreement.sand, 
+                                     aes(x = ind, y = percent_agr, fill = diff)) + 
+        geom_bar(stat = "identity", colour = "grey40", size = 0.25) + 
+        # very ugly padding hack to increase spacing of legend items:
+        scale_fill_grey(start = 0.4, end = 1, name = "", 
+                        labels = c(" >2 classes difference  ",
+                                   " 2 classes difference  ",
+                                   " 1 class difference  ",
+                                   " Agreement  ")) +
+        labs(x = "", y = "%") + 
+        coord_flip() +
+        guides(fill = guide_legend(reverse = TRUE, nrow = 2, byrow = FALSE)) + # reverse the order of the legend, it gets messed up when putting it on top
+        theme(legend.position = "top") + 
+        text_size(text.x = 12, text.y = 12, legend.text = 12, title.y = 12)
+)
+```
+
+Well, as expected, based on the previous analysis.. The same pairs have the highest % agreement, and most often - only 1 class difference.. Then, from H'-M-AMBIn down - all over the place; it's like they go completely random, evenly spread across classes.  
+
+**What WOULD be interesting to do would be to find where - and in how many cases - the diffences cross the good-moderate border - that would be the one requiring measures to be taken.**  
+
+Save this plot.  
+```{r save_plot_index_percentage_agreement_sand}
+ggsave(here(figures.dir, "ind_perc_agreement_sand.png"), 
+       dpi = 300, width = 16, height = 15, units = "cm")
+```
+
+
+#### **Seagrass stations (Burgas Bay, 2013-2014)**  
+Import zoobenthic abundance data (cleaned and prepared).  
+```{r import_zoo_abnd_zostera}
+zoo.abnd.zostera <- read_csv(here(save.dir, "abnd_zostera_orig_clean.csv"))
+
+## a little mostly cosmetic modifications... 
+(zoo.abnd.zostera <- zoo.abnd.zostera %>% 
+    mutate(station = factor(station, levels = c("Poda", "Otmanli", "Vromos", "Gradina", "Ropotamo"))) 
+)
+```
+
+Subset the ecological groups for the species in the seagrass dataset (not really necessary, but oh well)..  
+```{r subset_ecological_groups_zostera}
+## subset to the current species only
+ecol.groups.zostera <- filter(ecol.groups, species %in% names(zoo.abnd.zostera))
+```
+
+
+##### Index calculation   
+###### **M-AMBI (classical)**  
+Calculate the classical M-AMBI (the others are always calculated the same): factor analysis and the old, non-specific reference values. 
+```{r mambi_classical_zostera}
+## we need to jump through some hoops to use the function from Sigovini et al. (2013): it relies on row names for both the data and the ecological groups, and uses matrices.
+zoo.abnd.zostera.mat <- as.matrix(zoo.abnd.zostera %>% dplyr::select(-c(station:replicate)))
+
+## this horror has duplicate row names, because it needs them to know how to aggregate the data by station later
+rownames(zoo.abnd.zostera.mat) <- zoo.abnd.zostera %>%
+  unite(station, year, month, col = "new_names") %>%
+  pull(new_names)
+
+eg.zostera.ambi <- as.data.frame(ecol.groups.zostera %>% dplyr::select(ambi.eg))
+rownames(eg.zostera.ambi) <- ecol.groups.zostera %>% pull(species)
+
+## calculate the indices, using the classical formula & the old reference and classification values, and aggregating by station-sampling. This is only to get the classical M-AMBI values exactly as would be returned by the software
+(indices.classical.zostera <- mambi_sigovini(zoo.abnd.zostera.mat, eg.zostera.ambi,
+                                             trasf = "f",
+                                             high = c(50, 4, 1.2), 
+                                             bad = c(15, 1.3, 5.5),
+                                             st = factor(rownames(zoo.abnd.zostera.mat), levels = unique(rownames(zoo.abnd.zostera.mat))))) # this particular crap is to avoid alphabetical reordering later
+```
+
+Extract M-AMBI from the second df in the list result.  
+```{r extract_mambi_classical_zostera}
+## only keep M-AMBI
+mambi.classical.zostera <- extract_index(indices.classical.zostera[[2]], `M-AMBI`)
+mambi.classical.zostera <- mambi.classical.zostera %>%
+  separate(col = "rowname",
+           into = c("station", "year", "month"),
+           sep = "_") %>%
+  # convert variables back to the correct type
+  mutate(station = factor(station, levels = levels(zoo.abnd.zostera$station)), 
+         year = as.numeric(year), 
+         month = as.numeric(month))
+
+## repeat each row 4 times, in order to have the same number of replicates as the other indices, even though M-AMBI is calculated over the aggregated replicates - will be needed for the index comparisons later.  
+(mambi.classical.zostera <- mambi.classical.zostera %>%
+    slice(rep(1:n(), each = 4))
+)
+```
+
+Look fine! Onwards.   
+
+###### **H', AMBI**  
+Now get AMBI & H' for each distinct replicate. AMBI is actually already calculated for each replicate (last column in df1 of the index result list), but then it gets averaged, and so does H'. So I'll resort to some cheating with row names to make the function think of each row as an independent station (and not a replicate).  
+```{r extract_h_ambi_zostera}
+## change the row names of the data matrix to make the function think of each row as an independent station.   
+rownames(zoo.abnd.zostera.mat) <- paste(zoo.abnd.zostera %>% pull(station), 
+                                        c(rep(1:8, times = 2), 1:4, 1:8, 1:4), 
+                                        sep = "_")
+
+## calculate the indices again
+(indices.classical.zostera.2 <- mambi_sigovini(zoo.abnd.zostera.mat, eg.zostera.ambi,
+                                               trasf = "f",
+                                               high = c(50, 4, 1.2),
+                                               bad = c(15, 1.3, 5.5),
+                                               st = factor(rownames(zoo.abnd.zostera.mat), levels = unique(rownames(zoo.abnd.zostera.mat))))
+)
+
+## this time, only keep S, H' and AMBI
+s.h.ambi.zostera <- extract_index(indices.classical.zostera.2[[2]], S, H1, AMBI)
+
+## get rid of the numbers at the end of the station names
+s.h.ambi.zostera$rowname <- str_sub(s.h.ambi.zostera$rowname, end = -3)
+
+## check...
+s.h.ambi.zostera
+```
+
+I'll also keep the distribution of the ecological groups.  
+```{r ecological_group_distribution_ambi_zostera}
+## will use the 2nd iteration of the calculation, since the row names are unique and therefore preserved, and I need them to reorder the rows by station 
+(ambi.eg.distribution.zostera <- extract_index(indices.classical.zostera.2[[1]], `EG1(%)`, `EG2(%)`, `EG3(%)`, `EG4(%)`, `EG5(%)`, `NA`)
+)
+
+ambi.eg.distribution.zostera <- ambi.eg.distribution.zostera %>%
+  separate(col = "rowname",
+           into = c("station", "rep"), 
+           sep = "_")
+
+## convert station to factor & rearrange
+(ambi.eg.distribution.zostera <- ambi.eg.distribution.zostera %>%
+    mutate(station = factor(station, levels = levels(zoo.abnd.zostera$station))) %>% 
+    arrange(station, rep) %>% 
+    select(-rep)
+)
+
+## add the year, month and replicate (for aggregations etc.)
+ambi.eg.distribution.zostera <- bind_cols(ambi.eg.distribution.zostera,
+                                          zoo.abnd.zostera %>% select(year, month, replicate))
+
+(ambi.eg.distribution.zostera <- ambi.eg.distribution.zostera %>%
+    select(station, year, month, replicate, everything())
+)
+```
+
+Save the AMBI EG distribution - who knows, I might need it some time.  
+```{r save_ambi_eg_zostera}
+write_csv(ambi.eg.distribution.zostera, 
+          here(save.dir, "ambi_eg_distribution_zostera.csv"))
+```
+
+Summarize the AMBI EG distribution.  
+```{r summarize_ambi_eg_zostera}
+## it's better to have long-format data for ggplot
+ambi.eg.zostera.long <- ambi.eg.distribution.zostera %>%
+    select(-c(year:replicate, `NA`)) %>%
+    gather(key = eg, value = distr, -station)
+
+## rename the EGs & convert them to factor (will color by EG)
+ambi.eg.zostera.long$eg <- recode(ambi.eg.zostera.long$eg, `EG1(%)` = "EG I", `EG2(%)` = "EG II", `EG3(%)` = "EG III", `EG4(%)` = "EG IV", `EG5(%)` = "EG V")
+
+ambi.eg.zostera.long <- ambi.eg.zostera.long %>%
+    mutate(eg = factor(eg, levels = (c("EG I", "EG II", "EG III", "EG IV", "EG V"))))
+
+## average across stations and EGs
+ambi.eg.zostera.long.summary <- ambi.eg.zostera.long %>%
+    group_by(station, eg) %>%
+    summarise(distr_mean = mean(distr))
+
+```
+
+Plot.. 
+```{r plot_ambi_eg_zostera}
+## plot as stacked bars
+(plot.ambi.eg.zostera <- ggplot(ambi.eg.zostera.long.summary, 
+                             aes(x = as.factor(as.numeric(station)), y = distr_mean, fill = eg)) + 
+    geom_bar(stat = "identity", colour = "grey15", size = 0.2) + 
+    scale_fill_manual(values = eg.colours, name = "") +  ## same colours as for the sand
+    scale_x_discrete(labels = paste0("Z", unique(as.numeric(ambi.eg.zostera.long.summary$station))
+)) + 
+    labs(x = "Station", y = "%") + 
+    theme(legend.position = "top") + 
+    text_size(legend.text = 14, 
+              text.x = 13, text.y = 13, 
+              title.x = 14, title.y = 14)
+)
+
+```
+
+Save the plot. I think the colours are exceptionally ugly, but I suppose there's nothing to be done, stupid standards.  
+```{r save_plot_ambi_eg_zostera}
+ggsave(filename = here(figures.dir, "eg_ambi_zostera.png"), 
+       plot.ambi.eg.zostera, 
+       dpi = 300, width = 15, height = 15, units = "cm")
+
+```
+
+It's interesting that EG5 (first-order opportunists) is present everywhere in the seagrass habitats, no matter where the station is geographically (inner or outer bay) - most of all at Z5-Ropotamo. There is also a higher proportion of EG4 at the inner stations, and the highest proportion of sensitive species is at station Z4-Gradina. Not bad, for a non-adjusted index and all.  
+
+###### **BENTIX**
+On to the BENTIX calculations.  
+```{r bentix_zostera}
+## get the ecological groups for BENTIX
+eg.zostera.bentix <- as.data.frame(ecol.groups.zostera %>% select(bentix.eg))
+rownames(eg.zostera.bentix) <- ecol.groups.zostera %>% pull(species)
+
+(bentix.zostera <- bentix(zoo.abnd.zostera.mat, ecological.groups = eg.zostera.bentix))
+```
+
+Put all indices in one single tibble.  
+```{r indices_all_zostera}
+(indices.all.zostera <- bind_cols(mambi.classical.zostera,
+                                  s.h.ambi.zostera %>% select(S, H1, AMBI),
+                                  bentix.zostera %>% select(BENTIX))
+)
+```
+
+Calculate the EQRs for AMBI, BENTIX and H'.  
+```{r calculate_eqr_zostera}
+(indices.all.zostera <- indices.all.zostera %>%
+   mutate(AMBI.EQR = eqr(AMBI, ref.high = 0, ref.bad = 6), 
+          H.EQR = eqr(H1, ref.high = 4, ref.bad = 0),
+          BENTIX.EQR = eqr(BENTIX, ref.high = 6, ref.bad = 0))
+)
+```
+
+###### **M-AMBIn (simplified M-AMBI)**  
+M-AMBIn is a simplification of M-AMBI which is only a simple average of min-max normalized values. Each biotope is supposed to have specific reference values for all component indices; however, since the seagrasses don't have it at all, I'll use the old M-AMBI high/bad reference values.     
+```{r mambi_new_zostera}
+mambi.new.zostera <- mambi_sigovini(zoo.abnd.zostera.mat,
+                                   eg.zostera.ambi,
+                                   trasf = "n",
+                                   high = c(50, 4, 1.2),
+                                   bad = c(15, 1.3, 5.5)
+                                   )
+
+mambi.new.df.zostera <- extract_index(mambi.new.zostera[[2]], `M-AMBI*(n)`)
+
+(mambi.new.df.zostera <- mambi.new.df.zostera %>%
+    separate(col = "rowname", 
+             into = c("station", "rep"), 
+             sep = "_") %>%
+    mutate(station = factor(station, levels = levels(zoo.abnd.zostera$station))) %>%
+    arrange(station)
+)
+
+## NB make sure the stations & replicates are in the correct order before proceeding!
+
+## add M-AMBI*n to the combined index dataset
+indices.all.zostera <- indices.all.zostera %>%
+    mutate(`M-AMBIn` = mambi.new.df.zostera$`M-AMBI*(n)`)
+```
+
+I *think* that M-AMBIn is an EQR when calculated this way, off the M-AMBI EC limits, so I'm not going to recalculate, I don't even know how to, anyway - what limits am I to use?     
+
+Save this, finally.  
+```{r save_indices_all_zostera}
+## rearrange a little, just to appease my OCD
+(indices.all.zostera <- indices.all.zostera %>%
+    select(station:month, 
+           S, H1, AMBI, BENTIX, `M-AMBI`, `M-AMBIn`, 
+           H.EQR, AMBI.EQR, BENTIX.EQR)
+)
+
+write_csv(indices.all.zostera, 
+          here(save.dir, "indices_all_zostera.csv"))
+```
+
+
+##### Exploratory analysis  
+Now we'll do some exploratory analyses & summaries on the indices.   
+I'll work mostly with the EQRs from now on (directly comparable).     
+```{r summarize_indices_st_zostera}
+(ind.st.summary.zostera <- indices.all.zostera %>% 
+    group_by(station) %>%
+    select(`M-AMBI`, `M-AMBIn`, ends_with("EQR")) %>%
+    summarise_all(list(~mean(.), ~sd(.)))
+)
+```
+
+###### **Differences in assessment between stations**
+Next, we want to see if the indices differ between **stations** - as a proxy to the anthropogenic pressure gradient, going from 1 (most impacted) to 6 (least impacted).  
+Unfortunately, the distribution of the values is not normal - not really surprising for ecological data, but causes problems for parametric statistical tests such as ANOVA. This can easily be seen from the q-q plots:  
+```{r check_anova_residuals_indices_zostera}
+mapply(function(x, y) car::qqPlot(aov(x ~ indices.all.zostera$station)$residuals, line = "robust", main = y),
+       x = indices.all.zostera %>% select(`M-AMBI`, `M-AMBIn`, ends_with("EQR")), 
+       y = names(indices.all.zostera %>% select(`M-AMBI`, `M-AMBIn`, ends_with("EQR")))
+       )
+```
+
+The worst offender is, actually, M-AMBI. Although the others are not faring much better. No clear idea what's going on there..  Possibly, Poda and Otmanli, which are causing problems again with the differences between the 2 samplings.  
+```{r plot_index_variance_zostera}
+mapply(function(x, y) stripchart(x ~ indices.all.zostera$station, main = y),
+       x = indices.all.zostera %>% select(`M-AMBI`, `M-AMBIn`, ends_with("EQR")), 
+       y = names(indices.all.zostera %>% select(`M-AMBI`, `M-AMBIn`, ends_with("EQR")))
+       )
+```
+
+I'm going again with robust regression, with station as factor.  
+```{r robust_regression_ind_station_zostera}
+ind.rr.st.zostera <- apply(indices.all.zostera %>% dplyr::select(`M-AMBI`, `M-AMBIn`, ends_with("EQR")), 
+                           2,
+                           function(x) MASS::rlm(x ~ station, data = indices.all.zostera)
+                        )
+
+lapply(ind.rr.st.zostera, summary)
+```
+
+Now we'll do the appropriate post-hoc tests to see where the largest differences are.  
+NB The seagrass data doesn't want to play with my beautiful heteroscedastic variance estimator (could be because of the unequal sample sizes between groups?? works perfectly with the sand data), so I'm removing it.. No more time to play.  
+```{r posthoc_ind_station_zostera}
+ind.glht.st.zostera <- lapply(ind.rr.st.zostera,
+                              function(x) multcomp::glht(x, mcp(station = "Tukey")))
+
+mcp.st.labels.zostera <- lapply(ind.glht.st.zostera, multcomp::cld) # get some labels for the summary plots - significance of the comparisons
+
+lapply(ind.glht.st.zostera, summary)
+```
+
+Ok, now we know there are **significant differences** in index assessments between stations (+ between which pairs). Let's plot them, using the summary tables we did before (mean + sd):
+```{r ind_summary_stations_long_zostera}
+## reshape the index summary tibble - long
+ind.st.summary.zostera.long <- ind.st.summary.zostera %>%
+    gather(key = ind, value = ind_value, -station) %>%
+    ## separate the index column into 2: index and variable (mean or sd)
+    separate(ind, into = c("index", "var"), sep = "_") %>%
+    spread(var, ind_value)
+
+## get rid of the "EQR" at the end of the index names
+ind.st.summary.zostera.long <- ind.st.summary.zostera.long %>%
+  mutate(index = gsub(index, pattern = ".EQR", replacement = ""))
+
+## replace H with H' and convert index to factor (to have them in the desired order)
+(ind.st.summary.zostera.long <- ind.st.summary.zostera.long %>%
+    mutate(index = gsub(index, pattern = "H", replacement = "H'")) %>%
+    mutate(index = factor(index, levels = c("AMBI", "BENTIX", "H'", "M-AMBI", "M-AMBIn")))
+)
+```
+
+
+We need to get and add the significance labels (will make life immensely easier if they are in the same tibble).
+```{r labels_plot_ind_summary_stations_zostera}
+## extract the significance letter labels that we generated before. Don't ask how I came to this - I remember digging relentlessly through blogs and forums, and nearly going crazy with it..
+ind.st.labels.zostera <- plyr::ldply(mcp.st.labels.zostera, function(x) x[[10]][[1]])
+
+## fix index names
+ind.st.labels.zostera$.id <- recode(ind.st.labels.zostera$.id,
+                                 "H.EQR" = "H'", "AMBI.EQR" = "AMBI", "M-AMBI" = "M-AMBI", "BENTIX.EQR" = "BENTIX", "M-AMBIn" = "M-AMBIn")
+
+ind.st.labels.zostera$.id <- factor(ind.st.labels.zostera$.id, levels = c("AMBI", "BENTIX", "H'", "M-AMBI", "M-AMBIn"))
+
+ind.st.labels.zostera
+
+## convert to long, rename the index column & make station a factor
+ind.st.labels.zostera.long <- ind.st.labels.zostera %>%
+    gather(key = station, value = label, -.id) %>%
+    rename(index = .id) %>%
+    mutate(station = factor(station, levels = levels(zoo.abnd.zostera$station)))
+
+## add to the dataset for plotting
+(ind.st.summary.zostera.long <- left_join(ind.st.summary.zostera.long,
+                                       ind.st.labels.zostera.long,
+                                       by = c("station", "index"))
+)
+```
+
+The ecological class limits for the summary plots are the same as for the sand stations - will be recycled.
+
+Plot the comparison of the indices by station.
+```{r plot_ind_summary_stations_zostera}
+plot.ind.st.summary.zostera <- ggplot(ind.st.summary.zostera.long,
+                                   aes(x = as.numeric(station), y = mean)) +
+  geom_bar(position = position_dodge(), stat = "identity", fill = "grey60") +
+  ## error bars = sd
+  geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd),
+                width = 0.15, colour = "grey30", position = position_dodge(0.9)) +
+  ## labels - significant difference pairs (above error bars)
+  geom_text(aes(x = as.numeric(station), y = mean + sd, label = label), vjust = -0.3, size = 2.5) +
+  labs(x = "Station", y = "EQR") +
+  facet_wrap(~index) +
+  scale_y_continuous(breaks = seq(0, 1, 0.25)) +
+  scale_x_continuous(breaks = 1:5, labels = paste0("Z", unique(as.numeric(ind.st.summary.zostera.long$station)))) +
+  text_size(text.x = 12, text.y = 12, title.x = 12, title.y = 12, strip.x = 12)
+
+## add the limits of the ecological classes for each index
+## NB names of indices (facets) have to match in order for the lines to go where they should (otherwise they'll go in separate, additional facets)!
+(plot.ind.st.summary.zostera <- plot.ind.st.summary.zostera +
+    geom_hline(data = ind.limits.long, aes(yintercept = limits), lwd = 0.2, colour = "grey30")
+)
+
+```
+
+Well isn't this a fine mess..  
+AMBI and BENTIX think that Z1-Z3 and Z5 are more or less the same, and Z4 is much better - kinda logical and consistent.  
+There aren't too many differences between stations with H - and it also gives pretty high ES to all.  
+M-AMBI also thinks that Z4-Gradina is in the best ES, and the rest are not too bad either. 
+M-AMBIn, on the other hand, gives moderate to all stations, and even poor to one (Z3). Nice job, unadjusted limits!  
+
+Save the station summary plot.
+```{r save_plot_ind_summary_stations_zostera}
+ggsave(here(figures.dir, "ind_station_summary_zostera.png"),
+       plot.ind.st.summary.zostera,
+       dpi = 300, width = 17, height = 15, units = "cm")
+
+```
+
+
+##### Index performance vs environmental parameters  
+###### **Normalize indices (MEDGIG)**    
+Normalize the index EQRs.  
+```{r normalize_indices_zostera}
+## uses my custom function for the normalization 
+(indices.all.norm.zostera <- as_tibble(mapply(normalize_index,
+                                              indices.all.zostera %>% dplyr::select(`M-AMBI`, `M-AMBIn`, ends_with("EQR")) %>% dplyr::select(H.EQR, AMBI.EQR, `M-AMBI`, BENTIX.EQR, `M-AMBIn`),
+                                              ind.limits,
+                                              SIMPLIFY = FALSE))    
+)    
+```
+
+###### **Correlation with environmental parameters**  
+Import environmental data for seagrass.  
+Again, as before, I'll use the most significant ones determined by PCA: LUSI, chl-a, Ntot, secchi + all sediment parameters (except the most inter-correlated): TOM, moisture content, mean grain size, sand, silt_clay + all seagrass parameters: shoot count, above-ground biomass, below-ground biomass.  
+Import the environmental parameters (from the cleaned files; see multivariate analyses notebook).  
+```{r import_env_data_zostera}
+(env.data.zostera <- read_csv(here(save.dir, "env_data_ordinations_zostera.csv"))
+)
+```
+
+Calculate the correlations.. 
+```{r ind_correlations_env_zostera}
+ind.corr.env.zostera <- Hmisc::rcorr(as.matrix(bind_cols(indices.all.norm.zostera, S = indices.all.zostera$S)), # also include S - as suggested by article review
+                                     as.matrix(env.data.zostera %>% dplyr::select(-c(station, year))), 
+                                     type = "spearman")
+
+
+corstars(ind.corr.env.zostera)
+
+## kable(corstars(ind.corr.env.zostera)) # better-looking table
+```
+
+
+###### **Index agreement analyses**  
+Calculate the absolute average class difference between indices.  
+```{r index_absolute_class_difference_zostera}
+## calculate the absolute class difference - NB this is NOT the average - will have to be calculated later. Uses custom function
+(ind.abs.class.diff.zostera <- ind_abs_diff(indices.all.norm.zostera, nb.classes = 5))
+```
+
+Curiously, there don't seem to be more than 2 classes difference.. I suppose that's ok..  
+
+```{r plot_index_absolute_aver_diff_zostera}
+## calculate the average class difference, and prepare data for plotting
+ind.abs.av.class.diff.zostera <- bind_rows(colMeans(ind.abs.class.diff.zostera)) ## THIS actually calculates the average class difference - by column 
+
+## convert to long and prepare for plotting (fix names and labels,..)
+ind.abs.av.class.diff.zostera.long <- ind.abs.av.class.diff.zostera %>%
+  gather(key = ind, value = diff)
+
+(ind.abs.av.class.diff.zostera.long <- ind.abs.av.class.diff.zostera.long %>%
+    arrange(desc(diff)) %>%
+    mutate(ind = gsub(".EQR", "", x = ind)) %>%
+    mutate(ind = gsub("H", "H'", x = ind)) %>%
+    mutate(ind = factor(ind, levels = ind)) ## this order is necessary, because I want indices on the y axis, and ggplot will plot them bottom to top, alphabetically, regardless of what I tell it
+)
+
+(plot.ind.abs.av.class.diff.zostera <- ggplot(ind.abs.av.class.diff.zostera.long, 
+                                           aes(x = ind, y = diff)) + 
+    geom_bar(stat = "identity") + 
+    geom_hline(yintercept = 0.5) + # the acceptable difference limit according to the intercalibration
+    coord_flip() + 
+    labs(x = "", y = "Absolute class difference") + 
+    text_size(text.x = 12, text.y = 12, title.y = 12)
+)   
+```
+
+This is interesting..  
+The highest agreement is between H and M-AMBI, and AMBI and BENTIX - the only acceptable ones, really..  
+Then, BENTIX and M-AMBIn - really?? And worse and worse from there, erratic, seems like. 
+(Although, as an aside, the highest difference is still less than that observed for the sand stations)..  
+I'm blaming this on the futility of using indices not adapted for this biotope and its particularities - see the unusually high proportions of EG5 and EG4, which are present even in supposedly good conditions (Z4). Unless something is done, these indices are probably not to be used for ES assessments of zoobenthos in seagrass.  
+
+Save the plot.  
+```{r save_plot_index_absolute_aver_diff_zostera}
+ggsave(here(figures.dir, "ind_abs_class_diff_zostera.png"), 
+       plot.ind.abs.av.class.diff.zostera, 
+       dpi = 300, width = 16, height = 15, units = "cm")
+```
+
+Calculate the percentage agreement between indices.
+```{r index_percentage_agreement_zostera}
+## summarize the calculated class differences (for 5 classes)
+ind.percent.agreement.zostera <- as_tibble(ind.abs.class.diff.zostera) %>% 
+    gather(key = ind, value = diff) %>%
+    # ## recode the class difference so that all differences of > 2 classes form a single group
+    # mutate(diff = recode(diff, "0" = 0, "1" = 1, "2" = 2, "3" = 3, "4" = 3)) %>%
+    group_by(ind, diff) %>%
+    summarize(count = n()) %>%
+    ungroup()
+
+## calculate the % agreement 
+ind.percent.agreement.zostera <- ind.percent.agreement.zostera %>% 
+  group_by(ind) %>% 
+  mutate(percent_agr = count/sum(count) * 100)
+  
+## fix names a bit (as before)
+(ind.percent.agreement.zostera <- ind.percent.agreement.zostera %>%
+    ungroup() %>%
+    mutate(ind = gsub(".EQR", "", x = ind)) %>%
+    mutate(ind = gsub("H", "H'", x = ind)) %>%
+    arrange(diff, desc(percent_agr))
+)
+```
+
+```{r plot_index_percentage_agreement_zostera}
+## we'll plot as stacked bar chart with fill colors by level of agreement (diff); we need to put the fill factor in descending order, because ggplot stacks bottom to top.
+ind.percent.agreement.zostera <- ind.percent.agreement.zostera %>%
+    mutate(diff = factor(diff, levels = rev(0:3))) %>%
+    mutate(ind = factor(ind, levels = rev(unique(ind)))) # in reverse order, so that on the plot, they'll come out arranged by highest % perfect agreement (diff = 0)
+
+## plot 
+(plot.ind.percent.agr.zostera <- ggplot(ind.percent.agreement.zostera, 
+                                     aes(x = ind, y = percent_agr, fill = diff)) + 
+        geom_bar(stat = "identity", colour = "grey40", size = 0.25) + 
+        # very ugly padding hack to increase spacing of legend items:
+        scale_fill_grey(start = 0.4, end = 1, name = "", 
+                        labels = c(" 2 classes difference  ",
+                                   " 1 class difference  ",
+                                   " Agreement  ")) +
+        labs(x = "", y = "%") + 
+        coord_flip() +
+        guides(fill = guide_legend(reverse = TRUE, nrow = 2, byrow = FALSE)) + # reverse the order of the legend, it gets messed up when putting it on top
+        theme(legend.position = "top") + 
+        text_size(text.x = 12, text.y = 12, legend.text = 12, title.y = 12)
+)
+```
+
+Nice, there is some pretty high agreement (where there is), and then mostly 1 class difference only.  
+
+**What WOULD be interesting to do would be to find where - and in how many cases - the diffences cross the good-moderate border - that would be the one requiring measures to be taken.**  
+
+Save this plot.  
+```{r save_plot_index_percentage_agreement_zostera}
+ggsave(here(figures.dir, "ind_perc_agreement_zostera.png"), 
+       dpi = 300, width = 16, height = 15, units = "cm")
+```
