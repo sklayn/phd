@@ -94,7 +94,7 @@ text_size <- function(text.x = NULL,
 ***  
 
 #### **Sand stations (Burgas Bay, 2013-2014)**  
-Import zoobenthic abundance data (cleaned and prepared).  
+  Import zoobenthic abundance data (cleaned and prepared).  
 ```{r import_zoo_abnd_sand}
 zoo.abnd.sand <- read_csv(here(save.dir, "abnd_sand_orig_clean.csv"))
 
@@ -749,8 +749,8 @@ ind.abs.av.class.diff.sand.long <- ind.abs.av.class.diff.sand %>%
 
 (plot.ind.abs.av.class.diff.sand <- ggplot(ind.abs.av.class.diff.sand.long, 
                                            aes(x = ind, y = diff)) + 
-    geom_bar(stat = "identity") + 
-    geom_hline(yintercept = 0.5) + # the acceptable difference limit according to the intercalibration
+    geom_bar(stat = "identity", fill = "sky blue") + 
+    geom_hline(yintercept = 0.5, col = "red") + # the acceptable difference limit according to the intercalibration
     coord_flip() + 
     labs(x = "", y = "Absolute class difference") + 
     text_size(text.x = 12, text.y = 12, title.y = 12)
@@ -805,11 +805,11 @@ ind.percent.agreement.sand <- ind.percent.agreement.sand %>%
                                      aes(x = ind, y = percent_agr, fill = diff)) + 
         geom_bar(stat = "identity", colour = "grey40", size = 0.25) + 
         # very ugly padding hack to increase spacing of legend items:
-        scale_fill_grey(start = 0.4, end = 1, name = "", 
-                        labels = c(" >2 classes difference  ",
-                                   " 2 classes difference  ",
-                                   " 1 class difference  ",
-                                   " Agreement  ")) +
+        scale_fill_viridis(discrete = T, name = "", 
+                           labels = c(" >2 classes difference  ",
+                                      " 2 classes difference  ",
+                                      " 1 class difference  ",
+                                      " Agreement  ")) +
         labs(x = "", y = "%") + 
         coord_flip() +
         guides(fill = guide_legend(reverse = TRUE, nrow = 2, byrow = FALSE)) + # reverse the order of the legend, it gets messed up when putting it on top
@@ -819,14 +819,29 @@ ind.percent.agreement.sand <- ind.percent.agreement.sand %>%
 ```
 
 Well, as expected, based on the previous analysis.. The same pairs have the highest % agreement, and most often - only 1 class difference.. Then, from H'-M-AMBIn down - all over the place; it's like they go completely random, evenly spread across classes.  
-
-**What WOULD be interesting to do would be to find where - and in how many cases - the diffences cross the good-moderate border - that would be the one requiring measures to be taken.**  
-
+ 
 Save this plot.  
 ```{r save_plot_index_percentage_agreement_sand}
 ggsave(here(figures.dir, "ind_perc_agreement_sand.png"), 
        dpi = 300, width = 16, height = 15, units = "cm")
 ```
+
+
+Check in how many cases the diffences cross the good-moderate border - that would be the one requiring measures to be taken.    
+```{r index_diff_good_moderate_sand}
+## custom function, and a pain in the ass it was to write. Also probably could have been done much more easily and elegantly. 
+gm.diff.sand <- gm_diff(indices.all.norm.sand, ind.limits)
+
+## fix index names, because I have OCD
+(gm.diff.sand <- gm.diff.sand %>% 
+    mutate(contrast = str_replace_all(contrast, pattern = ".EQR", replacement = ""))
+)
+```
+
+In most cases, the difference in assessment between two indices crosses the good/moderate boundary, so would have implications - for both conservation and management. On one hand, if the actual ES is acceptable, and the assessment says the opposite, unnecessary measures and expenses would be undertaken. On the other hand, if the reverse happens, no measures would be undertaken, and the ES is likely to deteriorate even more. Of course, it's probably not likely that a community in terrible, horrible, no good condition will ever be assessed as high, with no one the wiser - but it is what it is.   
+Surprisingly good result - only 5% - for M-AMBI/M-AMBIn. It gives one hope for the comparability of results of the old and new national monitoring program, and for the validity of management measures (or it would, if anyone else involved were doing their jobs).  
+It seems best to use more than one index, as suggested by numerous other studies before (which??) - and make sure they are more or less in agreement, and react as expected to the pressure that is currently investigated. Also, if one index is a component in the calculation of another (see: H and M-AMBI - both flavours) - make sure it doesn't have an unduly high weight, esp. if its behaviour is sometimes non-linear or dependent on hidden factors (or take those into consideration as well).  
+
 
 
 #### **Seagrass stations (Burgas Bay, 2013-2014)**  
@@ -1266,8 +1281,8 @@ ind.abs.av.class.diff.zostera.long <- ind.abs.av.class.diff.zostera %>%
 
 (plot.ind.abs.av.class.diff.zostera <- ggplot(ind.abs.av.class.diff.zostera.long, 
                                            aes(x = ind, y = diff)) + 
-    geom_bar(stat = "identity") + 
-    geom_hline(yintercept = 0.5) + # the acceptable difference limit according to the intercalibration
+    geom_bar(stat = "identity", fill = "sky blue") + 
+    geom_hline(yintercept = 0.5, col = "red") + # the acceptable difference limit according to the intercalibration
     coord_flip() + 
     labs(x = "", y = "Absolute class difference") + 
     text_size(text.x = 12, text.y = 12, title.y = 12)
@@ -1292,7 +1307,7 @@ Calculate the percentage agreement between indices.
 ## summarize the calculated class differences (for 5 classes)
 ind.percent.agreement.zostera <- as_tibble(ind.abs.class.diff.zostera) %>% 
     gather(key = ind, value = diff) %>%
-    # ## recode the class difference so that all differences of > 2 classes form a single group
+    ## recoding the class difference so that all differences of > 2 classes form a single group not necessary here - there are no > 2 classes differences
     # mutate(diff = recode(diff, "0" = 0, "1" = 1, "2" = 2, "3" = 3, "4" = 3)) %>%
     group_by(ind, diff) %>%
     summarize(count = n()) %>%
@@ -1323,10 +1338,10 @@ ind.percent.agreement.zostera <- ind.percent.agreement.zostera %>%
                                      aes(x = ind, y = percent_agr, fill = diff)) + 
         geom_bar(stat = "identity", colour = "grey40", size = 0.25) + 
         # very ugly padding hack to increase spacing of legend items:
-        scale_fill_grey(start = 0.4, end = 1, name = "", 
-                        labels = c(" 2 classes difference  ",
-                                   " 1 class difference  ",
-                                   " Agreement  ")) +
+        scale_fill_viridis(discrete = TRUE, name = "",
+                           labels = c(" 2 classes difference  ",
+                                      " 1 class difference  ",
+                                      " Agreement  ")) +
         labs(x = "", y = "%") + 
         coord_flip() +
         guides(fill = guide_legend(reverse = TRUE, nrow = 2, byrow = FALSE)) + # reverse the order of the legend, it gets messed up when putting it on top
@@ -1336,11 +1351,28 @@ ind.percent.agreement.zostera <- ind.percent.agreement.zostera %>%
 ```
 
 Nice, there is some pretty high agreement (where there is), and then mostly 1 class difference only.  
-
-**What WOULD be interesting to do would be to find where - and in how many cases - the diffences cross the good-moderate border - that would be the one requiring measures to be taken.**  
+Surprising: difference M-AMBI-M-AMBIn - total disagreement. Those old boundaries must really be unsuitable for the seagrass communities..   
 
 Save this plot.  
 ```{r save_plot_index_percentage_agreement_zostera}
 ggsave(here(figures.dir, "ind_perc_agreement_zostera.png"), 
        dpi = 300, width = 16, height = 15, units = "cm")
 ```
+
+
+Check in how many cases the diffences cross the good-moderate border - that would be the one requiring measures to be taken.    
+```{r index_diff_good_moderate_zostera}
+## custom function
+gm.diff.zostera <- gm_diff(indices.all.norm.zostera, ind.limits)
+
+## fix index names, because I have OCD
+(gm.diff.zostera <- gm.diff.zostera %>% 
+    mutate(contrast = str_replace_all(contrast, pattern = ".EQR", replacement = ""))
+)
+```
+
+Well this was an exercise in futility.  
+The most surprising result again is M-AMBI-M-AMBIn - 100% of the cases are on opposite sides of the GM boundary. This means that one really, really shouldn't use M-AMBIn and the old boundaries if one wants something resembling a sensible result.  
+The others are more or less as expected, given the previous agreement analyses. The best is AMBI-BENTIX - it happens in only 12% of the cases.  
+
+All in all, the soft-bottom zoobenthic indices as they are applied here are really bad in the seagrass. Possible solutions: 1) adapt the boundaries to seagrass-associated fauna - good luck, with the amount of variation observed, and the interference of the natural environmental particularities, see community structure analyses 2) make a new index, specifically for seagrass fauna 3) drop entirely from assessments - no point; probably sufficient to monitor ecological state of seagrass itself - if it's good, it's likely that the associated communities will do perfectly fine. Bonus: those assessments are immensely easier to apply/train people to do.    

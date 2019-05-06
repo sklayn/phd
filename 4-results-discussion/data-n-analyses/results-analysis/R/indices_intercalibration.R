@@ -76,3 +76,40 @@ ind_abs_diff <- function(indices, nb.classes = 5) {
   return(ind.abs.diff.final)
 
 }
+
+gm_diff <- function(ind.norm, ind.lims) {
+  ### helper to find the proportion of cases where the difference of assessments of two indices crosses the good-moderate boundary
+  ### Arguments: ind.norm - index assessments (normalized EQRs), in columns.
+  ###            ind.lims - limits of the 5 ecological classes for each index, going from high to bad. NB column number and order should match ind.norm! 
+  ### Returns: df of the proportion of cases where the disagreement crosses the good-moderate boundary, for each pair of indices 
+  ### Dependencies: tidyverse; custom function es_qualitative for turning numeric EQRs into qualitative ES classes
+  
+  
+  ## get the qualitative assessment in 5 classes, according to each index's limits
+  ind.qual <- map2(ind.norm, ind.lims, ~es_qualitative(.x, .y))
+  
+  ## reduce them to two - acceptable (high/good) and unacceptable (moderate to bad)
+  level.key <- c(high = "acceptable", good = "acceptable", moderate = "unacceptable", poor = "unacceptable", bad = "unacceptable")
+  
+  ind.qual <- lapply(ind.qual, function(x) recode(x, !!!level.key))
+  
+  ## compare the indices two by two. Indices will go in rows here (default method of collapsing a list in ldply - rbind)! 
+  ind.comp <- plyr::ldply(ind.qual)
+  
+  ## construct a matrix of combinations for pairwise comparison - of ROWS.
+  ind.combn <- combn(nrow(ind.comp), 2)
+  
+  ## fix the names, to use later for the output df
+  colnames(ind.combn) <- apply(ind.combn, 2, function(x) paste(ind.comp[x[1], 1], ind.comp[x[2], 1], sep = "-")) 
+  
+  ## compare the indices 2x2 according to the comparison matrix above. Drop the first column (id) from the index df first! 
+  gm.diff <- plyr::adply(ind.combn, 2, function(x) abs(ind.comp[-1][x[1], ] - ind.comp[-1][x[2], ]))
+  
+  ## calculate the proportion of all cases where a disagreement crosses the GM boundary for each pair of indices (1 = disagreement, 0 = agreement)
+  gm.diff <- gm.diff %>% 
+    mutate(gm_diff = rowSums(select(., -X1))/ncol(gm.diff %>% select(-X1))) %>% 
+    select(X1, gm_diff) %>% 
+    rename(contrast = X1)
+  
+  return(gm.diff)
+}
