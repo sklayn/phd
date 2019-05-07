@@ -94,7 +94,7 @@ text_size <- function(text.x = NULL,
 ***  
 
 #### **Sand stations (Burgas Bay, 2013-2014)**  
-  Import zoobenthic abundance data (cleaned and prepared).  
+Import zoobenthic abundance data (cleaned and prepared).  
 ```{r import_zoo_abnd_sand}
 zoo.abnd.sand <- read_csv(here(save.dir, "abnd_sand_orig_clean.csv"))
 
@@ -538,12 +538,11 @@ plot.ind.st.summary.sand <- ggplot(ind.st.summary.sand.long,
   geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd),
                 width = 0.15, colour = "grey30", position = position_dodge(0.9)) + 
   ## labels - significant difference pairs (above error bars)
-  geom_text(aes(x = as.numeric(station), y = mean + sd, label = label), vjust = -0.3, size = 2.5) +
+  geom_text(aes(x = as.numeric(station), y = mean + sd, label = label), vjust = -0.3, size = 2) +
   labs(x = "Station", y = "EQR") + 
   facet_wrap(~index) +
   scale_y_continuous(breaks = seq(0, 1, 0.25)) + 
-  scale_x_continuous(breaks = 1:6, labels = paste0("S", unique(as.numeric(ind.st.summary.sand.long$station)))) + 
-  text_size(text.x = 12, text.y = 12, title.x = 12, title.y = 12, strip.x = 12)
+  scale_x_continuous(breaks = 1:6, labels = paste0("S", unique(as.numeric(ind.st.summary.sand.long$station)))) 
 
 ## add the limits of the ecological classes for each index
 ## NB names of indices (facets) have to match in order for the lines to go where they should (otherwise they'll go in separate, additional facets)!
@@ -619,12 +618,11 @@ plot.ind.biotope.summary.sand <- ggplot(ind.biotope.summary.sand.long,
   geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd),
                 width = 0.15, colour = "grey30", position = position_dodge(0.9)) +
   ## labels - significant differences between pairs
-  geom_text(aes(x = as.numeric(biotope), y = mean + sd, label = label), vjust = -0.3, size = 2.5) +
+  geom_text(aes(x = as.numeric(biotope), y = mean + sd, label = label), vjust = -0.3, size = 2) +
   labs(x = "Biotope", y = "EQR") + 
   facet_wrap(~index) +
   scale_y_continuous(breaks = seq(0, 1, 0.25)) + 
-  scale_x_continuous(breaks = 1:4) + 
-  text_size(text.x = 12, text.y = 12, title.x = 12, title.y = 12, strip.x = 12)
+  scale_x_continuous(breaks = 1:4) 
 
 ## add the limits of the ecological classes for each index
 (plot.ind.biotope.summary.sand <- plot.ind.biotope.summary.sand + 
@@ -641,6 +639,24 @@ ggsave(here(figures.dir, "ind_biotope_summary_sand.png"),
 ```
 
 
+Make a composite plot of both stations and biotopes, to save myself the trouble later.  
+```{r plot_composite_ind_summary_st_biotopes_sand}
+(plot.comp.ind.st.sbiotope.summary.sand <- cowplot::plot_grid(plot.ind.st.summary.sand,
+                                                              plot.ind.biotope.summary.sand,
+                                                              nrow = 2,
+                                                              align = "h", labels = c("A", "B"))
+)
+```
+
+Save this monstrosity.  
+```{r save_plot_composite_ind_summary_st_biotopes_sand}
+cowplot::save_plot(here(figures.dir, "ind_st_biotope_summary_sand.png"), 
+                   plot.comp.ind.st.sbiotope.summary.sand, 
+                   base_aspect_ratio = 2, base_width = 6.8, base_height = 6)
+```
+
+
+
 ##### Index performance vs environmental parameters  
 ###### **Normalize indices (MEDGIG)**    
 We'll normalize the index EQRs before going on to compare them among themselves & with the environmental parameters, as was done in the MEDGIG intercalibrations (van de Bund et al. 2008).  
@@ -653,7 +669,7 @@ We'll normalize the index EQRs before going on to compare them among themselves 
 )    
 ```
 
-###### **Correlation with environmental parameters**  
+  ###### **Correlation with environmental parameters**  
 Good, useful biotic indices respond to changes in community structure related to pressure (natural or anthropogenic). Therefore, in a pressure gradient such as the one in Burgas Bay (demonstrated by the change in environmental variables & LUSI), they are expected to be correlated with the the environmental parameters: negatively with the eutrophication & pollution indicators & LUSI, positively with parameters such as dissolved O2, water transparency etc. The performance won't be terribly good anyway because of the natural variability of the communities (see previous analyses by biotope).   
 
 Import environmental data for sand.  
@@ -723,6 +739,8 @@ corstars(mambin.corr.env.sand)
 ```
 
 This is much, much better than before - significant negative correlations with the eutrophication parameteres & LUSI and sediment silt-clay, and significant positive with water transparency. Not good - significant correlation with TOM, but it has only been measured 3 times during this study, and not even that sometimes, so not much can be expected. Also a bit strange - inclusion of the other sediment parameters (gravel, moisture content) - they're not really indicative of any sort of pressure (in fact, they're a remnant of the community structure analyses, where they do serve a purpose).  
+
+**NOTE 2019/05/07: I checked with the published article on this - there are some discrepancies in the correlation coefficients and significance levels (and also with the environmental parameters used). I suppose it's because for the thesis, I redid most of the calculations, and notably imputed (mean value) the missing values for the sediment parameters - there is so little data there anyway.. I don't know what precisely is going on with the NO3 for instance. For practical purposes, I am going with the published results in the article - NOT the ones obtained here; and with the parameters there, too. In any case, they aren't too different - the conclusions are exactly the same - and it will be too much hassle to explain the mismatch.**  
 
 ###### **Index agreement analyses**  
 Not only are indices supposed to react to changes in benthic community structure, they should also agree with each other, so that they can be applied with good confidence in the study area, and the assessments are comparable with those coming from other areas (i.e., "good" means the same thing everywhere).  
