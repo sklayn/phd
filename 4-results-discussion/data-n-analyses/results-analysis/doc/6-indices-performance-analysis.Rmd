@@ -1389,8 +1389,12 @@ gm.diff.zostera <- gm_diff(indices.all.norm.zostera, ind.limits)
 )
 ```
 
+NB this is different than the differences between stations (see plot), because the **normalized EQRs** are used. If the non-normalized (really observed) EQRs are used, the proportion of differences that cross the G/M boundary are smaller. 
+
 Well this was an exercise in futility.  
 The most surprising result again is M-AMBI-M-AMBIn - 100% of the cases are on opposite sides of the GM boundary. This means that one really, really shouldn't use M-AMBIn and the old boundaries if one wants something resembling a sensible result.  
 The others are more or less as expected, given the previous agreement analyses. The best is AMBI-BENTIX - it happens in only 12% of the cases.  
 
 All in all, the soft-bottom zoobenthic indices as they are applied here are really bad in the seagrass. Possible solutions: 1) adapt the boundaries to seagrass-associated fauna - good luck, with the amount of variation observed, and the interference of the natural environmental particularities, see community structure analyses 2) make a new index, specifically for seagrass fauna 3) drop entirely from assessments - no point; probably sufficient to monitor ecological state of seagrass itself - if it's good, it's likely that the associated communities will do perfectly fine. Bonus: those assessments are immensely easier to apply/train people to do.    
+
+Last-last thing to try: 
