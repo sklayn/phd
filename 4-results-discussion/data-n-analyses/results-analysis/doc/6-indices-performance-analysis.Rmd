@@ -789,7 +789,7 @@ As expected from the correlations - for some index-parameter combinations, not b
 The other three are shitty, though - H' and M-AMBI for the reasons already explained, M-AMBIn because not adjusted for most of the habitat subtypes in the dataset.  
 Funny thing - no bad anywhere (some in H, which as established performs really poorly in some particular conditions which I was unlucky enough to get in my data).  
 
-
+    
 ###### **Index agreement analyses**  
 Not only are indices supposed to react to changes in benthic community structure, they should also agree with each other, so that they can be applied with good confidence in the study area, and the assessments are comparable with those coming from other areas (i.e., "good" means the same thing everywhere).  
 This was the principle behind the various intercalibrations - make sure all assessments mean the same thing. To test it here, the suggested procedures / indicators from van de Bund et al. (2008) will be applied: the absolute average class difference and the percentage agreement (as supporting measure).  
