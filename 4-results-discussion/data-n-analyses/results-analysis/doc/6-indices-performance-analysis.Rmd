@@ -669,7 +669,7 @@ We'll normalize the index EQRs before going on to compare them among themselves 
 )    
 ```
 
-  ###### **Correlation with environmental parameters**  
+###### **Correlation with environmental parameters**  
 Good, useful biotic indices respond to changes in community structure related to pressure (natural or anthropogenic). Therefore, in a pressure gradient such as the one in Burgas Bay (demonstrated by the change in environmental variables & LUSI), they are expected to be correlated with the the environmental parameters: negatively with the eutrophication & pollution indicators & LUSI, positively with parameters such as dissolved O2, water transparency etc. The performance won't be terribly good anyway because of the natural variability of the communities (see previous analyses by biotope).   
 
 Import environmental data for sand.  
@@ -741,6 +741,54 @@ corstars(mambin.corr.env.sand)
 This is much, much better than before - significant negative correlations with the eutrophication parameteres & LUSI and sediment silt-clay, and significant positive with water transparency. Not good - significant correlation with TOM, but it has only been measured 3 times during this study, and not even that sometimes, so not much can be expected. Also a bit strange - inclusion of the other sediment parameters (gravel, moisture content) - they're not really indicative of any sort of pressure (in fact, they're a remnant of the community structure analyses, where they do serve a purpose).  
 
 **NOTE 2019/05/07: I checked with the published article on this - there are some discrepancies in the correlation coefficients and significance levels (and also with the environmental parameters used). I suppose it's because for the thesis, I redid most of the calculations, and notably imputed (mean value) the missing values for the sediment parameters - there is so little data there anyway.. I don't know what precisely is going on with the NO3 for instance. For practical purposes, I am going with the published results in the article - NOT the ones obtained here; and with the parameters there, too. In any case, they aren't too different - the conclusions are exactly the same - and it will be too much hassle to explain the mismatch.**  
+
+Last-last thing to try: given the environmental parameters, check if the classification system successfully differentiates between between classes, and between which subsequent classes - best?   
+I'm only going to use the environmental parameters with which the indices have the best correlations (yes, I know it is highly subjective, and I don't care). Also, I'm importing and using the **old environmental data from the article**. 
+Import the old environmental data (pre-cleaned and everything).  
+```{r import_old_env_data_sand}
+(env.data.old.sand <- read_csv(here(data.dir, "env_data_smry_old_sand.csv"))
+)
+```
+
+Gather the needed data (yes, I'm making another two-three-million useless temporary data frames).  
+```{r class_distr_ind_env_sand}
+## get the index EQRs, and convert to qualitative. MAKE EXTRA SURE THE COLUMNS ARE IN THE SAME ORDER IN THE TWO DFS, OTHERWISE THE WRONG LIMITS WILL BE APPLIED TO EACH INDEX
+(ind.qual.sand <- map2_df(indices.all.norm.sand %>% select(H.EQR, AMBI.EQR, `M-AMBI`, BENTIX.EQR, `M-AMBIn.EQR`), 
+                             ind.limits,
+                             ~es_qualitative(.x, .y)
+                             )
+)
+
+
+## get (manually) the environmental parameters, and add to the qualitative index df. AGAIN MAKE SURE THE ROWS ARE IN THE SAME ORDER (I TRUST THEY ARE HERE, BUT IN FUTURE)
+(ind.qual.env.sand <- bind_cols(ind.qual.sand, 
+                                   env.data.old.sand %>% select(silt.clay, Secchi.depth_mean, chl.a_mean, NH4_mean, PO4_mean, LUSI))
+)  
+
+## convert to long, key = index
+(ind.qual.env.long.sand <- gather(ind.qual.env.sand, key = "index", value = "assessment", -c(silt.clay:LUSI)) %>% 
+    ## convert the qualitative assessments to factor, so that the classes go high to bad
+    mutate(assessment = factor(assessment, levels = c("high", "good", "moderate", "poor", "bad")))
+)
+```
+
+Make a boxplot of the distribution of classes vs the environmental parameters for each index.  
+```{r plot_class_distr_ind_env_sand}
+## to avoid repeating code for each variable, AND to have nice y-axis labels.. 
+map2(ind.qual.env.long.sand %>% select(silt.clay:LUSI),
+     names(ind.qual.env.long.sand %>% select(silt.clay:LUSI)),
+     ~ggplot(ind.qual.env.long.sand, aes(x = assessment, y = .x)) +
+       geom_boxplot() +
+       labs(y = .y) +
+       facet_wrap(~index))
+
+```
+
+I don't think I'm using this, in the end.. That's why I'm not going to try and make the plots more presentable.  
+As expected from the correlations - for some index-parameter combinations, not bad at all - classification distinct enough, and in the correct direction to boot. See AMBI (and BENTIX, though a bit less) with silt.clay, chl.a, secchi, LUSI. 
+The other three are shitty, though - H' and M-AMBI for the reasons already explained, M-AMBIn because not adjusted for most of the habitat subtypes in the dataset.  
+Funny thing - no bad anywhere (some in H, which as established performs really poorly in some particular conditions which I was unlucky enough to get in my data).  
+
 
 ###### **Index agreement analyses**  
 Not only are indices supposed to react to changes in benthic community structure, they should also agree with each other, so that they can be applied with good confidence in the study area, and the assessments are comparable with those coming from other areas (i.e., "good" means the same thing everywhere).  
@@ -1272,6 +1320,45 @@ corstars(ind.corr.env.zostera)
 ## kable(corstars(ind.corr.env.zostera)) # better-looking table
 ```
 
+Last-last thing to try: given the environmental parameters, check if the classification system successfully differentiates between between classes, and between which subsequent classes - best?   
+I'm only going to use the environmental parameters with which the indices have the best correlations (yes, I know it is highly subjective, and I don't care).  
+Gather the needed data (yes, I'm making another two-three-million useless temporary data frames).  
+```{r class_distr_ind_env_zostera}
+## get the index EQRs, and convert to qualitative. MAKE EXTRA SURE THE COLUMNS ARE IN THE SAME ORDER IN THE TWO DFS, OTHERWISE THE WRONG LIMITS WILL BE APPLIED TO EACH INDEX
+(ind.qual.zostera <- map2_df(indices.all.norm.zostera %>% select(H.EQR, AMBI.EQR, `M-AMBI`, BENTIX.EQR, `M-AMBIn`), 
+                             ind.limits,
+                             ~es_qualitative(.x, .y)
+                             )
+)
+
+
+## get (manually) the environmental parameters, and add to the qualitative index df. AGAIN MAKE SURE THE ROWS ARE IN THE SAME ORDER (I TRUST THEY ARE HERE, BUT IN FUTURE)
+(ind.qual.env.zostera <- bind_cols(ind.qual.zostera, 
+                                   env.data.zostera %>% select(TOM, chl_a, secchi, LUSI, shoot_count))
+)  
+
+## convert to long, key = index
+(ind.qual.env.long.zostera <- gather(ind.qual.env.zostera, key = "index", value = "assessment", -c(TOM:shoot_count)) %>% 
+    ## convert the qualitative assessments to factor, so that the classes go high to bad
+    mutate(assessment = factor(assessment, levels = c("high", "good", "moderate", "poor", "bad")))
+)
+```
+
+Make a boxplot of the distribution of classes vs the environmental parameters for each index.  
+```{r plot_class_distr_ind_env_zostera}
+## to avoid repeating code for each variable, AND to have nice y-axis labels.. 
+map2(ind.qual.env.long.zostera %>% select(TOM:shoot_count),
+     names(ind.qual.env.long.zostera %>% select(TOM:shoot_count)),
+     ~ggplot(ind.qual.env.long.zostera, aes(x = assessment, y = .x)) +
+       geom_boxplot() +
+       labs(y = .y) +
+       facet_wrap(~index))
+
+```
+
+I don't think I'm using this, in the end.. That's why I'm not going to try and make the plots more presentable.  
+As expected from the correlations - there is much variability in the index assessments, so the classes tend to overlap (no clear distinction often enough). Nevertheless, you can see that the assessments mostly go in the correct direction, and the indices do exhibit classification differences corresponding to increases/decreases of the environmental parameters (which should have been tested statstically, say, with a t-test on subsequent classes, 2x2, but since I'm not going to use it, I won't bother).  
+Exception - H - a total mess; it wasn't correlated to anything, so no surprise there.  
 
 ###### **Index agreement analyses**  
 Calculate the absolute average class difference between indices.  
@@ -1395,6 +1482,5 @@ Well this was an exercise in futility.
 The most surprising result again is M-AMBI-M-AMBIn - 100% of the cases are on opposite sides of the GM boundary. This means that one really, really shouldn't use M-AMBIn and the old boundaries if one wants something resembling a sensible result.  
 The others are more or less as expected, given the previous agreement analyses. The best is AMBI-BENTIX - it happens in only 12% of the cases.  
 
-All in all, the soft-bottom zoobenthic indices as they are applied here are really bad in the seagrass. Possible solutions: 1) adapt the boundaries to seagrass-associated fauna - good luck, with the amount of variation observed, and the interference of the natural environmental particularities, see community structure analyses 2) make a new index, specifically for seagrass fauna 3) drop entirely from assessments - no point; probably sufficient to monitor ecological state of seagrass itself - if it's good, it's likely that the associated communities will do perfectly fine. Bonus: those assessments are immensely easier to apply/train people to do.    
+All in all, the soft-bottom zoobenthic indices as they are applied here are really bad in the seagrass. Possible solutions: 1) adapt the boundaries to seagrass-associated fauna - good luck, with the amount of variation observed, and the interference of the natural environmental particularities, see community structure analyses 2) make/adapt a new index, specifically for seagrass fauna 3) drop entirely from assessments - no point; probably sufficient to monitor ecological state of seagrass itself - if it's good, it's likely that the associated communities will do perfectly fine. Bonus: those assessments are immensely easier to apply/train people to do.    
 
-Last-last thing to try: 
