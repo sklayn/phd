@@ -221,7 +221,7 @@ baltic.sub.2003 <- baltic.sub[baltic.sub$yearcollected == 2003, c("tname", "loca
 
 ## fill in missing combinations (add 0-count taxa to whatever station they're missing from) 
 ## (package tidyr)
-baltic.sub.2003 <- complete(baltic.sub.2003,
+baltic.sub.2003 <- tidyr::complete(baltic.sub.2003,
                             tname, locality,
                             fill = list(observedindividualcount = 0))
 
@@ -229,8 +229,8 @@ baltic.sub.2003 <- complete(baltic.sub.2003,
 baltic.sub.2003.fixed <- baltic.sub.2003[-which(baltic.sub.2003$locality == "Moni-018"), ]
 
 # calculate mean and variance for each taxon, then plot in ggplot
-baltic.sub.2003.fixed.gg <- ddply(baltic.sub.2003.fixed, 
-                                  .(tname), 
+baltic.sub.2003.fixed.gg <- plyr::ddply(baltic.sub.2003.fixed, 
+                                  .variables = "tname", 
                                   summarize, 
                                   mean = mean(observedindividualcount), 
                                   variance = var(observedindividualcount))
@@ -244,8 +244,8 @@ meanvar.plot.baltic.2003 <- ggplot(baltic.sub.2003.fixed.gg) +
   theme(plot.title = element_text(hjust = 0.5))
 
 ## try log(x + 1) transforming the taxon counts before plotting
-baltic.sub.2003.fixed.gg.log <- ddply(baltic.sub.2003.fixed, 
-                                  .(tname), 
+baltic.sub.2003.fixed.gg.log <- plyr::ddply(baltic.sub.2003.fixed, 
+                                  .variables = "tname", 
                                   summarize, 
                                   mean = mean(log(observedindividualcount + 1)), 
                                   variance = var(log(observedindividualcount + 1)))
@@ -260,11 +260,11 @@ meanvar.plot.baltic.2003.log <- ggplot(baltic.sub.2003.fixed.gg.log) +
     
 
 
-meanvar.plots <- grid.arrange(meanvar.plot.baltic.2003,
+meanvar.plots <- gridExtra::grid.arrange(meanvar.plot.baltic.2003,
                               meanvar.plot.baltic.2003.log,
                               ncol = 2)
 
-grid.arrange(meanvar.plot.baltic.2003, 
+gridExtra::grid.arrange(meanvar.plot.baltic.2003, 
              meanvar.plot.baltic.2003.log, 
              ncol = 2)
 
@@ -277,7 +277,7 @@ ggsave(file.path(figures.dir, "mean-variance-ex-plot.png"),
 ### plot the mean-variance relationship (log scale) - using package mvabund
 # first, extract only the abundances, transpose and make into mvabund matrix
 library(reshape2) 
-baltic.sub.2003.fin <- dcast(baltic.sub.2003.fixed, 
+baltic.sub.2003.fin <- reshape2::dcast(baltic.sub.2003.fixed, 
                              formula = locality ~ tname, 
                              value.var = "observedindividualcount")
 # plot
@@ -298,3 +298,20 @@ baltic.sub.2003.fin.log <- apply(baltic.sub.2003.fin[, -1],
 meanvar.plot(baltic.sub.2003.fin.log, 
              xlab = "Mean (log scale)", 
              ylab = "Variance (log scale)")
+
+### just use the data/examples that come with mvabund
+## Load the tikus dataset:
+data(tikus)
+tikusdat <- mvabund(tikus$abund)
+year <- tikus$x[,1]
+
+## Plot mean-variance plot for a mvabund object with a log scale (default):
+meanvar.plot(tikusdat) 	
+
+## Again but without log-transformation of axes:
+meanvar.plot(tikusdat,log="") 	
+
+## A mean-variance plot, data organised by year, 
+## for 1981 and 1983 only, as in Figure 7a of Warton (2008):
+is81or83 <- year==81 | year==83
+meanvar.plot(tikusdat~year, subset=is81or83, col=c(1,10))
