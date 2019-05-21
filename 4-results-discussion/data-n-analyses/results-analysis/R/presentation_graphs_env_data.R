@@ -184,3 +184,30 @@ ggsave(here(figures.dir, "sediment_grain_size_zostera.png"),
 ggsave(here(figures.dir, "sediment_mean_grain_size_zostera.png"), 
        plot.mean.grain.size.zostera, 
        dpi = 300)
+
+
+####### MDS by biotopes - sand #########
+### import the MDS 
+mds.sand <- read_rds(here(save.dir, "mds_sand.RDS"))
+
+### import vegan
+library(vegan)
+
+## extract MDS site scores 
+(mds.scores.sand <- as_tibble(scores(mds.sand, display = "sites")) %>% 
+  mutate(station = rep(sediment.data.smry.sand$station, each = 9), ## make a factor of stations, b.c. I'm tired now
+         biotope = rep(c(1, 2, 3, 4, 3), c(18, 9, 9, 9, 9)) ## add biotopes - manually
+         ) 
+)
+
+## plot
+(plot.mds.biotopes.sand <- ggplot(mds.scores.sand) +
+  geom_point(aes(x = NMDS1, y = NMDS2, colour = station), size = 2) +
+  stat_ellipse(aes(x = NMDS1, y = NMDS2, group = biotope), lwd = 0.2) + 
+  scale_colour_brewer(palette = "Set2", labels = paste0("S", as.numeric(unique(mds.scores.sand$station)))) 
+)  
+
+## save 
+ggsave(here(figures.dir, "mds_biotopes_sand.png"), 
+       plot.mds.biotopes.sand,
+       dpi = 300)
