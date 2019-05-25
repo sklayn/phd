@@ -1,6 +1,6 @@
 ---
 title: "Biodiversity of macrozoobenthic communities - 2"
-date: "2018-02-01"
+date: "`r Sys.Date()`"
 output: 
   html_notebook:
     theme: paper
@@ -325,7 +325,7 @@ write_rds(list("Dplus_sim" = dplus.sim.long,
           here(save.dir, "dplus_lambda_simulated.RDS"))
 ```
 
-  Now plot the observed values of D-plus in the sand dataset, and add these confidence limits.  
+Now plot the observed values of D-plus in the sand dataset, and add these confidence limits.  
 ```{r plot_dplus_sand}
 s.l.dplus.sand <- bind_cols(S = tax.distinctness.sand$Species, 
                             Dplus = tax.distinctness.sand$Dplus,
@@ -373,7 +373,7 @@ plot.lambda.sand <- ggplot(s.l.dplus.sand, aes(x = S, y = Lambda, color = statio
 ## plot them together in a grid
 plot.dplus.l.combined.sand <- cowplot::plot_grid(plot.dplus.sand + theme(legend.position = "none"), 
                                                  plot.lambda.sand + theme(legend.position = "none"), 
-                                                 labels = c("A", "B"), align = "h")
+                                                 labels = c("A", "B"), align = "h") 
 
 ## get the legend from one of the plots, and put it at the bottom
 dplus.legend <- cowplot::get_legend(plot.dplus.sand + theme(legend.position = "bottom"))

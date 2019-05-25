@@ -64,6 +64,7 @@ source(here(functions.dir, "import_data.R"))
   Organize some commonly-used ggplot2 modifications into a more convenient (and less repetitive) format.
 ```{r custom_ggplot_settings_helpers}
 ## ggplot settings & things that I keep reusing
+theme_set(theme_bw())
 # ggplot_theme <- list(
 #   theme_bw(),
 #   theme(element_text(family = "Times"))
