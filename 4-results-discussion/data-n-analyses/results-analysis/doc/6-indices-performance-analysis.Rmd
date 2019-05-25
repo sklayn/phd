@@ -641,18 +641,133 @@ ggsave(here(figures.dir, "ind_biotope_summary_sand.png"),
 
 Make a composite plot of both stations and biotopes, to save myself the trouble later.  
 ```{r plot_composite_ind_summary_st_biotopes_sand}
-(plot.comp.ind.st.sbiotope.summary.sand <- cowplot::plot_grid(plot.ind.st.summary.sand,
-                                                              plot.ind.biotope.summary.sand,
-                                                              nrow = 2,
-                                                              align = "h", labels = c("A", "B"))
+(plot.comp.ind.st.biotope.summary.sand <- cowplot::plot_grid(plot.ind.st.summary.sand,
+                                                             plot.ind.biotope.summary.sand,
+                                                             nrow = 2,
+                                                             align = "h", labels = c("A", "B"))
 )
 ```
 
 Save this monstrosity.  
 ```{r save_plot_composite_ind_summary_st_biotopes_sand}
 cowplot::save_plot(here(figures.dir, "ind_st_biotope_summary_sand.png"), 
-                   plot.comp.ind.st.sbiotope.summary.sand, 
+                   plot.comp.ind.st.biotope.summary.sand, 
                    base_aspect_ratio = 2, base_width = 6.8, base_height = 6)
+```
+
+
+
+Better idea: instead of having the ES limits as lines, do them as strips of colour. Might be a more intuitive visualization.. Also plot the mean EQRs as dots instead of bars (bars are generally a waste of ink). 
+```{r ind_limits_ranges}
+## we want ranges (ymin-ymax) to plot the classes as strips of colour. The values in the index limit tibble are the lower limits of each class = ymin (except for bad, which is 0 and will have to be added). The upper limits are Inf for high, and the lower limit of the previous class for all others. Bonus: will be the same for the seagrasses, so won't have to repeat this calculation.   
+(ind.limits.strips.long <- ind.limits.long %>%
+   ## add a row of 0 for each index - corresponding to the lower limit for the bad class 
+   bind_rows(tibble(index = c("H'", "AMBI", "M-AMBI", "BENTIX", "M-AMBIn"), 
+                    limits = rep(0, times = 5))) %>% 
+   arrange(index) %>%
+   group_by(index) %>%
+   ## calculate the ymin and ymax for each index, as described above
+   mutate(ymin = limits, 
+          ymax = lag(limits, 1)) %>% 
+   ## set ymax for high to +Inf
+   mutate(ymax = replace_na(ymax, Inf)) %>% 
+   ## add class designation (as factor) - to be used in the plot legend
+   mutate(class = factor(c("high", "good", "moderate", "poor", "bad"), levels = c("high", "good", "moderate", "poor", "bad")))
+)
+
+## make a new named vector of colours for the classes (yes I know it's technically the same as the EG colours, in fact I'm reusing it, but I don't want too much confusion)
+es.classes <- eg.colours
+names(es.classes) <- as.character(levels(ind.limits.strips.long$class))
+```
+
+On to the monstrous plot!
+```{r plot_ind_summary_stations_strips_sand}
+(plot.ind.st.summary.strips.sand <- ggplot(ind.st.summary.sand.long,
+                                           aes(x = as.numeric(station), y = mean)) +
+   ## add the strips first - so as to form the background, not overlap the points
+   geom_rect(data = ind.limits.strips.long, 
+             aes(xmin = -Inf, xmax = Inf, ymin = ymin, ymax = ymax, fill = class), 
+             alpha = 0.45, inherit.aes = FALSE) + 
+   scale_fill_manual(name = "Ecological class", values = es.classes) +
+   
+   ## error bars = sd. Plot first, so as to go behind the dots
+   geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd),
+                 width = 0.15, colour = "grey25", position = position_dodge(0.9)) +
+   geom_point(colour = "grey25") +
+   ## labels - significant difference pairs (above error bars)
+   geom_text(aes(x = as.numeric(station), y = mean + sd, label = label), vjust = -0.3, size = 2) +
+   labs(x = "Station", y = "EQR") +
+   facet_wrap(~index) +
+   scale_y_continuous(breaks = seq(0, 1, 0.25)) +
+   scale_x_continuous(breaks = 1:6, labels = paste0("S", unique(as.numeric(ind.st.summary.sand.long$station))))
+)
+
+```
+
+Save this - wow was it a pain to construct, I really don't want to lose it somewhere... 
+```{r save_plot_ind_summary_stations_strips_sand}
+ggsave(here(figures.dir, "ind_station_summary_strips_sand.png"),
+       plot.ind.st.summary.strips.sand, 
+       dpi = 300, width = 17, height = 15, units = "cm")
+```
+
+
+Now plot the biotopes (keeping the x axis numeric for readability).  
+```{r plot_ind_summary_biotopes_strips_sand}
+(plot.ind.biotope.summary.strips.sand <- ggplot(ind.biotope.summary.sand.long, 
+                                                aes(x = as.numeric(biotope), y = mean)) + 
+   ## add the strips first - so as to form the background, not overlap the points
+   geom_rect(data = ind.limits.strips.long, 
+             aes(xmin = -Inf, xmax = Inf, ymin = ymin, ymax = ymax, fill = class), 
+             alpha = 0.45, inherit.aes = FALSE) + 
+   scale_fill_manual(name = "Ecological class", values = es.classes) +
+   
+   ## error bars = sd. Before the points, so that the bars don't overlap them  
+   geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd),
+                 width = 0.15, colour = "grey25", position = position_dodge(0.9)) +
+   geom_point(colour = "grey25") +
+   
+   ## labels - significant differences between pairs
+   geom_text(aes(x = as.numeric(biotope), y = mean + sd, label = label), vjust = -0.3, size = 2) +
+   
+   labs(x = "Biotope", y = "EQR") + 
+   facet_wrap(~index) +
+   scale_y_continuous(breaks = seq(0, 1, 0.25)) + 
+   scale_x_continuous(breaks = 1:4) 
+)
+```
+
+Save this one, too. 
+```{r save_plot_ind_summary_biotopes_strips_sand}
+ggsave(here(figures.dir, "ind_biotope_summary_strips_sand.png"),
+       plot.ind.biotope.summary.strips.sand, 
+       dpi = 300, width = 17, height = 15, units = "cm")
+```
+
+
+
+Make a composite plot of both stations and biotopes, with EC as colour strips.  
+```{r plot_composite_ind_summary_st_biotopes_strips_sand}
+(plot.comp.ind.st.biotope.summary.strips.sand <- cowplot::plot_grid(plot.ind.st.summary.strips.sand + theme(legend.position = "none"),
+                                                                    plot.ind.biotope.summary.strips.sand + theme(legend.position = "none"),
+                                                                    nrow = 2,
+                                                                    align = "h", labels = c("A", "B"))
+)
+
+## get the legend from one of the plots, and put it at the bottom
+comp.ind.legend <- cowplot::get_legend(plot.ind.biotope.summary.strips.sand + theme(legend.position = "right"))
+
+(plot.comp.ind.st.biotope.summary.strips.sand <- cowplot::plot_grid(plot.comp.ind.st.biotope.summary.strips.sand,
+                                                                    comp.ind.legend,
+                                                                    ncol = 2, rel_widths = c(1, 0.3))
+)
+```
+
+Save this monstrosity.  
+```{r save_plot_composite_ind_summary_st_biotopes_strips_sand}
+cowplot::save_plot(here(figures.dir, "ind_st_biotope_summary_strips_sand.png"), 
+                   plot.comp.ind.st.biotope.summary.strips.sand, 
+                   base_aspect_ratio = 2, base_width = 6.8, base_height = 7)
 ```
 
 
@@ -1237,7 +1352,7 @@ ind.st.labels.zostera
 ind.st.labels.zostera.long <- ind.st.labels.zostera %>%
     gather(key = station, value = label, -.id) %>%
     rename(index = .id) %>%
-    mutate(station = factor(station, levels = levels(zoo.abnd.zostera$station)))
+    mutate(station = factor(station, levels = levels(indices.all.zostera$station)))
 
 ## add to the dataset for plotting
 (ind.st.summary.zostera.long <- left_join(ind.st.summary.zostera.long,
@@ -1285,6 +1400,39 @@ ggsave(here(figures.dir, "ind_station_summary_zostera.png"),
        dpi = 300, width = 17, height = 15, units = "cm")
 
 ```
+
+
+Redo this plot with EC as strips of colour in the background.  
+```{r plot_ind_summary_stations_strips_zostera}
+(plot.ind.st.summary.strips.zostera <- ggplot(ind.st.summary.zostera.long,
+                                              aes(x = as.numeric(station), y = mean)) +
+   ## add the strips first - so as to form the background, not overlap the points
+   geom_rect(data = ind.limits.strips.long, 
+             aes(xmin = -Inf, xmax = Inf, ymin = ymin, ymax = ymax, fill = class), 
+             alpha = 0.45, inherit.aes = FALSE) + 
+   scale_fill_manual(name = "Ecological class", values = es.classes) +
+   
+   ## error bars = sd. Plot first, so as to go behind the dots
+   geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd),
+                 width = 0.15, colour = "grey25", position = position_dodge(0.9)) +
+   geom_point(colour = "grey25") +
+   ## labels - significant difference pairs (above error bars)
+   geom_text(aes(x = as.numeric(station), y = mean + sd, label = label), vjust = -0.5, size = 2) +
+   labs(x = "Station", y = "EQR") +
+   facet_wrap(~index) +
+   scale_y_continuous(breaks = seq(0, 1, 0.25)) +
+   scale_x_continuous(breaks = 1:5, labels = paste0("Z", unique(as.numeric(ind.st.summary.zostera.long$station))))
+)
+
+```
+
+Save this. 
+```{r save_plot_ind_summary_stations_strips_zostera}
+ggsave(here(figures.dir, "ind_station_summary_strips_zostera.png"),
+       plot.ind.st.summary.strips.zostera, 
+       dpi = 300, width = 17, height = 15, units = "cm")
+```
+
 
 
 ##### Index performance vs environmental parameters  
