@@ -697,8 +697,8 @@ abnd.top10.sp.glms.env.red.sand <- zoo.abnd.sand %>%
 
 Now make a plot of species abundances, coloring them by environmental factor values (4 plots in total).  
 ```{r plot_top10_taxa_glm_env_red_sand_by_param}
-plots.list.top10.taxa.glm.env.red.sand <- lapply(c("PO4", "seston", "LUSI", "gravel"),
-                                                 function (i) {
+(plots.list.top10.taxa.glm.env.red.sand <- lapply(c("PO4", "seston", "LUSI", "gravel"),
+                                                  function (i) {
                                                    ggplot(abnd.top10.sp.glms.env.red.sand,
                                                           aes_(x = ~species, y = ~log_y_min(count), colour = as.name(i))) +
                                                      # scale_colour_viridis(option = "viridis") +
@@ -707,11 +707,14 @@ plots.list.top10.taxa.glm.env.red.sand <- lapply(c("PO4", "seston", "LUSI", "gra
                                                      labs(x = "", y = "Abundance (log(y/min + 1))")
                                                    }
                                                  ) 
+)
+
 
 ## set the names of the plots in the list - will be easier to save them in one go later (less fiddling with constructing file names)
 names(plots.list.top10.taxa.glm.env.red.sand) <- c("PO4", "seston", "LUSI", "gravel")
 
 ```
+
 
 Save these plots.. 
 ```{r save_plots_top10_taxa_glm_env_red_sand_by_param}
@@ -1603,6 +1606,56 @@ I'm going to plot these top contributing species, but I'm not using the plot. At
     theme(legend.position = "top")
 
 )
+```
+
+
+Make a plot with less species (~10-15) for the defense presentation - in the end, it's more illustrative and easier to understand. Again, this still means multiple plots - for each environmental factor in the model.  
+```{r extract_top10_taxa_glm_env_red_zostera}
+## since the top contributing taxa are already extracted, I'll just get the original abundances of the top 10 (or 15) in the vector  
+## get the selected species and their abundances from the original count data, and transform them to long format
+abnd.top10.sp.glms.env.red.zostera <- zoo.abnd.zostera %>% 
+  select(station, names(top.sp.glms.env.red.zostera[1:10])) %>% 
+  gather(key = "species", value = "count", -station) %>% 
+  ## turn species into a factor, or you'll be very very sorry later, when they're out of order on the plot. NB need to be in REVERSE order, because ggplot plots from bottom to top, and I want the top-contributing species on top. 
+  mutate(species = factor(species, levels = rev(names(top.sp.glms.env.red.zostera)))) 
+
+
+## add the significant environmental parameters from the model
+(abnd.top10.sp.glms.env.red.zostera <- left_join(abnd.top10.sp.glms.env.red.zostera, 
+                                              env.zostera %>% select(station, Ntotal, sand, shoot_count, ag_biomass_wet, bg_biomass_wet), 
+                                              by = "station") 
+    
+)
+```
+
+Now make a plot of species abundances, coloring them by environmental factor values (4 plots in total).  
+```{r plot_top10_taxa_glm_env_red_zostera_by_param}
+(plots.list.top10.taxa.glm.env.red.zostera <- lapply(c("Ntotal", "sand", "shoot_count", "ag_biomass_wet", "bg_biomass_wet"), 
+                                                     function (i) {
+                                                ggplot(abnd.top10.sp.glms.env.red.zostera,
+                                                       aes_(x = ~species, y = ~log_y_min(count), colour = as.name(i))) +
+                                                        # scale_colour_viridis(option = "viridis") +
+                                                        geom_point() +
+                                                        coord_flip() +
+                                                        labs(x = "", y = "Abundance (log(y/min + 1))")
+                                                      }
+                                                ) 
+)
+
+## set the names of the plots in the list - will be easier to save them in one go later (less fiddling with constructing file names)
+names(plots.list.top10.taxa.glm.env.red.zostera) <- c("Ntotal", "sand", "shoot_count", "ag_biomass_wet", "bg_biomass_wet")
+
+```
+
+Save these plots.. 
+```{r save_plots_top10_taxa_glm_env_red_zostera_by_param}
+map2(names(plots.list.top10.taxa.glm.env.red.zostera),
+     plots.list.top10.taxa.glm.env.red.zostera, 
+     function(a, b) {
+       ggsave(filename = here(figures.dir, paste0("top10_taxa_glm_env_red_zostera_", a, ".png")),
+              b, 
+              width = 15, height = 10, units = "cm", dpi = 300)
+       })
 ```
 
 
