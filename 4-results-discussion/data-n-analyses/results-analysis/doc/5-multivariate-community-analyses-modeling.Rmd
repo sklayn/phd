@@ -90,7 +90,7 @@ log_y_min <- function(y) {
 ***  
 
 #### **Sand stations (Burgas Bay, 2013-2014)**  
-Import zoobenthic abundance data (cleaned and prepared).  
+  Import zoobenthic abundance data (cleaned and prepared).  
 ```{r import_zoo_abnd_sand}
 zoo.abnd.sand <- read_csv(here(save.dir, "abnd_sand_orig_clean.csv"))
 
@@ -634,7 +634,7 @@ names(top.sp.glms.env.red.sand) <- names(top.sp.glms.env.red.sand) %>%
 
 ```
 
-I'm going to plot these top contributing species, but I'm not using the plot. At least this time it's more manageable, but still not presentable enough.. 
+I'm going to plot these top contributing species, but I'm (probably) not using the plot. At least this time it's more manageable, but still not presentable enough.. 
 
 ```{r plot_relative_taxon_contrib_top_glm_env_red_sand}
 ## get the species and their abundances from the original count data, and transform them to long format
@@ -669,13 +669,60 @@ abnd.top.sp.glms.env.red.sand <- zoo.abnd.sand %>%
 ```
 
 Try another thing - manually, unfortunately: this same nightmare, but colored by the values of each model term. 
-```{r composite_plot_relative_taxon_contrib_top_glm_env_sand}
+```{r plot_relative_taxon_contrib_top_glm_env_red_sand_by_param}
 ggplot(abnd.top.sp.glms.env.red.sand,
        mapping = aes(x = species, y = log_y_min(count), colour = seston)) + 
   geom_point() + 
   coord_flip()
 ```
 
+Well, in the end the results presented as a table (as below) went into the thesis text, but I want to try and make a plot with less species (~10-15) for the defense presentation - in the end, it's more illustrative and easier to understand. Unfortunately, this still means 4 plots - for each environmental factor in the model.  
+```{r extract_top10_taxa_glm_env_red_sand}
+## since the top contributing taxa are already extracted, I'll just get the original abundances of the top 10 (or 15) in the vector  
+## get the selected species and their abundances from the original count data, and transform them to long format
+abnd.top10.sp.glms.env.red.sand <- zoo.abnd.sand %>% 
+  select(station, names(top.sp.glms.env.red.sand[1:10])) %>% 
+  gather(key = "species", value = "count", -station) %>% 
+  ## turn species into a factor, or you'll be very very sorry later, when they're out of order on the plot. NB need to be in REVERSE order, because ggplot plots from bottom to top, and I want the top-contributing species on top. 
+  mutate(species = factor(species, levels = rev(names(top.sp.glms.env.red.sand)))) 
+
+
+## add the significant environmental parameters from the model
+(abnd.top10.sp.glms.env.red.sand <- left_join(abnd.top10.sp.glms.env.red.sand, 
+                                              env.sand %>% select(station, PO4, seston, LUSI, gravel), 
+                                              by = "station") 
+    
+)
+```
+
+Now make a plot of species abundances, coloring them by environmental factor values (4 plots in total).  
+```{r plot_top10_taxa_glm_env_red_sand_by_param}
+plots.list.top10.taxa.glm.env.red.sand <- lapply(c("PO4", "seston", "LUSI", "gravel"),
+                                                 function (i) {
+                                                   ggplot(abnd.top10.sp.glms.env.red.sand,
+                                                          aes_(x = ~species, y = ~log_y_min(count), colour = as.name(i))) +
+                                                     # scale_colour_viridis(option = "viridis") +
+                                                     geom_point() +
+                                                     coord_flip() + 
+                                                     labs(x = "", y = "Abundance (log(y/min + 1))")
+                                                   }
+                                                 ) 
+
+## set the names of the plots in the list - will be easier to save them in one go later (less fiddling with constructing file names)
+names(plots.list.top10.taxa.glm.env.red.sand) <- c("PO4", "seston", "LUSI", "gravel")
+
+```
+
+Save these plots.. 
+```{r save_plots_top10_taxa_glm_env_red_sand_by_param}
+map2(names(plots.list.top10.taxa.glm.env.red.sand),
+     plots.list.top10.taxa.glm.env.red.sand, 
+     function(a, b) {
+       ggsave(filename = here(figures.dir, paste0("top10_taxa_glm_env_red_sand_", a, ".png")),
+              b, 
+              width = 15, height = 10, units = "cm", dpi = 300)
+       })
+```
 
 
 Extract the taxon information (univariate tests) from the model ANOVA to present as a table (probably better than this plot, although it's informative).  
