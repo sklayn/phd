@@ -365,8 +365,8 @@ mambi_sigovini <- function(X, eg, m.values, metrics = c("S", "H1", "AMBI"), tras
 	  # # factor score estimates are based upon the data matrix times a weighting matrix which
 	  # # weights the observed variables; in the method implemented here, weights are just
 	  # # component loadings.
-	  # METRICS.scores <- factor.scores(METRICS.tot, f = METRICS.fa, method = c("components"))$scores
-	  # # METRICS.scores <- scale(METRICS.tot) %*% METRICS.fa$loadings
+	  # # METRICS.scores <- factor.scores(METRICS.tot, f = METRICS.fa, method = c("components"))$scores
+	  # METRICS.scores <- scale(METRICS.tot) %*% METRICS.fa$loadings
 	  # 
 	  # colnames(METRICS.scores) <- c("x", "y", "z")
 

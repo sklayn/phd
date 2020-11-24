@@ -247,6 +247,7 @@ summarize_zoo_data(zoo.abnd.sand.long, value.col = sp_count, per.m2 = 20, round.
 summarize_zoo_data(zoo.biomass.sand.long, value.col = sp_biomass, per.m2 = 20, round.to = 2)
 ```
 <br>    
+
 2. Taxonomic composition and structure  
   Import the taxonomic data. This includes all species on my current species list, so it applies to all analyses.
 ```{r import_taxonomic_data}
