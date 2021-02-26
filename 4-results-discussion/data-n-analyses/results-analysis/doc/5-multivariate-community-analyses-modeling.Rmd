@@ -839,14 +839,14 @@ Maybe also remove the singletons (species appearing only once in the whole datas
 
 
 ##### **LVM - model-based ordination**
-Perform a model-based unconstrained ordination by fiting a pure latent variable model (package boral - Hui et al., 2014). This will allow to visualize the multivariate stations x species data - similar to nMDS, can be interpreted in the same way.   
+Perform a model-based unconstrained ordination by fitting a pure latent variable model (package boral - Hui et al., 2014). This will allow to visualize the multivariate stations x species data - similar to nMDS, can be interpreted in the same way.   
 I'm including a (fixed) row effect to account for differences in site total abundance - this way, the ordination is in terms of **species composition**.   
 NB this takes about a million years to run! 
 ```{r lvm_zostera}
 lvm.zostera <- boral(y = zoo.abnd.flt.zostera, 
                   family = "negative.binomial",
                   
-                  ## we want to control for site effects - there are 6 sites with 9 replicates each
+                  ## we want to control for site effects - there are 5 sites; some with 8, some with 4 replicates
                   row.eff = "fixed", row.ids = matrix(rep(1:5, times = c(8, 8, 4, 8, 4)), ncol = 1),  
                   ## 2 latent variables = 2 axes on which to represent the zoobenthic data
                   lv.control = list(num.lv = 2) 
