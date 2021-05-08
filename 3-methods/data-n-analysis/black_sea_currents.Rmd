@@ -128,6 +128,7 @@ bg_df <- fortify(bg_spdf_geog, region = "STATE_B_ID") ## region is the name of t
 ggplot(bg_df, aes(x = long, y = lat, group = group)) + 
   geom_polygon()
 ```
+
 Zoom in on the southern Black Sea coast (same extent as the currents data from the Black Sea model)..  
 ```{r zoom_bg_coast}
 ggplot(bg_df, aes(x = long, y = lat, group = group)) + 
