@@ -36,4 +36,5 @@ vignettes/*.pdf
 
 
 ## project-specific potentially sensitive stuff ##
+
 .Rproj.user
