@@ -10,7 +10,7 @@ plot_mds <- function(mds.obj, groups = NULL) {
     ## extract the MDS scores and create tibble for plotting. NB in this case 
     ## the rownames are not preserved as a variable - no need since if desired, 
     ## labels/groups are to be supplied in the function call.  
-    scrs <- as_data_frame(scores(mds.obj, display = "sites"))
+    scrs <- as_tibble(scores(mds.obj, display = "sites"))
     
     if(!is.null(groups)) {
         ## if there are groups, add them to the tibble

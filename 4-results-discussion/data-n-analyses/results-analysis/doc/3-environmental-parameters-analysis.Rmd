@@ -213,7 +213,7 @@ This inevitably fails, because it can't describe the dimensions with no actual v
 # Investigate(water.sand.pca.fin, file = "pca_report_water_sand.Rmd", document = "html_document", remove.temp = TRUE)
 ```
 
-To reiterate - the automatic report **fails** at the attempt to describe the dimensions - that's because there is nothing to describe; the orignal data only has 1 value per station - not really appropriate for PCA, which attempts to describe variability after all (what variability with only 1 value?).  
+To reiterate - the automatic report **fails** at the attempt to describe the dimensions - that's because there is nothing to describe; the original data only has 1 value per station - not really appropriate for PCA, which attempts to describe variability after all (what variability with only 1 value?).  
 Before that, it manages to say that the analysis should not be attempted at all - see generated report. Quoting: "An estimation of the right number of axes to interpret suggests to not interpret the analysis at all.  Indeed, the amount of inertia of the first axis is not higher than that obtained by the 0.95-quantile of random distributions (46.6% against 61.68%). This observation suggests that no axis is carrying a real information."
 
 **Also, I don't like how LUSI got excluded - I think in the end, I might just show the correlation table to demonstrate that LUSI reflects well the eutrophication gradient, then just pass it on to the community structure analyses. Will dramatically reduce the number of variables + the uncertainty associated with only a few discrete samples of highly variable parameters such as nutrients and oxygen.**  
